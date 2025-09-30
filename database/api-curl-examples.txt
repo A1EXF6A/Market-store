@@ -1,0 +1,226 @@
+# ENTIDADES Y EJEMPLOS CURL PARA EL PROYECTO
+
+## ENTIDADES DEL SISTEMA
+
+### 1. Users (Usuarios)
+- Roles: buyer, seller, moderator, admin
+- Estados: active, suspended
+- Géneros: male, female, other
+
+### 2. Items (Productos/Servicios)
+- Tipos: product, service
+- Estados: active, suspended, hidden, pending, banned
+
+### 3. Services - Extensión de items para servicios
+### 4. ItemPhotos - Fotos de productos
+### 5. Chats - Conversaciones entre buyer y seller
+### 6. Messages - Mensajes dentro de chats
+### 7. Ratings - Calificaciones de sellers
+### 8. Reports - Reportes de items (spam, inappropriate, illegal, other)
+### 9. Incidents - Incidentes creados por reportes
+### 10. Appeals - Apelaciones de sellers contra incidents
+### 11. Favorites - Items favoritos de usuarios
+
+## EJEMPLOS DE CURL
+
+### AUTENTICACIÓN
+
+# Registro de usuario
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nationalId": "1234567890",
+    "firstName": "Juan",
+    "lastName": "Pérez",
+    "email": "juan@example.com",
+    "phone": "+573001234567",
+    "address": "Calle 123 #45-67, Bogotá",
+    "gender": "male",
+    "password": "password123"
+  }'
+
+# Login
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan@example.com",
+    "password": "password123"
+  }'
+
+# Ver perfil (requiere token)
+curl -X GET http://localhost:3000/auth/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+### PRODUCTOS/ITEMS
+
+# Crear producto (requiere rol SELLER)
+curl -X POST http://localhost:3000/products \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "type": "product",
+    "name": "iPhone 15 Pro",
+    "description": "Teléfono en excelente estado, poco uso",
+    "price": 1500000,
+    "location": "Bogotá, Colombia",
+    "availability": true,
+    "photos": [
+      "https://example.com/photo1.jpg",
+      "https://example.com/photo2.jpg"
+    ]
+  }'
+
+# Crear servicio
+curl -X POST http://localhost:3000/products \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "type": "service",
+    "name": "Clases de Inglés",
+    "description": "Clases personalizadas de inglés",
+    "price": 50000,
+    "location": "Virtual/Presencial",
+    "availability": true,
+    "workingHours": "Lunes a Viernes 2PM-6PM"
+  }'
+
+# Obtener todos los productos
+curl -X GET http://localhost:3000/products
+
+# Obtener producto específico
+curl -X GET http://localhost:3000/products/1
+
+# Obtener mis productos (seller)
+curl -X GET http://localhost:3000/products/my-products \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Obtener favoritos
+curl -X GET http://localhost:3000/products/favorites \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Marcar/desmarcar favorito
+curl -X POST http://localhost:3000/products/1/favorite \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Actualizar producto
+curl -X PATCH http://localhost:3000/products/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "iPhone 15 Pro - Actualizado",
+    "price": 1400000
+  }'
+
+# Eliminar producto
+curl -X DELETE http://localhost:3000/products/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+### CHAT Y MENSAJES
+
+# Iniciar chat con seller
+curl -X POST http://localhost:3000/chat/start \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "sellerId": 2
+  }'
+
+# Obtener mis chats
+curl -X GET http://localhost:3000/chat/my-chats \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Obtener mensajes de un chat
+curl -X GET http://localhost:3000/chat/1/messages \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Enviar mensaje
+curl -X POST http://localhost:3000/chat/1/messages \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "content": "Hola, ¿está disponible el producto?"
+  }'
+
+### REPORTES E INCIDENTES
+
+# Crear reporte (requiere rol BUYER)
+curl -X POST http://localhost:3000/incidents/reports \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "itemId": 1,
+    "type": "spam",
+    "comment": "Este producto parece falso"
+  }'
+
+# Crear apelación (requiere rol SELLER)
+curl -X POST http://localhost:3000/incidents/appeals \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "incidentId": 1,
+    "reason": "El producto es legítimo, tengo facturas que lo comprueban"
+  }'
+
+# Ver incidentes (MODERATOR/ADMIN)
+curl -X GET http://localhost:3000/incidents \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Ver reportes (MODERATOR/ADMIN)
+curl -X GET http://localhost:3000/incidents/reports \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Ver mis incidentes (SELLER)
+curl -X GET http://localhost:3000/incidents/my-incidents \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Asignar moderador (MODERATOR/ADMIN)
+curl -X PATCH http://localhost:3000/incidents/1/assign \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Resolver incidente (MODERATOR/ADMIN)
+curl -X PATCH http://localhost:3000/incidents/1/resolve \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "status": "active"
+  }'
+
+### GESTIÓN DE USUARIOS
+
+# Ver todos los usuarios (ADMIN/MODERATOR)
+curl -X GET http://localhost:3000/users \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Ver usuario específico
+curl -X GET http://localhost:3000/users/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Cambiar estado de usuario (ADMIN/MODERATOR)
+curl -X PATCH http://localhost:3000/users/1/status \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "status": "suspended"
+  }'
+
+# Verificar usuario (ADMIN)
+curl -X PATCH http://localhost:3000/users/1/verify \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+### VALORES DE ENUMS IMPORTANTES
+
+- UserRole: "buyer", "seller", "moderator", "admin"
+- UserGender: "male", "female", "other"
+- UserStatus: "active", "suspended"
+- ItemType: "product", "service"
+- ItemStatus: "active", "suspended", "hidden", "pending", "banned"
+- ReportType: "spam", "inappropriate", "illegal", "other"
+
+### NOTAS IMPORTANTES
+
+1. Reemplaza YOUR_JWT_TOKEN con el token que obtienes del endpoint de login
+2. Ajusta la URL base según tu configuración (probablemente http://localhost:3000)
+3. Los endpoints requieren diferentes roles según se indica en cada ejemplo
+4. Las fechas se generan automáticamente en las entidades
+5. Algunos campos son opcionales según los DTOs

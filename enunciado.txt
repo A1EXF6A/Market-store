@@ -1,0 +1,107 @@
+SISTEMA DE VENTAS MULTIEMPRESA 
+
+Roles: 
+
+    Compradores/Visualizadores: Podrá visualizar un listado de artículos e ingresar para obtener más información de este, además podrán filtrar por categoría, por precio y ubicación. 
+
+    Vendedores: Podrán subir artículos con su respectiva información (descripción, precio, varias fotos, disponibilidad), además podrán editar y o  eliminar una publicación. 
+
+    Moderadores: Dara seguimiento a artículos que se consideren peligrosos o no aptos para la venta a través de la plataforma los cuales serán detectados por la aplicación o detección manual. Por otro lado, podrá suspender o reactivar cuentas de vendedores y o compradores 
+
+    Administrador: Podrá registrar a moderadores y podrá asumir los mismos roles que el moderador 
+
+ 
+
+Funcionalidades: 
+
+Gestión de productos / servicios: Crear, modificar, eliminar, visualizar, apelar, cambiar su estado de visualización. 
+
+    La visualización de productos puede realizarse por categorías e incluye filtros de precio. 
+
+    El sistema debe detectar posibles productos no permitidos y ocultarlos por mientras se revisan 
+
+    Si a un producto no se le permite la publicación, el usuario podrá apelar, es decir solicitar una revisión la cual permitirá ingresar información por parte del vendedor 
+
+    Un producto no podrá ser eliminado si se ha detectado como producto peligroso y este automáticamente desaparece de la bandeja de visualización del vendedor y comprador pero podrá ser revisado por moderadores 
+
+    Estas restricciones aplican también a servicios 
+
+    Se pueden reportar productos o servicios por parte del moderador como también por parte de los compradores 
+
+    Si un comprador reporta un producto, este no se desactiva automáticamente, debe ser revisado por un moderador y este ultimo tomara la decisión. 
+
+    Los usuarios podrán darle un me interesa o retirarlo, de tal manera que aparezca en un apartado de productos guardados 
+
+Gestión de usuarios: 
+
+    Compradores y vendedores podrán darse de alta en la plataforma, es requerido que se valide con un correo existente 
+
+    Compradores y vendedores podrán recuperar su contraseña 
+
+    Moderadores serán dados de alta por parte del administrador 
+
+    Moderadores y administrador podrán activar o desactivar las cuentas de vendedores y compradores 
+
+ 
+
+ 
+
+Gestión de incidencias/reportes 
+
+    Los productos/servicios que se hayan detectado por el sistema se ubicaran en este modulo 
+
+    Se podrán filtrar por fechas  
+
+    Al revisar una incidencia se registrará de forma automática quien le está dando seguimiento 
+
+    A su vez desde este módulo se podrá cambiar el estado de visualización en el caso de que se determine que no es un producto o servicio peligroso 
+
+    En este módulo también aparecerán en otra sección los reportes realizados por los compradores. 
+
+    Los reportes realizados por los compradores vendrán acompañados de un tipo de reporte y un comentario opciónal 
+
+    Si un vendedor no esta de acuerdo con la decisión tomada podrá realizar una apelación sobre la misma e indicar los motivos, esto reactivara la incidencia la cual será tomada y o revisada por un moderador diferente y este último tomara la última decisión  
+
+Restricciones 
+
+    El sistema debe detectar productos o servicios prohibidos 
+
+    El registro en la aplicación solo permite un usuario por correo 
+
+    El registro debe realizarse mediante un correo valido 
+
+    El registro se completa cuando se verifica la cuenta  
+
+    Uso de contraseñas fuertes 
+
+    Encriptación de las contraseñas 
+
+    El sistema ocultara/suspenderá las publicaciones que sobrepasen un tiempo determinado en la plataforma indicado por el administrador. 
+
+    El sistema debe ser responsive 
+
+    Se debe considerar el uso adecuado de colores y distribución de elementos para una adecuada interacción 
+
+Información a manejar 
+
+Usuarios: cedula, nombre, apellido, correo, teléfono, dirección, genero 
+
+Productos: código, nombre, descripción, fotos (1 a 5), precio, ubicación, disponibilidad, tipo, estado, fecha de publicación 
+
+Servicios: Horario de atención, los mismos que producto 
+
+Incidencia: Fecha de incidencia, estado, descripción, moderador encargado, vendedor que solicita si aplica 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Funcionalidad para seleccionar 
+
+    Chat con el vendedor con posibilidad de valoración del mismo 
+
+    Definición de ubicación del producto, lo que permitirá filtrar por ubicación de productos en base al vendedor 
