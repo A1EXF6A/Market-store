@@ -45,7 +45,7 @@ function AppRouter() {
           }
         />
 
-        <Route path="products" element={<ProductsPage />} />
+
 
         <Route
           path="/"
@@ -57,7 +57,7 @@ function AppRouter() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
-
+          <Route path="products" element={<ProductsPage />} />
           <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="favorites" element={<FavoritesPage />} />
 
