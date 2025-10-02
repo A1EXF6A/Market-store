@@ -8,6 +8,7 @@ import { User } from "../entities/user.entity";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./jwt.strategy";
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { JwtStrategy } from "./jwt.strategy";
       secret: env.jwt.secret || "your-secret-key",
       signOptions: { expiresIn: "24h" },
     }),
+     UsersModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
