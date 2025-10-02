@@ -45,14 +45,10 @@ export class ProductsController {
     return this.productsService.findBySeller(user.userId);
   }
 
-  // Endpoint protegido para favoritos del usuario autenticado
   @Get('favorites')
   @UseGuards(JwtAuthGuard)
   getFavorites(@Req() req) {
-    console.log('Headers:', req.headers);
-    console.log('Usuario autenticado:', req.user);
-    console.log('Usuario autenticado:', req.user);
-    return this.productsService.getFavorites(req.user.id);
+    return this.productsService.getFavorites(req.user.userId);
   }
 
   @Get(":id")

@@ -25,7 +25,7 @@ export class ProductsService {
     private serviceRepository: Repository<Service>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
-  ) {}
+  ) { }
 
   async create(
     createProductDto: CreateProductDto,
@@ -181,15 +181,17 @@ export class ProductsService {
       return { isFavorite: true };
     }
   }
-
   async getFavorites(userId: number): Promise<Item[]> {
+    console.log('Buscando favoritos para usuario:', userId);
+
     const favorites = await this.favoriteRepository.find({
-      where: { userId },
+      where: { user: { userId } }, // 🔹 Filtra usando la relación
       relations: ["item", "item.seller", "item.photos"],
     });
 
     return favorites.map((fav) => fav.item);
   }
+
 
   private async generateUniqueCode(): Promise<string> {
     let code: string;
