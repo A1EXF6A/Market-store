@@ -9,6 +9,7 @@ import {
   UseGuards,
   Query,
   Inject,
+  Req,
 } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -23,7 +24,7 @@ import { User, UserRole } from "../entities/user.entity";
 export class ProductsController {
   constructor(
     @Inject(ProductsService) private readonly productsService: ProductsService,
-  ) {}
+  ) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,10 +45,14 @@ export class ProductsController {
     return this.productsService.findBySeller(user.userId);
   }
 
-  @Get("favorites")
+  // Endpoint protegido para favoritos del usuario autenticado
+  @Get('favorites')
   @UseGuards(JwtAuthGuard)
-  getFavorites(@GetUser() user: User) {
-    return this.productsService.getFavorites(user.userId);
+  getFavorites(@Req() req) {
+    console.log('Headers:', req.headers);
+    console.log('Usuario autenticado:', req.user);
+    console.log('Usuario autenticado:', req.user);
+    return this.productsService.getFavorites(req.user.id);
   }
 
   @Get(":id")

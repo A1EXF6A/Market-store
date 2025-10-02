@@ -25,15 +25,20 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
+
           const response = await authService.login({ email, password });
-          Cookies.set("access_token", response.access_token, { expires: 7 });
+
+          localStorage.setItem("access_token", response.access_token);
+
           set({
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
           });
         } catch (error) {
+          console.log("Error in login:", error);
           set({ isLoading: false });
+
           throw error;
         }
       },

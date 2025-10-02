@@ -24,7 +24,7 @@ export const productsService = {
     if (filters?.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
     if (filters?.location) params.append('location', filters.location);
     if (filters?.search) params.append('search', filters.search);
-    
+
     const response = await api.get(`/products?${params.toString()}`);
     return response.data;
   },
@@ -39,14 +39,15 @@ export const productsService = {
     return response.data;
   },
 
-  getFavorites: async (): Promise<Product[]> => {
+  getFavorites: async (userId: number): Promise<Product[]> => {
     const response = await api.get('/products/favorites');
+    
     return response.data;
   },
 
   create: async (data: CreateProductData): Promise<Product> => {
     const formData = new FormData();
-    
+
     // Add text fields
     formData.append('name', data.name);
     if (data.description) formData.append('description', data.description);
@@ -55,14 +56,14 @@ export const productsService = {
     formData.append('type', data.type);
     formData.append('availability', data.availability.toString());
     if (data.workingHours) formData.append('workingHours', data.workingHours);
-    
+
     // Add images
     if (data.images) {
       data.images.forEach((image) => {
         formData.append('images', image);
       });
     }
-    
+
     const response = await api.post('/products', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -73,7 +74,7 @@ export const productsService = {
 
   update: async (id: number, data: UpdateProductData): Promise<Product> => {
     const formData = new FormData();
-    
+
     // Add text fields
     if (data.name) formData.append('name', data.name);
     if (data.description) formData.append('description', data.description);
@@ -82,21 +83,21 @@ export const productsService = {
     if (data.type) formData.append('type', data.type);
     if (data.availability !== undefined) formData.append('availability', data.availability.toString());
     if (data.workingHours) formData.append('workingHours', data.workingHours);
-    
+
     // Add images
     if (data.images) {
       data.images.forEach((image) => {
         formData.append('images', image);
       });
     }
-    
+
     // Add removed images
     if (data.removedImages) {
       data.removedImages.forEach((imageUrl) => {
         formData.append('removedImages', imageUrl);
       });
     }
-    
+
     const response = await api.patch(`/products/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

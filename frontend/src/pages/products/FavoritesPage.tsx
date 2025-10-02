@@ -5,10 +5,13 @@ import type { Product } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Heart, 
-  DollarSign, 
-  MapPin, 
+import { useAuthStore } from '../../store/authStore';
+import Cookies from 'js-cookie';
+
+import {
+  Heart,
+  DollarSign,
+  MapPin,
   Calendar,
   Eye,
   HeartOff
@@ -18,6 +21,7 @@ import { toast } from 'sonner';
 const FavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
     loadFavorites();
@@ -26,10 +30,14 @@ const FavoritesPage: React.FC = () => {
   const loadFavorites = async () => {
     try {
       setLoading(true);
-      const data = await productsService.getFavorites();
+      console.log(Cookies.get("access_token"));
+
+      const data = await productsService.getFavorites((Number)(user?.userId));
+
       setFavorites(data);
     } catch (error: any) {
       toast.error('Error al cargar tus favoritos');
+      console.error('Error fetching favorites:', error);
     } finally {
       setLoading(false);
     }
@@ -135,14 +143,14 @@ const FavoritesPage: React.FC = () => {
                       {product.price.toLocaleString()}
                     </div>
                   )}
-                  
+
                   {product.location && (
                     <div className="flex items-center text-gray-600 text-sm">
                       <MapPin className="h-4 w-4 mr-1" />
                       {product.location}
                     </div>
                   )}
-                  
+
                   <div className="flex items-center text-gray-500 text-xs">
                     <Calendar className="h-4 w-4 mr-1" />
                     Publicado {new Date(product.publishedAt).toLocaleDateString()}
@@ -167,7 +175,7 @@ const FavoritesPage: React.FC = () => {
           ))}
         </div>
       )}
-      
+
       {favorites.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-600 mb-4">
