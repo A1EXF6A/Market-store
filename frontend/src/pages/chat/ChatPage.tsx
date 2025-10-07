@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, is } from 'date-fns/locale';
 
 const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,6 +70,10 @@ const ChatPage: React.FC = () => {
 
       // Set up socket listeners
       socketService.onNewMessage((message: Message) => {
+        //codificamos el mensaje que llega por websocket
+        message = JSON.parse(message.content);
+
+        console.log("New message received via socket:", message);
         setMessages(prev => [...prev, message]);
 
         // Update chat list to move this chat to top
@@ -119,6 +123,7 @@ const ChatPage: React.FC = () => {
       socketService.joinChat(chat.chatId);
 
       // Load messages
+
       const messagesData = await chatService.getChatMessages(chat.chatId);
       setMessages(messagesData);
 
@@ -131,16 +136,16 @@ const ChatPage: React.FC = () => {
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedChat || sending) return;
-
     try {
       setSending(true);
       const messageData = {
         chatId: selectedChat.chatId,
         content: newMessage.trim(),
+        senderId: user?.userId
       };
 
       // Send via socket for real-time
-      socketService.sendMessage(selectedChat.chatId, newMessage.trim());
+      socketService.sendMessage(selectedChat.chatId, JSON.stringify(messageData));
 
       // Also send via API for persistence
       await chatService.sendMessage(messageData);
@@ -335,8 +340,8 @@ const ChatPage: React.FC = () => {
                   >
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-900'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-900'
                         }`}
                     >
                       <p className="text-sm">{message.content}</p>
@@ -367,7 +372,7 @@ const ChatPage: React.FC = () => {
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       </div>
-                      <span className="text-xs ml-2">escribiendo...</span>
+                      <span className="text-xs ml-2">Escribiendo...</span>
                     </div>
                   </div>
                 </div>
