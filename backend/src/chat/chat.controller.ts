@@ -13,6 +13,10 @@ export class ChatController {
   startChat(@Body("sellerId") sellerId: number, @GetUser() user: User) {
     return this.chatService.createOrGetChat(user.userId, sellerId);
   }
+  @Post("find-or-create")
+  findOrCreateChat(@Body("sellerId") sellerId: number, @GetUser() user: User) {
+    return this.chatService.createOrGetChat(user.userId, sellerId);
+  }
 
   @Get("my-chats")
   getMyChats(@GetUser() user: User) {
@@ -25,7 +29,7 @@ export class ChatController {
     return this.chatService.getChatMessages(+id);
   }
 
-  @Post(":id/messages")
+  @Post("messages")
   sendMessage(
     @Param("id") id: string,
     @Body("content") content: string,

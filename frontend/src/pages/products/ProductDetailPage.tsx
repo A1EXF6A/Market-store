@@ -20,6 +20,7 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { chatService } from '../../services/chat';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,7 +59,16 @@ const ProductDetailPage: React.FC = () => {
       toast.error('Error al actualizar favorito');
     }
   };
-
+  const handleContactSeller = async () => {
+    if (!product || !product.seller) return;
+    try {
+      const chat = await chatService.findOrCreateChat(product.seller.userId);
+      navigate(`/chat/${chat.chatId}`);
+    } catch (error: any) {
+      toast.error('Error al iniciar chat con el vendedor');
+      console.error(error);
+    }
+  };
   const getStatusBadge = (status: string) => {
     const statusMap = {
       active: 'bg-green-100 text-green-800',
@@ -211,7 +221,7 @@ const ProductDetailPage: React.FC = () => {
                       <Heart className="h-4 w-4 mr-2" />
                       Favorito
                     </Button>
-                    <Button className="flex-1">
+                    <Button className="flex-1" onClick={handleContactSeller}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Contactar Vendedor
                     </Button>
