@@ -7,9 +7,9 @@ import { useAuthStore } from '../../store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  MessageSquare, 
-  Send, 
+import {
+  MessageSquare,
+  Send,
   ArrowLeft,
   Clock,
   Search,
@@ -57,7 +57,7 @@ const ChatPage: React.FC = () => {
   const initializeChat = async () => {
     try {
       setLoading(true);
-      
+
       // Connect to socket
       const token = getToken();
       if (token) {
@@ -71,7 +71,7 @@ const ChatPage: React.FC = () => {
       // Set up socket listeners
       socketService.onNewMessage((message: Message) => {
         setMessages(prev => [...prev, message]);
-        
+
         // Update chat list to move this chat to top
         setChats(prev => {
           const chatIndex = prev.findIndex(c => c.chatId === message.chatId);
@@ -141,12 +141,12 @@ const ChatPage: React.FC = () => {
 
       // Send via socket for real-time
       socketService.sendMessage(selectedChat.chatId, newMessage.trim());
-      
+
       // Also send via API for persistence
       await chatService.sendMessage(messageData);
-      
+
       setNewMessage('');
-      
+
       // Stop typing indicator
       socketService.setTyping(selectedChat.chatId, false);
     } catch (error: any) {
@@ -158,7 +158,7 @@ const ChatPage: React.FC = () => {
 
   const handleTyping = (value: string) => {
     setNewMessage(value);
-    
+
     if (selectedChat) {
       // Clear previous timeout
       if (typingTimeoutRef.current) {
@@ -244,17 +244,16 @@ const ChatPage: React.FC = () => {
                 {filteredChats.map((chat) => {
                   const otherUser = getOtherUser(chat);
                   if (!otherUser) return null;
-                  
+
                   const isSelected = selectedChat?.chatId === chat.chatId;
                   const lastMessage = chat.messages?.[chat.messages.length - 1];
-                  
+
                   return (
                     <div
                       key={chat.chatId}
                       onClick={() => selectChat(chat)}
-                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${
-                        isSelected ? 'bg-blue-50 border-blue-200' : ''
-                      }`}
+                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${isSelected ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -335,26 +334,29 @@ const ChatPage: React.FC = () => {
                     className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        isOwn
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-200 text-gray-900'
-                      }`}
+                        }`}
                     >
                       <p className="text-sm">{message.content}</p>
-                      <div className={`flex items-center justify-end mt-1 ${
-                        isOwn ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
+                      <div className={`flex items-center justify-end mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
                         <Clock className="h-3 w-3 mr-1" />
                         <span className="text-xs">
-                          {format(new Date(message.sentAt), 'HH:mm', { locale: es })}
+                          {format(
+                            new Date(message.sentAt ?? new Date().toISOString()),
+                            'HH:mm',
+                            { locale: es }
+                          )}
+
                         </span>
                       </div>
                     </div>
                   </div>
                 );
               })}
-              
+
               {/* Typing Indicator */}
               {Array.from(typingUsers).filter(userId => userId !== user?.userId).length > 0 && (
                 <div className="flex justify-start">
@@ -370,7 +372,7 @@ const ChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -385,8 +387,8 @@ const ChatPage: React.FC = () => {
                   disabled={sending}
                   className="flex-1"
                 />
-                <Button 
-                  onClick={sendMessage} 
+                <Button
+                  onClick={sendMessage}
                   disabled={!newMessage.trim() || sending}
                   size="sm"
                 >

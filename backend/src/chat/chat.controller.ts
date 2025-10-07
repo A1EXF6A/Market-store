@@ -31,10 +31,11 @@ export class ChatController {
 
   @Post("messages")
   sendMessage(
-    @Param("id") id: string,
+    @Body("chatId") id: string,
     @Body("content") content: string,
     @GetUser() user: User,
   ) {
+    console.log("Creating message in chat:", id, "by user:", user.userId);
     return this.chatService.createMessage(+id, user.userId, content);
   }
 }
