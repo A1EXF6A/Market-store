@@ -13,7 +13,7 @@ export interface SendMessageData {
 
 export const chatService = {
   getChats: async (): Promise<Chat[]> => {
-    const response = await api.get('/chats');
+    const response = await api.get('/chats/my-chats');
     return response.data;
   },
 

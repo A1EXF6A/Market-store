@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { chatService } from '../../services/chat';
-import { socketService } from '../../services/socket';
+import { socketService } from '../../services/websocket';
 import type { Chat, Message } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

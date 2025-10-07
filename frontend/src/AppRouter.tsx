@@ -45,8 +45,6 @@ function AppRouter() {
           }
         />
 
-
-
         <Route
           path="/"
           element={

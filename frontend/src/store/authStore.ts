@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       getToken: () => {
-        return Cookies.get("access_token");
+        return localStorage.getItem("access_token") || undefined;
       },
     }),
     {

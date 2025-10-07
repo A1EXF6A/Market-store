@@ -1,13 +1,13 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, UseGuards, Inject } from "@nestjs/common";
 import { ChatService } from "./chat.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { GetUser } from "../common/decorators/get-user.decorator";
 import { User } from "../entities/user.entity";
 
-@Controller("chat")
+@Controller("chats")
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor( @Inject(ChatService) private readonly  chatService: ChatService) {}
 
   @Post("start")
   startChat(@Body("sellerId") sellerId: number, @GetUser() user: User) {
@@ -16,6 +16,7 @@ export class ChatController {
 
   @Get("my-chats")
   getMyChats(@GetUser() user: User) {
+    console.log("User ID:", user.userId); 
     return this.chatService.getUserChats(user.userId);
   }
 
