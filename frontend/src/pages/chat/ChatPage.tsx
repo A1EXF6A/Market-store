@@ -23,6 +23,7 @@ const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, getToken } = useAuthStore();
+  const [otherUser, setOtherUser] =useState(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -126,11 +127,14 @@ const ChatPage: React.FC = () => {
 
       const messagesData = await chatService.getChatMessages(chat.chatId);
       setMessages(messagesData);
-
+      //set other user
+      const otherUser = user?.userId === chat.buyerId ? chat.seller : chat.buyer;
+      setOtherUser(otherUser);
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
     } catch (error: any) {
-      toast.error('Error al cargar mensajes');
+      toast.error('Erro  r al cargar mensajes');
+      console.error(error);
     }
   };
 
@@ -363,7 +367,7 @@ const ChatPage: React.FC = () => {
               })}
 
               {/* Typing Indicator */}
-              {Array.from(typingUsers).filter(userId => userId !== user?.userId).length > 0 && (
+              {Array.from(typingUsers).filter(userId => userId !== otherUser?.userId).length > 0 && (
                 <div className="flex justify-start">
                   <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
                     <div className="flex items-center space-x-1">
