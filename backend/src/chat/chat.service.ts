@@ -33,7 +33,6 @@ export class ChatService {
   }
 
   async getUserChats(userId: number): Promise<Chat[]> {
-    
     return this.chatRepository.find({
       where: [{ buyerId: userId }, { sellerId: userId }],
       relations: ["buyer", "seller", "messages"],
@@ -41,22 +40,26 @@ export class ChatService {
     });
   }
 
-  async getChatMessages(user:User,chatId: number): Promise<Message[]> {
+  async getChatMessages(user: User, chatId: number): Promise<Message[]> {
     //si el chat no le pertenece al usuario, lanzar error
     const chat = await this.chatRepository.findOne({
       where: { chatId },
       relations: ["buyer", "seller"],
     });
-    if (!chat || (chat.buyer.userId !== user.userId && chat.seller.userId !== user.userId)) {
+    if (
+      !chat ||
+      (chat.buyer.userId !== user.userId && chat.seller.userId !== user.userId)
+    ) {
       throw new Error("Access denied");
     }
-    
+
     return this.messageRepository.find({
       where: { chatId },
       relations: ["sender"],
       order: { sentAt: "ASC" },
     });
   }
+
   async getChatById(chatId: number): Promise<Chat> {
     return this.chatRepository.findOne({
       where: { chatId },
