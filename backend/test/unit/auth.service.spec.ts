@@ -54,6 +54,27 @@ describe('AuthService', () => {
         lastName: 'User'
       } as any)).rejects.toThrow(ConflictException);
     });
+
+    it('debería lanzar error si faltan campos (email/nationalId/password)', async () => {
+      await expect(service.register({} as any)).rejects.toThrow(ConflictException);
+    });
+
+    it('debería lanzar error si nationalId ya existe', async () => {
+      // Simular que la verificación por email no encuentra nada, pero la de nationalId sí
+      (userRepo.findOneBy as jest.Mock)
+        .mockResolvedValueOnce(null) // email check
+        .mockResolvedValueOnce({ nationalId: '123' } as any); // nationalId check
+
+      await expect(
+        service.register({
+          email: 'unique@example.com',
+          nationalId: '123',
+          password: '12345678',
+          firstName: 'Test',
+          lastName: 'User'
+        } as any)
+      ).rejects.toThrow(ConflictException);
+    });
   });
 
   describe('login', () => {
@@ -70,6 +91,20 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'wrong@example.com', password: 'invalid' })
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('debería lanzar error si faltan campos (email/password)', async () => {
+      await expect(service.login({} as any)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('validateUser', () => {
+    it('debería devolver usuario por id usando userRepository.findOne', async () => {
+      const user = { userId: 42, email: 'u@example.com' } as any;
+      userRepo.findOne.mockResolvedValue(user);
+      const result = await service.validateUser(42);
+      expect(result).toBe(user);
+      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { userId: 42 } });
     });
   });
 });
