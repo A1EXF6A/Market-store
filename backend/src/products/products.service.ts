@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { Favorite } from "src/entities/favorite.entity";
 import { ItemPhoto } from "src/entities/item-photo.entity";
 import { ItemStatus, ItemType } from "../entities/enums";
@@ -13,6 +13,8 @@ import { User } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class ProductsService {
@@ -29,9 +31,10 @@ export class ProductsService {
 
   async create(
     createProductDto: CreateProductDto,
+    files: { images?: Express.Multer.File[] },
     sellerId: number,
   ): Promise<Item> {
-    const { photos, workingHours, ...itemData } = createProductDto;
+    const { workingHours, ...itemData } = createProductDto;
 
     const code = await this.generateUniqueCode();
 
@@ -46,8 +49,9 @@ export class ProductsService {
 
     const savedItem = await this.itemRepository.save(item);
 
-    if (photos && photos.length > 0) {
-      const photoEntities = photos.map((url) =>
+    if (files.images && files.images.length > 0) {
+      const photoUrls = await this.saveImages(files.images);
+      const photoEntities = photoUrls.map((url) =>
         this.photoRepository.create({ itemId: savedItem.itemId, url }),
       );
       await this.photoRepository.save(photoEntities);
@@ -120,6 +124,7 @@ export class ProductsService {
   async update(
     id: number,
     updateProductDto: UpdateProductDto,
+    files: { images?: Express.Multer.File[] },
     user: User,
   ): Promise<Item> {
     const item = await this.findOne(id);
@@ -128,14 +133,20 @@ export class ProductsService {
       throw new ForbiddenException("You can only update your own products");
     }
 
-    const { photos, workingHours, ...updateData } = updateProductDto;
+    const { workingHours, removedImages, ...updateData } = updateProductDto;
 
     await this.itemRepository.update(id, updateData);
 
-    if (photos) {
+    if (removedImages && removedImages.length > 0) {
+      await this.removeImages(removedImages);
+      await this.photoRepository.delete({ itemId: id, url: In(removedImages) });
+    }
+
+    if (files.images) {
       await this.photoRepository.delete({ itemId: id });
-      if (photos.length > 0) {
-        const photoEntities = photos.map((url) =>
+      if (files.images.length > 0) {
+        const photoUrls = await this.saveImages(files.images);
+        const photoEntities = photoUrls.map((url) =>
           this.photoRepository.create({ itemId: id, url }),
         );
         await this.photoRepository.save(photoEntities);
@@ -204,6 +215,36 @@ export class ProductsService {
     }
 
     return code;
+  }
+
+  private async saveImages(images: Express.Multer.File[]): Promise<string[]> {
+    const urls: string[] = [];
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    for (const image of images) {
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${path.extname(image.originalname)}`;
+      const filePath = path.join(uploadDir, uniqueName);
+      fs.writeFileSync(filePath, image.buffer);
+      urls.push(`/uploads/${uniqueName}`);
+    }
+
+    return urls;
+  }
+
+  private async removeImages(urls: string[]): Promise<void> {
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+
+    for (const url of urls) {
+      const fileName = path.basename(url);
+      const filePath = path.join(uploadDir, fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
   }
 
   private detectProhibitedContent(name: string, description?: string): boolean {

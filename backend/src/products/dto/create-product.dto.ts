@@ -8,6 +8,7 @@ import {
   ArrayMaxSize,
   IsBoolean,
 } from "class-validator";
+import { Transform } from "class-transformer";
 import { ItemType } from "../../entities/enums";
 
 export class CreateProductDto {
@@ -22,24 +23,21 @@ export class CreateProductDto {
   @IsOptional()
   description?: string;
 
-  @IsNumber()
-  @IsOptional()
-  price?: number;
+   @IsNumber()
+   @IsOptional()
+   @Transform(({ value }) => value ? parseFloat(value) : undefined)
+   price?: number;
 
   @IsString()
   @IsOptional()
   location?: string;
 
-  @IsBoolean()
-  @IsOptional()
-  availability?: boolean;
+   @IsBoolean()
+   @IsOptional()
+   @Transform(({ value }) => value === 'true')
+   availability?: boolean;
 
-  @IsArray()
-  @ArrayMaxSize(5)
-  @IsOptional()
-  photos?: string[];
-
-  @IsString()
-  @IsOptional()
-  workingHours?: string;
+   @IsString()
+   @IsOptional()
+   workingHours?: string;
 }

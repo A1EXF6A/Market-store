@@ -10,7 +10,10 @@ import {
   Query,
   Inject,
   Req,
+  UseInterceptors,
+  UploadedFiles,
 } from "@nestjs/common";
+import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ProductsService } from "./products.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -29,8 +32,9 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
-  create(@Body() createProductDto: CreateProductDto, @GetUser() user: User) {
-    return this.productsService.create(createProductDto, user.userId);
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
+  create(@Body() createProductDto: CreateProductDto, @UploadedFiles() files: { images?: Express.Multer.File[] }, @GetUser() user: User) {
+    return this.productsService.create(createProductDto, files, user.userId);
   }
 
   @Get()
@@ -59,12 +63,14 @@ export class ProductsController {
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
   update(
     @Param("id") id: string,
     @Body() updateProductDto: UpdateProductDto,
+    @UploadedFiles() files: { images?: Express.Multer.File[] },
     @GetUser() user: User,
   ) {
-    return this.productsService.update(+id, updateProductDto, user);
+    return this.productsService.update(+id, updateProductDto, files, user);
   }
 
   @Delete(":id")
