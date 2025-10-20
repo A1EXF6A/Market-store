@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService } from '../../services/products';
+import { API_BASE } from '../../services/api';
 import type { Product, ProductFilters } from '../../types';
 import { ItemType, UserRole } from '../../types';
 import { useAuthStore } from '../../store/authStore';
@@ -183,7 +184,7 @@ const ProductsPage: React.FC = () => {
                 <div className="aspect-video bg-gray-200 rounded-t-lg relative">
                   {product.photos.length > 0 ? (
                     <img
-                      src={product.photos[0].url}
+                      src={`${API_BASE}${product.photos[0].url}`}
                       alt={product.name}
                       className="w-full h-full object-cover rounded-t-lg"
                     />

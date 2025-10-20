@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { productsService } from '../../services/products';
+import { API_BASE } from '../../services/api';
 import type { Product } from '../../types';
 import { UserRole } from '../../types';
 import { useAuthStore } from '../../store/authStore';
@@ -111,7 +112,7 @@ const ProductDetailPage: React.FC = () => {
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
                 {product.photos.length > 0 ? (
                   <img
-                    src={product.photos[currentImageIndex]?.url || product.photos[0].url}
+                     src={`${API_BASE}${product.photos[currentImageIndex]?.url || product.photos[0].url}`}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -134,8 +135,8 @@ const ProductDetailPage: React.FC = () => {
                     currentImageIndex === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
                 >
-                  <img
-                    src={photo.url}
+                   <img
+                    src={`${API_BASE}${photo.url}`}
                     alt={`${product.name} ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
