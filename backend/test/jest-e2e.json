@@ -1,0 +1,16 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testRegex": "integration/.*\\.(spec|test)\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testTimeout": 60000,
+  "maxWorkers": 1,
+  "clearMocks": true,
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/src/$1"
+  }
+}
