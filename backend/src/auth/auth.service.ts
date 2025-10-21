@@ -48,7 +48,8 @@ export class AuthService {
       email,
       nationalId,
       passwordHash: hashedPassword,
-      role: UserRole.BUYER,
+      // Use provided role when present, otherwise default to BUYER
+      role: (userData as any).role ?? UserRole.BUYER,
     });
 
     await this.userRepository.save(user);

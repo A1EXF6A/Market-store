@@ -18,12 +18,22 @@ const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
+  const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
   const [showFilters, setShowFilters] = useState(false);
   const { user } = useAuthStore();
 
   useEffect(() => {
     loadProducts();
   }, [filters]);
+
+  // Debounce updating filters.search to avoid calling API on every keystroke
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchTerm || undefined }));
+    }, 300);
+
+    return () => clearTimeout(id);
+  }, [searchTerm]);
 
   const loadProducts = async () => {
     try {
@@ -52,6 +62,7 @@ const ProductsPage: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({});
+    setSearchTerm('');
   };
 
   const getStatusBadge = (status: string) => {
@@ -110,8 +121,8 @@ const ProductsPage: React.FC = () => {
                 <Input
                   id="search"
                   placeholder="Nombre del producto..."
-                  value={filters.search || ''}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
