@@ -30,7 +30,7 @@ const ProductsPage: React.FC = () => {
   useEffect(() => {
     const id = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchTerm || undefined }));
-    }, 300);
+    }, 1000);
 
     return () => clearTimeout(id);
   }, [searchTerm]);
