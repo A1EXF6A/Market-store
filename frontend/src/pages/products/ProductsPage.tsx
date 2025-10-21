@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService } from '../../services/products';
+import { API_BASE } from '../../services/api';
 import type { Product, ProductFilters } from '../../types';
 import { ItemType, UserRole } from '../../types';
 import { useAuthStore } from '../../store/authStore';
@@ -17,12 +18,22 @@ const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
+  const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
   const [showFilters, setShowFilters] = useState(false);
   const { user } = useAuthStore();
 
   useEffect(() => {
     loadProducts();
   }, [filters]);
+
+  // Debounce updating filters.search to avoid calling API on every keystroke
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchTerm || undefined }));
+    }, 1000);
+
+    return () => clearTimeout(id);
+  }, [searchTerm]);
 
   const loadProducts = async () => {
     try {
@@ -51,6 +62,7 @@ const ProductsPage: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({});
+    setSearchTerm('');
   };
 
   const getStatusBadge = (status: string) => {
@@ -109,8 +121,8 @@ const ProductsPage: React.FC = () => {
                 <Input
                   id="search"
                   placeholder="Nombre del producto..."
-                  value={filters.search || ''}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
@@ -183,7 +195,7 @@ const ProductsPage: React.FC = () => {
                 <div className="aspect-video bg-gray-200 rounded-t-lg relative">
                   {product.photos.length > 0 ? (
                     <img
-                      src={product.photos[0].url}
+                      src={`${API_BASE}${product.photos[0].url}`}
                       alt={product.name}
                       className="w-full h-full object-cover rounded-t-lg"
                     />

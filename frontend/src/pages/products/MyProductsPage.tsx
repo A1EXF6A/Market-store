@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService } from '../../services/products';
+import { API_BASE } from '../../services/api';
 import type { Product } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -146,7 +147,7 @@ const MyProductsPage: React.FC = () => {
                         <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden">
                           {product.photos.length > 0 ? (
                             <img
-                              src={product.photos[0].url}
+                              src={`${API_BASE}${product.photos[0].url}`}
                               alt={product.name}
                               className="w-full h-full object-cover"
                             />

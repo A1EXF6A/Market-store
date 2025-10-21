@@ -6,7 +6,7 @@ import {
   IsEnum,
   IsOptional,
 } from "class-validator";
-import { UserGender } from "../../entities/user.entity";
+import { UserGender, UserRole } from "../../entities/user.entity";
 
 export class RegisterDto {
   @IsString()
@@ -32,11 +32,15 @@ export class RegisterDto {
   @IsOptional()
   address?: string;
 
-  @IsEnum(UserGender)
-  @IsOptional()
-  gender?: UserGender;
+   @IsEnum(UserGender)
+   @IsOptional()
+   gender?: UserGender;
 
-  @IsString()
-  @MinLength(8)
-  password: string;
+   @IsEnum(UserRole)
+   @IsOptional()
+   role?: UserRole;
+
+   @IsString()
+   @MinLength(8)
+   password: string;
 }
