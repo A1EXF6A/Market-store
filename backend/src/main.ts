@@ -1,10 +1,11 @@
 import "reflect-metadata";
 
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import { ValidationPipe } from "@nestjs/common";
-import { AppModule } from "./app.module";
 import { join } from "path";
+import { AppModule } from "./app.module";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import env from "./config/env";
 
 async function bootstrap() {
@@ -18,13 +19,17 @@ async function bootstrap() {
     }),
   );
 
+  const filter = new HttpExceptionFilter();
+
+  app.useGlobalFilters(filter);
+
   app.enableCors({
     origin: "*",
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
   });
 
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
+  app.useStaticAssets(join(__dirname, "..", "uploads"), { prefix: "/uploads" });
 
   const port = env.port;
   await app.listen(port);

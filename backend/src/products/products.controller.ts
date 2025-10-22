@@ -27,13 +27,17 @@ import { User, UserRole } from "../entities/user.entity";
 export class ProductsController {
   constructor(
     @Inject(ProductsService) private readonly productsService: ProductsService,
-  ) { }
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
-  create(@Body() createProductDto: CreateProductDto, @UploadedFiles() files: { images?: Express.Multer.File[] }, @GetUser() user: User) {
+  @UseInterceptors(FileFieldsInterceptor([{ name: "images", maxCount: 5 }]))
+  create(
+    @Body() createProductDto: CreateProductDto,
+    @UploadedFiles() files: { images?: Express.Multer.File[] },
+    @GetUser() user: User,
+  ) {
     return this.productsService.create(createProductDto, files, user.userId);
   }
 
@@ -49,7 +53,7 @@ export class ProductsController {
     return this.productsService.findBySeller(user.userId);
   }
 
-  @Get('favorites')
+  @Get("favorites")
   @UseGuards(JwtAuthGuard)
   getFavorites(@Req() req) {
     return this.productsService.getFavorites(req.user.userId);
@@ -63,7 +67,7 @@ export class ProductsController {
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
+  @UseInterceptors(FileFieldsInterceptor([{ name: "images", maxCount: 5 }]))
   update(
     @Param("id") id: string,
     @Body() updateProductDto: UpdateProductDto,

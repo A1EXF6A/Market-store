@@ -13,8 +13,8 @@ import { User } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 @Injectable()
 export class ProductsService {
@@ -27,7 +27,7 @@ export class ProductsService {
     private serviceRepository: Repository<Service>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
-  ) { }
+  ) {}
 
   async create(
     createProductDto: CreateProductDto,
@@ -75,6 +75,16 @@ export class ProductsService {
       .leftJoinAndSelect("item.photos", "photos")
       .leftJoinAndSelect("item.service", "service")
       .where("item.status = :status", { status: ItemStatus.ACTIVE });
+
+    if (!filters) {
+      return queryBuilder.getMany();
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere("item.name ILIKE :name", {
+        name: `%${filters.search}%`,
+      });
+    }
 
     if (filters?.type) {
       queryBuilder.andWhere("item.type = :type", { type: filters.type });
@@ -193,7 +203,7 @@ export class ProductsService {
     }
   }
   async getFavorites(userId: number): Promise<Item[]> {
-    console.log('Buscando favoritos para usuario:', userId);
+    console.log("Buscando favoritos para usuario:", userId);
 
     const favorites = await this.favoriteRepository.find({
       where: { user: { userId } }, // 🔹 Filtra usando la relación
@@ -202,7 +212,6 @@ export class ProductsService {
 
     return favorites.map((fav) => fav.item);
   }
-
 
   private async generateUniqueCode(): Promise<string> {
     let code: string;
@@ -219,7 +228,7 @@ export class ProductsService {
 
   private async saveImages(images: Express.Multer.File[]): Promise<string[]> {
     const urls: string[] = [];
-    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+    const uploadDir = path.join(__dirname, "..", "..", "uploads");
 
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -236,7 +245,7 @@ export class ProductsService {
   }
 
   private async removeImages(urls: string[]): Promise<void> {
-    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+    const uploadDir = path.join(__dirname, "..", "..", "uploads");
 
     for (const url of urls) {
       const fileName = path.basename(url);

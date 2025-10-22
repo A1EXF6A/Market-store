@@ -1,17 +1,17 @@
 import {
-  Injectable,
-  UnauthorizedException,
   ConflictException,
   Inject,
+  Injectable,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 import * as bcrypt from "bcryptjs";
+import { Repository } from "typeorm";
 
 import { User, UserRole } from "../entities/user.entity";
-import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
 
 @Injectable()
 export class AuthService {
@@ -77,9 +77,13 @@ export class AuthService {
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
+    const passwordCompare = await bcrypt.compare(
+      password,
+      user?.passwordHash || "",
+    );
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      throw new UnauthorizedException("Invalid credentials");
+    if (!user || !passwordCompare) {
+      throw new UnauthorizedException("INVALID_CREDENTIALS");
     }
 
     const payload = { email: user.email, sub: user.userId, role: user.role };
