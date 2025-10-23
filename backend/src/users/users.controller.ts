@@ -1,9 +1,12 @@
-import { Controller, Get, Param, Patch, Body, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Patch, Body, UseGuards, Put } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
-import { UserRole, UserStatus } from "../entities/user.entity";
+import { GetUser } from "../common/decorators/get-user.decorator";
+import { UserRole, UserStatus, User } from "../entities/user.entity";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 
 @Controller("users")
 @UseGuards(JwtAuthGuard)
@@ -34,5 +37,16 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   verifyUser(@Param("id") id: string) {
     return this.usersService.verifyUser(+id);
+  }
+
+  @Put("profile")
+  updateProfile(@GetUser() user: User, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.updateUser(user.userId, updateUserDto);
+  }
+
+  @Patch("change-password")
+  async changePassword(@GetUser() user: User, @Body() changePasswordDto: ChangePasswordDto) {
+    await this.usersService.changePassword(user.userId, changePasswordDto);
+    return { message: "Password changed successfully" };
   }
 }

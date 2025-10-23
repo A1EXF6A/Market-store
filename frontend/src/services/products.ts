@@ -7,7 +7,6 @@ export interface CreateProductData {
   price?: number;
   location?: string;
   type: "product" | "service";
-  availability: boolean;
   workingHours?: string;
   images?: File[];
 }
@@ -47,7 +46,7 @@ export const productsService = {
     return response.data;
   },
 
-  getFavorites: async (userId: number): Promise<Product[]> => {
+  getFavorites: async (): Promise<Product[]> => {
     const response = await api.get("/products/favorites");
 
     return response.data;
@@ -62,7 +61,6 @@ export const productsService = {
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     formData.append("type", data.type);
-    formData.append("availability", data.availability.toString());
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 
     // Add images
@@ -89,8 +87,6 @@ export const productsService = {
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     if (data.type) formData.append("type", data.type);
-    if (data.availability !== undefined)
-      formData.append("availability", data.availability.toString());
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 
     // Add images
@@ -115,6 +111,16 @@ export const productsService = {
     return response.data;
   },
 
+  updateAvailability: async (
+    id: number,
+    available: boolean,
+  ): Promise<Product> => {
+    const response = await api.patch(`/products/${id}/availability`, {
+      available,
+    });
+    return response.data;
+  },
+
   delete: async (id: number): Promise<void> => {
     await api.delete(`/products/${id}`);
   },
@@ -128,5 +134,20 @@ export const productsService = {
       data: { imageUrl },
     });
   },
-};
 
+  hideProduct: async (id: number, reason: string): Promise<void> => {
+    await api.patch(`/products/${id}/status`, { status: 'hidden', reason });
+  },
+
+  suspendProduct: async (id: number, reason: string): Promise<void> => {
+    await api.patch(`/products/${id}/status`, { status: 'suspended', reason });
+  },
+
+  banProduct: async (id: number, reason: string): Promise<void> => {
+    await api.patch(`/products/${id}/status`, { status: 'banned', reason });
+  },
+
+  activateProduct: async (id: number): Promise<void> => {
+    await api.patch(`/products/${id}/status`, { status: 'active' });
+  },
+};

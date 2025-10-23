@@ -38,11 +38,11 @@ export const usersService = {
   },
 
   suspend: async (id: number): Promise<void> => {
-    await api.post(`/users/${id}/suspend`);
+    await api.patch(`/users/${id}/status`, { status: 'suspended' });
   },
 
   unsuspend: async (id: number): Promise<void> => {
-    await api.post(`/users/${id}/unsuspend`);
+    await api.patch(`/users/${id}/status`, { status: 'active' });
   },
 
   delete: async (id: number): Promise<void> => {

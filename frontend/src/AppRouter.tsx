@@ -4,6 +4,8 @@ import Layout from "./components/layout/Layout";
 import { ProtectedRoute, PublicRoute } from "./components/routes/routes";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import ChatPage from "./pages/chat/ChatPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import IncidentsPage from "./pages/incidents/IncidentsPage";
@@ -41,6 +43,22 @@ function AppRouter() {
           element={
             <PublicRoute>
               <RegisterPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
             </PublicRoute>
           }
         />

@@ -172,6 +172,15 @@ export class ProductsService {
     return this.findOne(id);
   }
 
+  toggleAvailability = async (id: number, available: boolean) => {
+    const item = await this.findOne(id);
+
+    item.availability = available;
+    await this.itemRepository.save(item);
+
+    return item;
+  };
+
   async remove(id: number, user: User): Promise<void> {
     const item = await this.findOne(id);
 
@@ -254,6 +263,18 @@ export class ProductsService {
         fs.unlinkSync(filePath);
       }
     }
+  }
+
+  async updateStatus(
+    id: number,
+    status: ItemStatus,
+    reason?: string,
+  ): Promise<Item> {
+    const item = await this.findOne(id);
+
+    await this.itemRepository.update(id, { status });
+
+    return this.findOne(id);
   }
 
   private detectProhibitedContent(name: string, description?: string): boolean {
