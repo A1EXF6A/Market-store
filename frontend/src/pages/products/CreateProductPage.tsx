@@ -1,31 +1,39 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { productsService } from '../../services/products';
-import type { CreateProductData } from '../../services/products';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import ImageUpload from '@/components/ui/image-upload';
-import { ArrowLeft, Save } from 'lucide-react';
-import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { productsService } from "../../services/products";
+import type { CreateProductData } from "../../services/products";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ImageUpload from "@/components/ui/image-upload";
+import { ArrowLeft, Save } from "lucide-react";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 const productSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').max(200, 'Máximo 200 caracteres'),
+  name: z
+    .string()
+    .min(1, "El nombre es requerido")
+    .max(200, "Máximo 200 caracteres"),
   description: z.string().optional(),
-  price: z.number().min(0, 'El precio debe ser mayor a 0').optional(),
-  location: z.string().max(150, 'Máximo 150 caracteres').optional(),
-  type: z.enum(['product', 'service']).refine(val => val, {
-    message: 'Selecciona un tipo'
+  category: z.string().max(100, "Máximo 100 caracteres").optional(),
+  price: z.number().min(0, "El precio debe ser mayor a 0").optional(),
+  location: z.string().max(150, "Máximo 150 caracteres").optional(),
+  type: z.enum(["product", "service"]).refine((val) => val, {
+    message: "Selecciona un tipo",
   }),
-  availability: z.boolean(),
   workingHours: z.string().optional(),
 });
 
@@ -35,7 +43,7 @@ const CreateProductPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(false);
   const [images, setImages] = React.useState<File[]>([]);
-  
+
   const {
     register,
     handleSubmit,
@@ -45,12 +53,11 @@ const CreateProductPage: React.FC = () => {
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      availability: true,
-      type: 'product',
+      type: "product",
     },
   });
 
-  const selectedType = watch('type');
+  const selectedType = watch("type");
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -58,19 +65,21 @@ const CreateProductPage: React.FC = () => {
       const createData: CreateProductData = {
         name: data.name,
         description: data.description,
+        category: data.category,
         price: data.price,
         location: data.location,
         type: data.type,
-        availability: data.availability,
         workingHours: data.workingHours,
         images: images,
       };
-      
+
       await productsService.create(createData);
-      toast.success('Producto creado exitosamente');
-      navigate('/my-products');
+      toast.success("Producto creado exitosamente");
+      navigate("/my-products");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al crear el producto');
+      toast.error(
+        error.response?.data?.message || "Error al crear el producto",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +108,7 @@ const CreateProductPage: React.FC = () => {
               <Input
                 id="name"
                 placeholder="Ej: iPhone 15 Pro Max"
-                {...register('name')}
+                {...register("name")}
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
@@ -108,7 +117,11 @@ const CreateProductPage: React.FC = () => {
 
             <div className="space-y-2">
               <Label htmlFor="type">Tipo *</Label>
-              <Select onValueChange={(value) => setValue('type', value as 'product' | 'service')}>
+              <Select
+                onValueChange={(value) =>
+                  setValue("type", value as "product" | "service")
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona el tipo" />
                 </SelectTrigger>
@@ -128,10 +141,26 @@ const CreateProductPage: React.FC = () => {
                 id="description"
                 placeholder="Describe tu producto o servicio..."
                 rows={4}
-                {...register('description')}
+                {...register("description")}
               />
               {errors.description && (
-                <p className="text-sm text-red-600">{errors.description.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.description.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Input
+                id="category"
+                placeholder="Ej: Electrónicos, Ropa, Servicios..."
+                {...register("category")}
+              />
+              {errors.category && (
+                <p className="text-sm text-red-600">
+                  {errors.category.message}
+                </p>
               )}
             </div>
 
@@ -152,7 +181,7 @@ const CreateProductPage: React.FC = () => {
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  {...register('price', { valueAsNumber: true })}
+                  {...register("price", { valueAsNumber: true })}
                 />
                 {errors.price && (
                   <p className="text-sm text-red-600">{errors.price.message}</p>
@@ -164,44 +193,36 @@ const CreateProductPage: React.FC = () => {
                 <Input
                   id="location"
                   placeholder="Ciudad, región..."
-                  {...register('location')}
+                  {...register("location")}
                 />
                 {errors.location && (
-                  <p className="text-sm text-red-600">{errors.location.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.location.message}
+                  </p>
                 )}
               </div>
             </div>
 
-            {selectedType === 'service' && (
+            {selectedType === "service" && (
               <div className="space-y-2">
                 <Label htmlFor="workingHours">Horario de Atención</Label>
                 <Input
                   id="workingHours"
                   placeholder="Ej: Lunes a Viernes 9:00 AM - 6:00 PM"
-                  {...register('workingHours')}
+                  {...register("workingHours")}
                 />
                 {errors.workingHours && (
-                  <p className="text-sm text-red-600">{errors.workingHours.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.workingHours.message}
+                  </p>
                 )}
               </div>
             )}
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="availability"
-                {...register('availability')}
-                className="rounded border-gray-300"
-              />
-              <Label htmlFor="availability">Producto disponible</Label>
-            </div>
-
-            <Separator />
-
             <div className="flex gap-4">
               <Button type="submit" disabled={isLoading} className="flex-1">
                 {isLoading ? (
-                  'Creando...'
+                  "Creando..."
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
@@ -221,3 +242,4 @@ const CreateProductPage: React.FC = () => {
 };
 
 export default CreateProductPage;
+

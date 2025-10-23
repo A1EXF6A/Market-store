@@ -1,23 +1,25 @@
 import {
-  Injectable,
-  UnauthorizedException,
   ConflictException,
   Inject,
+  Injectable,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 import * as bcrypt from "bcryptjs";
+import { Repository } from "typeorm";
 
 import { User, UserRole } from "../entities/user.entity";
-import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { EmailService } from "../common/services/email.service";
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     @Inject(JwtService) private jwtService: JwtService,
+    @Inject(EmailService) private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -54,6 +56,18 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
+    // Send verification email
+    const verificationToken = this.jwtService.sign(
+      { userId: user.userId, type: 'email_verification' },
+      { expiresIn: '24h' }
+    );
+    
+    try {
+      await this.emailService.sendVerificationEmail(user.email, verificationToken, user.firstName);
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+    }
+
     const payload = { email: user.email, sub: user.userId, role: user.role };
 
     return {
@@ -77,9 +91,13 @@ export class AuthService {
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
+    const passwordCompare = await bcrypt.compare(
+      password,
+      user?.passwordHash || "",
+    );
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      throw new UnauthorizedException("Invalid credentials");
+    if (!user || !passwordCompare) {
+      throw new UnauthorizedException("INVALID_CREDENTIALS");
     }
 
     const payload = { email: user.email, sub: user.userId, role: user.role };
@@ -99,5 +117,112 @@ export class AuthService {
 
   async validateUser(userId: number): Promise<User> {
     return this.userRepository.findOne({ where: { userId } });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return { message: "If the email exists, a reset link has been sent" };
+    }
+
+    // Generate reset token
+    const resetToken = this.jwtService.sign(
+      { userId: user.userId, type: 'password_reset' },
+      { expiresIn: '1h' }
+    );
+
+    // Send email with reset token
+    try {
+      await this.emailService.sendPasswordResetEmail(email, resetToken);
+      return { message: "If the email exists, a reset link has been sent" };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      return { message: "If the email exists, a reset link has been sent" };
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    try {
+      const payload = this.jwtService.verify(token);
+      
+      if (payload.type !== 'password_reset') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      const user = await this.userRepository.findOne({ 
+        where: { userId: payload.userId } 
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      // Update password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.passwordHash = hashedPassword;
+      await this.userRepository.save(user);
+
+      return { message: "Password reset successfully" };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    try {
+      const payload = this.jwtService.verify(token);
+      
+      if (payload.type !== 'email_verification') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      const user = await this.userRepository.findOne({ 
+        where: { userId: payload.userId } 
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      if (user.verified) {
+        return { message: "Email already verified" };
+      }
+
+      // Update verification status
+      user.verified = true;
+      await this.userRepository.save(user);
+
+      return { message: "Email verified successfully" };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async resendVerificationEmail(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    
+    if (!user) {
+      return { message: "If the email exists, a verification link has been sent" };
+    }
+
+    if (user.verified) {
+      return { message: "Email is already verified" };
+    }
+
+    // Generate new verification token
+    const verificationToken = this.jwtService.sign(
+      { userId: user.userId, type: 'email_verification' },
+      { expiresIn: '24h' }
+    );
+
+    try {
+      await this.emailService.sendVerificationEmail(user.email, verificationToken, user.firstName);
+      return { message: "If the email exists, a verification link has been sent" };
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      return { message: "If the email exists, a verification link has been sent" };
+    }
   }
 }

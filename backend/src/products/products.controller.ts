@@ -17,23 +17,29 @@ import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ProductsService } from "./products.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { UpdateProductStatusDto } from "./dto/update-product-status.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { GetUser } from "../common/decorators/get-user.decorator";
 import { User, UserRole } from "../entities/user.entity";
+import { composeLog } from "testcontainers/build/common";
 
 @Controller("products")
 export class ProductsController {
   constructor(
     @Inject(ProductsService) private readonly productsService: ProductsService,
-  ) { }
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
-  create(@Body() createProductDto: CreateProductDto, @UploadedFiles() files: { images?: Express.Multer.File[] }, @GetUser() user: User) {
+  @UseInterceptors(FileFieldsInterceptor([{ name: "images", maxCount: 5 }]))
+  create(
+    @Body() createProductDto: CreateProductDto,
+    @UploadedFiles() files: { images?: Express.Multer.File[] },
+    @GetUser() user: User,
+  ) {
     return this.productsService.create(createProductDto, files, user.userId);
   }
 
@@ -49,7 +55,7 @@ export class ProductsController {
     return this.productsService.findBySeller(user.userId);
   }
 
-  @Get('favorites')
+  @Get("favorites")
   @UseGuards(JwtAuthGuard)
   getFavorites(@Req() req) {
     return this.productsService.getFavorites(req.user.userId);
@@ -63,7 +69,7 @@ export class ProductsController {
   @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SELLER)
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
+  @UseInterceptors(FileFieldsInterceptor([{ name: "images", maxCount: 5 }]))
   update(
     @Param("id") id: string,
     @Body() updateProductDto: UpdateProductDto,
@@ -84,5 +90,23 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   toggleFavorite(@Param("id") id: string, @GetUser() user: User) {
     return this.productsService.toggleFavorite(+id, user.userId);
+  }
+
+  @Patch(":id/availability")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SELLER)
+  markAsSold(@Param("id") id: string, @Body("available") available: boolean) {
+    console.log(`Toggling availability for product ${id} to ${available}`);
+    return this.productsService.toggleAvailability(+id, available);
+  }
+
+  @Patch(":id/status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
+  updateStatus(
+    @Param("id") id: string,
+    @Body() updateStatusDto: UpdateProductStatusDto,
+  ) {
+    return this.productsService.updateStatus(+id, updateStatusDto.status, updateStatusDto.reason);
   }
 }

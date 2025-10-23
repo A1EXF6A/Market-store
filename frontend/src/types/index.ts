@@ -36,6 +36,7 @@ export interface Product {
   type: ItemType;
   name: string;
   description?: string;
+  category?: string;
   price?: number;
   location?: string;
   availability: boolean;
@@ -157,6 +158,7 @@ export interface AuthResponse {
 
 export interface ProductFilters {
   type?: ItemType;
+  category?: string;
   minPrice?: number;
   maxPrice?: number;
   location?: string;

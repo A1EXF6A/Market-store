@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { usersService, type UserFilters } from '../../services/users';
-import type { User } from '../../types';
-import { UserRole, UserStatus } from '../../types';
-import { useAuthStore } from '../../store/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState, useEffect } from "react";
+import { usersService, type UserFilters } from "../../services/users";
+import type { User } from "../../types";
+import { UserRole, UserStatus } from "../../types";
+import { useAuthStore } from "../../store/authStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,25 +22,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  UserCheck, 
-  UserX, 
+} from "@/components/ui/table";
+import {
+  Users,
+  Search,
+  Filter,
+  UserCheck,
+  UserX,
   Calendar,
   Mail,
   AlertTriangle,
-  MoreHorizontal
-} from 'lucide-react';
+  MoreHorizontal,
+  Settings,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
@@ -53,7 +64,7 @@ const UsersPage: React.FC = () => {
       const data = await usersService.getAll(filters);
       setUsers(data);
     } catch (error: any) {
-      toast.error('Error al cargar usuarios');
+      toast.error("Error al cargar usuarios");
     } finally {
       setLoading(false);
     }
@@ -64,31 +75,48 @@ const UsersPage: React.FC = () => {
       setActionLoading(userId);
       if (suspend) {
         await usersService.suspend(userId);
-        toast.success('Usuario suspendido');
+        toast.success("Usuario suspendido");
       } else {
         await usersService.unsuspend(userId);
-        toast.success('Suspensión removida');
+        toast.success("Suspensión removida");
       }
       loadUsers();
     } catch (error: any) {
-      toast.error('Error al actualizar usuario');
+      toast.error("Error al actualizar usuario");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
+    if (
+      !confirm(
+        "¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.",
+      )
+    ) {
       return;
     }
 
     try {
       setActionLoading(userId);
       await usersService.delete(userId);
-      toast.success('Usuario eliminado');
+      toast.success("Usuario eliminado");
       loadUsers();
     } catch (error: any) {
-      toast.error('Error al eliminar usuario');
+      toast.error("Error al eliminar usuario");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeRole = async (userId: number, newRole: UserRole) => {
+    try {
+      setActionLoading(userId);
+      await usersService.changeRole(userId, newRole);
+      toast.success("Rol actualizado correctamente");
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Error al cambiar el rol del usuario");
     } finally {
       setActionLoading(null);
     }
@@ -96,17 +124,29 @@ const UsersPage: React.FC = () => {
 
   const getRoleBadge = (role: UserRole) => {
     const roleMap = {
-      [UserRole.ADMIN]: { text: 'Administrador', class: 'bg-purple-100 text-purple-800' },
-      [UserRole.MODERATOR]: { text: 'Moderador', class: 'bg-blue-100 text-blue-800' },
-      [UserRole.SELLER]: { text: 'Vendedor', class: 'bg-green-100 text-green-800' },
-      [UserRole.BUYER]: { text: 'Comprador', class: 'bg-gray-100 text-gray-800' },
+      [UserRole.ADMIN]: {
+        text: "Administrador",
+        class: "bg-purple-100 text-purple-800",
+      },
+      [UserRole.MODERATOR]: {
+        text: "Moderador",
+        class: "bg-blue-100 text-blue-800",
+      },
+      [UserRole.SELLER]: {
+        text: "Vendedor",
+        class: "bg-green-100 text-green-800",
+      },
+      [UserRole.BUYER]: {
+        text: "Comprador",
+        class: "bg-gray-100 text-gray-800",
+      },
     };
     const roleInfo = roleMap[role];
     return <Badge className={roleInfo.class}>{roleInfo.text}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
-    return status === 'suspended' ? (
+    return status === "suspended" ? (
       <Badge className="bg-red-100 text-red-800">Suspendido</Badge>
     ) : (
       <Badge className="bg-green-100 text-green-800">Activo</Badge>
@@ -115,7 +155,11 @@ const UsersPage: React.FC = () => {
 
   const canManageUser = (user: User) => {
     if (currentUser?.role === UserRole.ADMIN) return true;
-    if (currentUser?.role === UserRole.MODERATOR && user.role !== UserRole.ADMIN) return true;
+    if (
+      currentUser?.role === UserRole.MODERATOR &&
+      user.role !== UserRole.ADMIN
+    )
+      return true;
     return false;
   };
 
@@ -135,7 +179,9 @@ const UsersPage: React.FC = () => {
       <div className="flex items-center gap-4">
         <Users className="h-8 w-8 text-blue-600" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Gestión de Usuarios
+          </h1>
           <p className="text-gray-600 mt-2">
             Administra usuarios y sus permisos en la plataforma
           </p>
@@ -160,19 +206,23 @@ const UsersPage: React.FC = () => {
                   id="search"
                   placeholder="Nombre, email..."
                   className="pl-10"
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  value={filters.search || ""}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, search: e.target.value }))
+                  }
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Rol</Label>
-              <Select 
-                value={filters.role || 'all'} 
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
-                  role: value === 'all' ? undefined : value as UserRole 
-                }))}
+              <Select
+                value={filters.role || "all"}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    role: value === "all" ? undefined : (value as UserRole),
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los roles" />
@@ -188,12 +238,14 @@ const UsersPage: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label>Estado</Label>
-              <Select 
-                value={filters.status || 'all'} 
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
-                  status: value === 'all' ? undefined : value as UserStatus
-                }))}
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: value === "all" ? undefined : (value as UserStatus),
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los estados" />
@@ -232,11 +284,14 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium text-gray-700">
-                          {user.firstName[0]}{user.lastName[0]}
+                          {user.firstName[0]}
+                          {user.lastName[0]}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{user.firstName} {user.lastName}</p>
+                        <p className="font-medium">
+                          {user.firstName} {user.lastName}
+                        </p>
                         <div className="flex items-center text-sm text-gray-600">
                           <Mail className="h-3 w-3 mr-1" />
                           {user.email}
@@ -253,53 +308,84 @@ const UsersPage: React.FC = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {canManageUser(user) && user.userId !== currentUser?.userId && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            disabled={actionLoading === user.userId}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {user.status === 'suspended' ? (
-                            <DropdownMenuItem 
-                              onClick={() => handleSuspendUser(user.userId, false)}
-                              className="text-green-600"
+                    {canManageUser(user) &&
+                      user.userId !== currentUser?.userId && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={actionLoading === user.userId}
                             >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Reactivar
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem 
-                              onClick={() => handleSuspendUser(user.userId, true)}
-                              className="text-orange-600"
-                            >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Suspender
-                            </DropdownMenuItem>
-                          )}
-                          {currentUser?.role === UserRole.ADMIN && (
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteUser(user.userId)}
-                              className="text-red-600"
-                            >
-                              <AlertTriangle className="h-4 w-4 mr-2" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {user.status === "suspended" ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleSuspendUser(user.userId, false)
+                                }
+                                className="text-green-600"
+                              >
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Reactivar
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleSuspendUser(user.userId, true)
+                                }
+                                className="text-orange-600"
+                              >
+                                <UserX className="h-4 w-4 mr-2" />
+                                Suspender
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {currentUser?.role === UserRole.ADMIN && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Cambiar Rol
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {Object.values(UserRole).map((role) => (
+                                      <DropdownMenuItem
+                                        key={role}
+                                        onClick={() => handleChangeRole(user.userId, role)}
+                                        disabled={user.role === role}
+                                        className={user.role === role ? "opacity-50" : ""}
+                                      >
+                                        {role === UserRole.ADMIN && "Administrador"}
+                                        {role === UserRole.MODERATOR && "Moderador"}
+                                        {role === UserRole.SELLER && "Vendedor"}
+                                        {role === UserRole.BUYER && "Comprador"}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteUser(user.userId)}
+                                  className="text-red-600"
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          
+
           {users.length === 0 && (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -318,3 +404,4 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
+

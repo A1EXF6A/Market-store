@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { User, UserStatus } from "../entities/user.entity";
+import { Repository, Like } from "typeorm";
+import { User, UserStatus, UserRole } from "../entities/user.entity";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
+import * as bcrypt from "bcryptjs";
+
+export interface UserFilters {
+  role?: UserRole;
+  status?: UserStatus;
+  search?: string;
+}
 
 @Injectable()
 export class UsersService {
@@ -22,8 +31,27 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(filters?: UserFilters): Promise<User[]> {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    if (filters?.role) {
+      queryBuilder.andWhere('user.role = :role', { role: filters.role });
+    }
+
+    if (filters?.status) {
+      queryBuilder.andWhere('user.status = :status', { status: filters.status });
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    queryBuilder.orderBy('user.createdAt', 'DESC');
+    
+    return queryBuilder.getMany();
   }
 
   async updateUserStatus(userId: number, status: UserStatus): Promise<User> {
@@ -36,5 +64,53 @@ export class UsersService {
     const user = await this.findById(userId);
     user.verified = true;
     return this.userRepository.save(user);
+  }
+
+  async updateUser(userId: number, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findById(userId);
+    
+    // Check if email is being updated and if it already exists
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.userRepository.findOne({ 
+        where: { email: updateUserDto.email } 
+      });
+      if (existingUser) {
+        throw new ConflictException("Email already in use");
+      }
+    }
+
+    // Update user fields
+    Object.assign(user, updateUserDto);
+    return this.userRepository.save(user);
+  }
+
+  async changePassword(userId: number, changePasswordDto: ChangePasswordDto): Promise<void> {
+    const user = await this.findById(userId);
+    
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.passwordHash
+    );
+    
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException("Current password is incorrect");
+    }
+
+    // Hash new password and update
+    const hashedNewPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
+    user.passwordHash = hashedNewPassword;
+    await this.userRepository.save(user);
+  }
+
+  async updateUserRole(userId: number, role: UserRole): Promise<User> {
+    const user = await this.findById(userId);
+    user.role = role;
+    return this.userRepository.save(user);
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    const user = await this.findById(userId);
+    await this.userRepository.remove(user);
   }
 }

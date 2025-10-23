@@ -1,80 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { productsService } from '../../services/products';
-import { API_BASE } from '../../services/api';
-import type { Product, ProductFilters } from '../../types';
-import { ItemType, UserRole } from '../../types';
-import { useAuthStore } from '../../store/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Heart, MapPin, DollarSign, Search, Filter } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { productsService } from "../../services/products";
+import type { Product, ProductFilters } from "../../types";
+import { ItemType, UserRole } from "../../types";
+import { useAuthStore } from "../../store/authStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ProductCard } from "@/components/ui/product-card";
+import { ReportProductModal } from "@/components/ui/report-product-modal";
+
+import { 
+  Search, 
+  Filter, 
+  MoreHorizontal,
+  Package,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Ban,
+  X,
+  Flag
+} from "lucide-react";
+import { toast } from "sonner";
 
 const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
-  const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
-  const [showFilters, setShowFilters] = useState(false);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [reportModal, setReportModal] = useState<{isOpen: boolean, productId: number, productName: string}>({
+    isOpen: false,
+    productId: 0,
+    productName: ""
+  });
   const { user } = useAuthStore();
+
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
 
   useEffect(() => {
     loadProducts();
-  }, [filters]);
+  }, []);
 
-  // Debounce updating filters.search to avoid calling API on every keystroke
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setFilters(prev => ({ ...prev, search: searchTerm || undefined }));
-    }, 1000);
-
-    return () => clearTimeout(id);
-  }, [searchTerm]);
-
-  const loadProducts = async () => {
+  const loadProducts = async (customFilters?: ProductFilters) => {
     try {
       setLoading(true);
-      const data = await productsService.getAll(filters);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const data = await productsService.getAll(currentFilters);
       setProducts(data);
     } catch (error: any) {
-      toast.error('Error al cargar productos');
+      toast.error("Error al cargar productos");
     } finally {
       setLoading(false);
     }
   };
 
+  const clearFilters = async () => {
+    setFilters({});
+    await loadProducts({});
+  };
+
   const handleToggleFavorite = async (productId: number) => {
     try {
       await productsService.toggleFavorite(productId);
-      toast.success('Favorito actualizado');
+      toast.success("Favorito actualizado");
     } catch (error: any) {
-      toast.error('Error al actualizar favorito');
+      toast.error("Error al actualizar favorito");
     }
   };
 
-  const handleFilterChange = (key: keyof ProductFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const handleProductAction = async (productId: number, action: string, reason?: string) => {
+    try {
+      setActionLoading(productId);
+      
+      switch (action) {
+        case 'hide':
+          await productsService.hideProduct(productId, reason || 'Oculto por administrador');
+          toast.success("Producto oculto");
+          break;
+        case 'suspend':
+          await productsService.suspendProduct(productId, reason || 'Suspendido por administrador');
+          toast.success("Producto suspendido");
+          break;
+        case 'ban':
+          await productsService.banProduct(productId, reason || 'Baneado por administrador');
+          toast.success("Producto baneado");
+          break;
+        case 'activate':
+          await productsService.activateProduct(productId);
+          toast.success("Producto activado");
+          break;
+      }
+      
+      await loadProducts();
+    } catch (error: any) {
+      toast.error("Error al actualizar producto");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const clearFilters = () => {
-    setFilters({});
-    setSearchTerm('');
-  };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      active: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      suspended: 'bg-red-100 text-red-800',
-      hidden: 'bg-gray-100 text-gray-800',
-      banned: 'bg-red-100 text-red-800',
-    };
-    return statusMap[status as keyof typeof statusMap] || 'bg-gray-100 text-gray-800';
-  };
 
   if (loading) {
     return (
@@ -89,180 +129,248 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center gap-4">
+        <Package className="h-8 w-8 text-blue-600" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Productos</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isAdmin ? "Gestión de Productos" : "Productos"}
+          </h1>
           <p className="text-gray-600 mt-2">
-            Explora nuestro catálogo de productos y servicios
+            {isAdmin 
+              ? "Administra productos y servicios en la plataforma"
+              : "Explora nuestro catálogo de productos y servicios"
+            }
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filtros
-        </Button>
       </div>
 
-      {showFilters && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Search className="h-5 w-5 mr-2" />
-              Filtros de Búsqueda
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="search">Buscar</Label>
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Buscar Producto</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
                   placeholder="Nombre del producto..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  value={filters.search || ""}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, search: e.target.value }))
+                  }
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select onValueChange={(value) => handleFilterChange('type', value === 'all' ? undefined : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los tipos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value={ItemType.PRODUCT}>Productos</SelectItem>
-                    <SelectItem value={ItemType.SERVICE}>Servicios</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="minPrice">Precio Mínimo</Label>
-                <Input
-                  id="minPrice"
-                  type="number"
-                  placeholder="0"
-                  value={filters.minPrice || ''}
-                  onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxPrice">Precio Máximo</Label>
-                <Input
-                  id="maxPrice"
-                  type="number"
-                  placeholder="1000"
-                  value={filters.maxPrice || ''}
-                  onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Ubicación</Label>
-                <Input
-                  id="location"
-                  placeholder="Ciudad, región..."
-                  value={filters.location || ''}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                />
-              </div>
-
-              <div className="flex items-end">
-                <Button variant="outline" onClick={clearFilters} className="w-full">
-                  Limpiar Filtros
-                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <p className="text-gray-500 text-lg">No se encontraron productos</p>
-            <p className="text-gray-400 mt-2">Intenta ajustar los filtros de búsqueda</p>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select
+                value={filters.type || "all"}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    type: value === "all" ? undefined : (value as ItemType),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value={ItemType.PRODUCT}>Productos</SelectItem>
+                  <SelectItem value={ItemType.SERVICE}>Servicios</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Input
+                id="category"
+                placeholder="Ej: Electrónicos, Ropa..."
+                value={filters.category || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, category: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minPrice">Precio Mínimo</Label>
+              <Input
+                id="minPrice"
+                type="number"
+                placeholder="0"
+                value={filters.minPrice || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    minPrice: e.target.value ? parseFloat(e.target.value) : undefined,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Ubicación</Label>
+              <Input
+                id="location"
+                placeholder="Ciudad, región..."
+                value={filters.location || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, location: e.target.value }))
+                }
+              />
+            </div>
           </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button onClick={clearFilters} variant="outline" className="flex items-center gap-2">
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button onClick={() => loadProducts()} className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Productos ({products.length})
+          </h2>
+          {isAdmin && (
+            <div className="text-sm text-gray-600">
+              Vista de administrador - Acciones disponibles en cada producto
+            </div>
+          )}
+        </div>
+
+        {products.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se encontraron productos
+              </h3>
+              <p className="text-gray-600">
+                Intenta ajustar los filtros de búsqueda
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          products.map((product) => (
-            <Card key={product.itemId} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-0">
-                <div className="aspect-video bg-gray-200 rounded-t-lg relative">
-                  {product.photos.length > 0 ? (
-                    <img
-                      src={`${API_BASE}${product.photos[0].url}`}
-                      alt={product.name}
-                      className="w-full h-full object-cover rounded-t-lg"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
-                      Sin imagen
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.filter(product => product.availability).map((product) => (
+                <div key={product.itemId} className="relative">
+                  <ProductCard
+                    product={product}
+                    onToggleFavorite={handleToggleFavorite}
+                    userRole={user?.role}
+                    showActions={!isAdmin}
+                  />
+                  
+                  {/* Admin actions overlay */}
+                  {isAdmin && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-white/90 hover:bg-white shadow-sm"
+                            disabled={actionLoading === product.itemId}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.itemId}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalles
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setReportModal({
+                                  isOpen: true,
+                                  productId: product.itemId,
+                                  productName: product.name
+                                })
+                              }
+                              className="text-blue-600"
+                            >
+                              <Flag className="h-4 w-4 mr-2" />
+                              Reportar
+                            </DropdownMenuItem>
+                            {product.status === 'active' ? (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProductAction(product.itemId, 'hide', 'Oculto por administrador')
+                                  }
+                                  className="text-orange-600"
+                                >
+                                  <EyeOff className="h-4 w-4 mr-2" />
+                                  Ocultar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProductAction(product.itemId, 'suspend', 'Suspendido por violación de términos')
+                                  }
+                                  className="text-red-600"
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Suspender
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProductAction(product.itemId, 'ban', 'Baneado por contenido inapropiado')
+                                  }
+                                  className="text-red-600"
+                                >
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Banear
+                                </DropdownMenuItem>
+                              </>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleProductAction(product.itemId, 'activate')
+                                }
+                                className="text-green-600"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Activar
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <Badge className={getStatusBadge(product.status)}>
-                      {product.status}
-                    </Badge>
-                    {user?.role === UserRole.BUYER && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="p-1 h-8 w-8 bg-white/80 hover:bg-white"
-                        onClick={() => handleToggleFavorite(product.itemId)}
-                      >
-                        <Heart className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
                 </div>
-                
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                    <Badge variant="outline">
-                      {product.type === ItemType.PRODUCT ? 'Producto' : 'Servicio'}
-                    </Badge>
-                  </div>
-                  
-                  {product.description && (
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {product.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    {product.price && (
-                      <div className="flex items-center text-green-600 font-semibold">
-                        <DollarSign className="h-4 w-4" />
-                        {product.price.toLocaleString()}
-                      </div>
-                    )}
-                    {product.location && (
-                      <div className="flex items-center text-gray-500 text-sm">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {product.location}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button asChild className="flex-1">
-                      <Link to={`/products/${product.itemId}`}>
-                        Ver Detalles
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+              ))}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Report Modal */}
+      <ReportProductModal
+        isOpen={reportModal.isOpen}
+        onClose={() => setReportModal({ isOpen: false, productId: 0, productName: "" })}
+        productId={reportModal.productId}
+        productName={reportModal.productName}
+      />
     </div>
   );
 };

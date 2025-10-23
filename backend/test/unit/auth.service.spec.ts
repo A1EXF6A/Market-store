@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from '../../src/entities/user.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { EmailService } from '../../src/common/services/email.service';
 import * as bcrypt from 'bcryptjs';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 
@@ -10,6 +11,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let userRepo: jest.Mocked<Repository<User>>;
   let jwtService: jest.Mocked<JwtService>;
+  let emailService: jest.Mocked<EmailService>;
 
   beforeEach(() => {
     userRepo = {
@@ -23,7 +25,12 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('fake-jwt'),
     } as any;
 
-    service = new AuthService(userRepo, jwtService);
+    emailService = {
+      sendVerificationEmail: jest.fn(),
+      sendPasswordResetEmail: jest.fn(),
+    } as any;
+
+    service = new AuthService(userRepo, jwtService, emailService);
   });
 
   describe('register', () => {

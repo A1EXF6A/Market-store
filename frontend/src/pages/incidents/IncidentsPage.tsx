@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { incidentsService, type IncidentFilters } from '../../services/incidents';
 import type { Incident } from '../../types';
-import { ItemStatus } from '../../types';
+import { ItemStatus, UserRole } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ const IncidentsPage: React.FC = () => {
 
     try {
       setActionLoading(incidentId);
-      await incidentsService.assignIncident(incidentId, currentUser.userId);
+      await incidentsService.assignIncident(incidentId);
       toast.success('Incidencia asignada');
       loadIncidents();
     } catch (error: any) {
@@ -96,8 +96,7 @@ const IncidentsPage: React.FC = () => {
     try {
       await incidentsService.resolveIncident(
         selectedIncident.incidentId,
-        resolution.status,
-        resolution.description
+        resolution.status
       );
       toast.success('Incidencia resuelta');
       setIsResolveDialogOpen(false);
@@ -152,7 +151,7 @@ const IncidentsPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
@@ -186,6 +185,24 @@ const IncidentsPage: React.FC = () => {
                   <SelectItem value={ItemStatus.ACTIVE}>Activos</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Fecha Inicio</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={filters.startDate || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">Fecha Fin</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={filters.endDate || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+              />
             </div>
           </div>
         </CardContent>
@@ -268,7 +285,7 @@ const IncidentsPage: React.FC = () => {
                             Asignar a mí
                           </DropdownMenuItem>
                         )}
-                        {incident.moderatorId === currentUser?.userId && (
+                        {(incident.moderatorId === currentUser?.userId || currentUser?.role === UserRole.ADMIN) && (
                           <DropdownMenuItem 
                             onClick={() => {
                               setSelectedIncident(incident);

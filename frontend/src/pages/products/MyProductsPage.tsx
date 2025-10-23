@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { productsService } from '../../services/products';
-import { API_BASE } from '../../services/api';
-import type { Product } from '../../types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { productsService } from "../../services/products";
+import { API_BASE } from "../../services/api";
+import type { Product } from "../../types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,23 +13,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trash2, 
+} from "@/components/ui/table";
+import {
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
   DollarSign,
   Calendar,
-  MoreHorizontal
-} from 'lucide-react';
+  MoreHorizontal,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const MyProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,35 +45,60 @@ const MyProductsPage: React.FC = () => {
       const data = await productsService.getMyProducts();
       setProducts(data);
     } catch (error: any) {
-      toast.error('Error al cargar tus productos');
+      toast.error("Error al cargar tus productos");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteProduct = async (productId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+    if (!confirm("¿Estás seguro de que quieres eliminar este producto?")) {
       return;
     }
 
     try {
       await productsService.delete(productId);
-      toast.success('Producto eliminado correctamente');
+      toast.success("Producto eliminado correctamente");
       loadMyProducts();
     } catch (error: any) {
-      toast.error('Error al eliminar el producto');
+      toast.error("Error al eliminar el producto");
     }
+  };
+
+  const toggleProductAvailability = async (
+    productId: number,
+    available: boolean,
+  ) => {
+    try {
+      await productsService.updateAvailability(productId, !available);
+      toast.success(
+        `Producto marcado como ${available ? "vendido" : "disponible"}`,
+      );
+      loadMyProducts();
+    } catch (error: any) {
+      toast.error("Error al actualizar la disponibilidad del producto");
+    }
+  };
+
+  const getAvailabilityBadge = (available: boolean) => {
+    const statusMap = {
+      available: { text: "Disponible", class: "bg-green-100 text-green-800" },
+      sold: { text: "Vendido", class: "bg-yellow-100 text-yellow-800" },
+    };
+    const statusInfo = available ? statusMap.available : statusMap.sold;
+    return <Badge className={statusInfo.class}>{statusInfo.text}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      active: { text: 'Activo', class: 'bg-green-100 text-green-800' },
-      pending: { text: 'Pendiente', class: 'bg-yellow-100 text-yellow-800' },
-      suspended: { text: 'Suspendido', class: 'bg-red-100 text-red-800' },
-      hidden: { text: 'Oculto', class: 'bg-gray-100 text-gray-800' },
-      banned: { text: 'Prohibido', class: 'bg-red-100 text-red-800' },
+      active: { text: "Activo", class: "bg-green-100 text-green-800" },
+      pending: { text: "Pendiente", class: "bg-yellow-100 text-yellow-800" },
+      suspended: { text: "Suspendido", class: "bg-red-100 text-red-800" },
+      hidden: { text: "Oculto", class: "bg-gray-100 text-gray-800" },
+      banned: { text: "Prohibido", class: "bg-red-100 text-red-800" },
     };
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.active;
+    const statusInfo =
+      statusMap[status as keyof typeof statusMap] || statusMap.active;
     return <Badge className={statusInfo.class}>{statusInfo.text}</Badge>;
   };
 
@@ -112,7 +137,8 @@ const MyProductsPage: React.FC = () => {
               No tienes productos publicados
             </h3>
             <p className="text-gray-600 mb-6">
-              Comienza creando tu primer producto o servicio para vender en la plataforma
+              Comienza creando tu primer producto o servicio para vender en la
+              plataforma
             </p>
             <Button asChild>
               <Link to="/products/create">
@@ -132,10 +158,9 @@ const MyProductsPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
-                  <TableHead>Tipo</TableHead>
                   <TableHead>Precio</TableHead>
+                  <TableHead>Fecha de publicación</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead>Fecha</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -159,16 +184,8 @@ const MyProductsPage: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-gray-600 truncate max-w-xs">
-                            {product.description}
-                          </p>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {product.type === 'product' ? 'Producto' : 'Servicio'}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       {product.price ? (
@@ -180,42 +197,60 @@ const MyProductsPage: React.FC = () => {
                         <span className="text-gray-400">Sin precio</span>
                       )}
                     </TableCell>
-                    <TableCell>{getStatusBadge(product.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center text-gray-600">
                         <Calendar className="h-4 w-4 mr-1" />
                         {new Date(product.publishedAt).toLocaleDateString()}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.itemId}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver Detalles
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to={`/products/${product.itemId}/edit`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteProduct(product.itemId)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell>
+                      {getAvailabilityBadge(product.availability)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-4 justify-end items-center">
+                        <Button
+                          onClick={() =>
+                            toggleProductAvailability(
+                              product.itemId,
+                              product.availability,
+                            )
+                          }
+                        >
+                          {product.availability
+                            ? "Marcar como vendido"
+                            : "Marcar como disponible"}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.itemId}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalles
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.itemId}/edit`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleDeleteProduct(product.itemId)
+                              }
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
