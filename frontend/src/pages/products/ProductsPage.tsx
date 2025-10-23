@@ -43,7 +43,8 @@ import {
   EyeOff,
   AlertTriangle,
   Ban,
-  Calendar
+  Calendar,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,12 +59,25 @@ const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     loadProducts();
-  }, [filters]);
+  }, []);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       const data = await productsService.getAll(filters);
+      setProducts(data);
+    } catch (error: any) {
+      toast.error("Error al cargar productos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearFilters = async () => {
+    setFilters({});
+    try {
+      setLoading(true);
+      const data = await productsService.getAll({});
       setProducts(data);
     } catch (error: any) {
       toast.error("Error al cargar productos");
@@ -233,6 +247,16 @@ const ProductsPage: React.FC = () => {
               />
             </div>
           </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button onClick={clearFilters} variant="outline" className="flex items-center gap-2">
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button onClick={loadProducts} className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -254,7 +278,7 @@ const ProductsPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
+              {products.filter(product => product.availability).map((product) => (
                 <TableRow key={product.itemId}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
