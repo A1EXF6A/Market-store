@@ -2,6 +2,8 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In } from "typeorm";
@@ -13,6 +15,7 @@ import { User } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
+import { IncidentsService } from "../incidents/incidents.service";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -27,6 +30,8 @@ export class ProductsService {
     private serviceRepository: Repository<Service>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
+    @Inject(forwardRef(() => IncidentsService))
+    private incidentsService: IncidentsService,
   ) {}
 
   async create(
@@ -38,16 +43,24 @@ export class ProductsService {
 
     const code = await this.generateUniqueCode();
 
+    const isDangerous = this.detectProhibitedContent(itemData.name, itemData.description);
+    
     const item = this.itemRepository.create({
       ...itemData,
       code,
       sellerId,
-      status: this.detectProhibitedContent(itemData.name, itemData.description)
-        ? ItemStatus.PENDING
-        : ItemStatus.ACTIVE,
+      status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
     });
 
     const savedItem = await this.itemRepository.save(item);
+
+    // Automatically create incident if dangerous content is detected
+    if (isDangerous) {
+      await this.incidentsService.createIncident(
+        savedItem.itemId,
+        `Producto detectado automáticamente como potencialmente peligroso. Palabras detectadas en: "${itemData.name}" ${itemData.description ? `- "${itemData.description}"` : ''}`,
+      );
+    }
 
     if (files.images && files.images.length > 0) {
       const photoUrls = await this.saveImages(files.images);
@@ -105,6 +118,12 @@ export class ProductsService {
     if (filters?.location) {
       queryBuilder.andWhere("item.location ILIKE :location", {
         location: `%${filters.location}%`,
+      });
+    }
+
+    if (filters?.category) {
+      queryBuilder.andWhere("item.category ILIKE :category", {
+        category: `%${filters.category}%`,
       });
     }
 
@@ -279,21 +298,51 @@ export class ProductsService {
 
   private detectProhibitedContent(name: string, description?: string): boolean {
     const prohibitedWords = [
-      "arma",
-      "droga",
-      "explosivo",
-      "ilegal",
-      "robado",
-      "falsificado",
-      "weapon",
-      "drug",
-      "explosive",
-      "illegal",
-      "stolen",
-      "fake",
+      // Weapons/Armas
+      "arma", "weapon", "pistola", "rifle", "gun", "firearm", "ammunition", "munición",
+      "cuchillo", "knife", "blade", "sword", "espada", "dagger", "machete",
+      
+      // Drugs/Drogas
+      "droga", "drug", "narcótico", "narcotic", "cocaína", "cocaine", "heroína", "heroin",
+      "marihuana", "marijuana", "cannabis", "lsd", "éxtasis", "ecstasy", "metanfetamina",
+      
+      // Explosives/Explosivos
+      "explosivo", "explosive", "bomba", "bomb", "dinamita", "dynamite", "granada", "grenade",
+      "pólvora", "gunpowder", "nitrato", "nitrate",
+      
+      // Illegal/Ilegal
+      "ilegal", "illegal", "prohibido", "forbidden", "banned", "contrabando", "contraband",
+      "falsificado", "fake", "counterfeit", "robado", "stolen", "pirata", "pirated",
+      
+      // Adult/Pornographic content
+      "pornografía", "pornography", "xxx", "adulto", "sexual", "erótico", "erotic",
+      
+      // Human/Animal related prohibited
+      "órgano", "organ", "humano", "human", "esclavo", "slave", "tráfico", "trafficking",
+      "animal protegido", "endangered", "marfil", "ivory", "cuerno", "horn",
+      
+      // Chemical/Venenos
+      "veneno", "poison", "tóxico", "toxic", "químico peligroso", "dangerous chemical",
+      "ácido", "acid", "mercurio", "mercury", "asbesto", "asbestos",
+      
+      // Prescription drugs
+      "medicamento controlado", "prescription", "receta médica", "controlled substance",
+      
+      // Identity/Documents
+      "documento falso", "fake document", "identidad falsa", "fake id", "pasaporte falso",
+      "cedula falsa", "licencia falsa"
     ];
 
     const content = `${name} ${description || ""}`.toLowerCase();
-    return prohibitedWords.some((word) => content.includes(word));
+    
+    // Check for exact word matches (not just substring contains)
+    const words = content.split(/\s+/);
+    const contentText = words.join(" ");
+    
+    return prohibitedWords.some((prohibitedWord) => {
+      // Check for both exact matches and phrase matches
+      return contentText.includes(prohibitedWord.toLowerCase()) ||
+             words.some(word => word === prohibitedWord.toLowerCase());
+    });
   }
 }

@@ -33,11 +33,16 @@ import {
   Mail,
   AlertTriangle,
   MoreHorizontal,
+  Settings,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -99,6 +104,19 @@ const UsersPage: React.FC = () => {
       loadUsers();
     } catch (error: any) {
       toast.error("Error al eliminar usuario");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeRole = async (userId: number, newRole: UserRole) => {
+    try {
+      setActionLoading(userId);
+      await usersService.changeRole(userId, newRole);
+      toast.success("Rol actualizado correctamente");
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Error al cambiar el rol del usuario");
     } finally {
       setActionLoading(null);
     }
@@ -324,14 +342,40 @@ const UsersPage: React.FC = () => {
                                 Suspender
                               </DropdownMenuItem>
                             )}
+                            
                             {currentUser?.role === UserRole.ADMIN && (
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user.userId)}
-                                className="text-red-600"
-                              >
-                                <AlertTriangle className="h-4 w-4 mr-2" />
-                                Eliminar
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Cambiar Rol
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {Object.values(UserRole).map((role) => (
+                                      <DropdownMenuItem
+                                        key={role}
+                                        onClick={() => handleChangeRole(user.userId, role)}
+                                        disabled={user.role === role}
+                                        className={user.role === role ? "opacity-50" : ""}
+                                      >
+                                        {role === UserRole.ADMIN && "Administrador"}
+                                        {role === UserRole.MODERATOR && "Moderador"}
+                                        {role === UserRole.SELLER && "Vendedor"}
+                                        {role === UserRole.BUYER && "Comprador"}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteUser(user.userId)}
+                                  className="text-red-600"
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

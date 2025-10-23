@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { incidentsService, type ReportFilters } from '../../services/incidents';
-import type { Report } from '../../types';
-import { ReportType } from '../../types';
+import type { Report, Incident } from '../../types';
+import { ReportType, ItemStatus } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,29 +27,72 @@ import {
   AlertTriangle,
   Trash,
   Ban,
-  Eye
+  Eye,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Clock,
+  UserCheck,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
 
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReportFilters>({});
+  const [activeTab, setActiveTab] = useState('reports');
 
   useEffect(() => {
-    loadReports();
-  }, [filters]);
+    loadData();
+  }, [filters, activeTab]);
 
-  const loadReports = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await incidentsService.getReports(filters);
-      setReports(data);
+      if (activeTab === 'reports') {
+        const data = await incidentsService.getReports(filters);
+        setReports(data);
+      } else {
+        const data = await incidentsService.getIncidents(filters);
+        setIncidents(data);
+      }
     } catch (error: any) {
-      toast.error('Error al cargar reportes');
+      toast.error('Error al cargar datos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignModerator = async (incidentId: number) => {
+    try {
+      setProcessing(`assign-${incidentId}`);
+      await incidentsService.assignIncident(incidentId);
+      toast.success('Te has asignado como moderador');
+      loadData();
+    } catch (error: any) {
+      toast.error('Error al asignarse como moderador');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleResolveIncident = async (incidentId: number, status: ItemStatus) => {
+    try {
+      setProcessing(`resolve-${incidentId}`);
+      await incidentsService.resolveIncident(incidentId, status);
+      toast.success(status === ItemStatus.ACTIVE ? 'Incidente resuelto - Producto reactivado' : 'Incidente resuelto - Producto suspendido');
+      loadData();
+    } catch (error: any) {
+      toast.error('Error al resolver incidente');
+    } finally {
+      setProcessing(null);
     }
   };
 
@@ -71,6 +114,25 @@ const ReportsPage: React.FC = () => {
     );
   };
 
+  const getStatusBadge = (status: ItemStatus) => {
+    const statusMap: Record<ItemStatus, { text: string; class: string; icon: React.ComponentType }> = {
+      [ItemStatus.PENDING]: { text: 'Pendiente', class: 'bg-yellow-100 text-yellow-800', icon: Clock },
+      [ItemStatus.ACTIVE]: { text: 'Activo', class: 'bg-green-100 text-green-800', icon: CheckCircle },
+      [ItemStatus.SUSPENDED]: { text: 'Suspendido', class: 'bg-red-100 text-red-800', icon: XCircle },
+      [ItemStatus.HIDDEN]: { text: 'Oculto', class: 'bg-gray-100 text-gray-800', icon: Clock },
+      [ItemStatus.BANNED]: { text: 'Prohibido', class: 'bg-red-100 text-red-800', icon: XCircle },
+    };
+    const statusInfo = statusMap[status];
+    const IconComponent = statusInfo.icon;
+    
+    return (
+      <Badge className={statusInfo.class}>
+        <IconComponent className="h-3 w-3 mr-1" />
+        {statusInfo.text}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -85,17 +147,30 @@ const ReportsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Flag className="h-8 w-8 text-red-600" />
+        <Shield className="h-8 w-8 text-blue-600" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Reportes</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Moderación</h1>
           <p className="text-gray-600 mt-2">
-            Revisa y gestiona los reportes enviados por los usuarios
+            Gestiona reportes, incidentes y apelaciones
           </p>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <Flag className="h-4 w-4" />
+            Reportes
+          </TabsTrigger>
+          <TabsTrigger value="incidents" className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Incidentes y Apelaciones
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reports" className="space-y-6">
+          {/* Filters */}
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -103,7 +178,7 @@ const ReportsPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
@@ -137,6 +212,24 @@ const ReportsPage: React.FC = () => {
                   <SelectItem value={ReportType.OTHER}>Otro</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Fecha Inicio</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={filters.startDate || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">Fecha Fin</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={filters.endDate || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+              />
             </div>
           </div>
         </CardContent>
@@ -282,8 +375,175 @@ const ReportsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+         </div>
+        )}
+        </TabsContent>
+
+        <TabsContent value="incidents" className="space-y-6">
+          {/* Incidents Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Incidentes y Apelaciones ({incidents.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Moderador</TableHead>
+                    <TableHead>Apelaciones</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {incidents.map((incident) => (
+                    <TableRow key={incident.incidentId}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Package className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="font-medium">Producto ID: {incident.itemId}</p>
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              className="p-0 h-auto text-blue-600"
+                              asChild
+                            >
+                              <Link to={`/products/${incident.itemId}`}>
+                                <Eye className="h-3 w-3 mr-1" />
+                                Ver producto
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4 text-gray-400" />
+                          <span>Usuario ID: {incident.sellerId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(incident.status)}</TableCell>
+                      <TableCell>
+                        {incident.moderatorId ? (
+                          <div className="flex items-center space-x-2">
+                            <UserCheck className="h-4 w-4 text-green-600" />
+                            <span className="text-sm">Asignado</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Sin asignar</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {incident.appeals && incident.appeals.length > 0 ? (
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-600">
+                              {incident.appeals.length} apelación{incident.appeals.length !== 1 ? 'es' : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Sin apelaciones</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-gray-600">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {new Date(incident.reportedAt).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          {!incident.moderatorId && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleAssignModerator(incident.incidentId)}
+                              disabled={processing === `assign-${incident.incidentId}`}
+                            >
+                              <Shield className="h-4 w-4 mr-1" />
+                              Asignarme
+                            </Button>
+                          )}
+                          
+                          {incident.moderatorId && incident.status === ItemStatus.PENDING && (
+                            <>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Resolver
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Resolver Incidente</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <p className="text-sm text-gray-600">
+                                      Descripción: {incident.description}
+                                    </p>
+                                    {incident.appeals && incident.appeals.length > 0 && (
+                                      <div className="space-y-2">
+                                        <h4 className="font-semibold">Apelaciones:</h4>
+                                        {incident.appeals.map((appeal, index) => (
+                                          <div key={index} className="bg-gray-50 p-3 rounded-md">
+                                            <p className="text-sm">{appeal.reason}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              {new Date(appeal.createdAt).toLocaleDateString()}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        onClick={() => handleResolveIncident(incident.incidentId, ItemStatus.ACTIVE)}
+                                        disabled={processing === `resolve-${incident.incidentId}`}
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                        Reactivar Producto
+                                      </Button>
+                                      <Button 
+                                        onClick={() => handleResolveIncident(incident.incidentId, ItemStatus.SUSPENDED)}
+                                        disabled={processing === `resolve-${incident.incidentId}`}
+                                        variant="destructive"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" />
+                                        Suspender Producto
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {incidents.length === 0 && (
+                <div className="text-center py-12">
+                  <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No se encontraron incidentes
+                  </h3>
+                  <p className="text-gray-600">
+                    No hay incidentes registrados
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

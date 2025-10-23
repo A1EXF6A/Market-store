@@ -4,6 +4,7 @@ import { Item } from '../../src/entities/item.entity';
 import { ItemPhoto } from '../../src/entities/item-photo.entity';
 import { Service as ServiceEntity } from '../../src/entities/service.entity';
 import { Favorite } from '../../src/entities/favorite.entity';
+import { IncidentsService } from '../../src/incidents/incidents.service';
 import { NotFoundException } from '@nestjs/common';
 
 describe('ProductsService (unit)', () => {
@@ -12,6 +13,7 @@ describe('ProductsService (unit)', () => {
   let photoRepo: jest.Mocked<Repository<ItemPhoto>>;
   let serviceRepo: jest.Mocked<Repository<ServiceEntity>>;
   let favRepo: jest.Mocked<Repository<Favorite>>;
+  let incidentsService: jest.Mocked<IncidentsService>;
 
   beforeEach(() => {
     // crear mocks completos para evitar errores por métodos faltantes
@@ -45,7 +47,11 @@ describe('ProductsService (unit)', () => {
       delete: jest.fn(),
     } as any;
 
-    service = new ProductsService(itemRepo, photoRepo, serviceRepo, favRepo);
+    incidentsService = {
+      createIncident: jest.fn(),
+    } as any;
+
+    service = new ProductsService(itemRepo, photoRepo, serviceRepo, favRepo, incidentsService);
   });
 
   it('findOne debería devolver item existente o lanzar NotFoundException', async () => {
@@ -95,6 +101,33 @@ describe('ProductsService (unit)', () => {
     const res = await service.create(dto, {}, 10);
     expect(itemRepo.create).toHaveBeenCalled();
     expect(itemRepo.save).toHaveBeenCalled();
+    expect(res).toBe(saved);
+  });
+
+  it('create debería detectar contenido peligroso y crear incidente automáticamente', async () => {
+    const dangerousDto: any = { name: 'Arma de fuego', description: 'Pistola para venta', type: 'product', price: 100 };
+    const saved = { itemId: 6, ...dangerousDto, status: 'pending' } as any;
+
+    // generateUniqueCode hace findOne para comprobar existencia -> no existe
+    (itemRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+    // save/create behavior for dangerous product
+    (itemRepo.create as jest.Mock).mockReturnValue(saved);
+    (itemRepo.save as jest.Mock).mockResolvedValueOnce(saved);
+    (incidentsService.createIncident as jest.Mock).mockResolvedValueOnce({ incidentId: 1 });
+
+    // la llamada final a findOne desde create()->findOne
+    (itemRepo.findOne as jest.Mock).mockResolvedValueOnce(saved);
+
+    const res = await service.create(dangerousDto, {}, 10);
+    
+    expect(itemRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'pending' // Should be set to pending due to dangerous content
+    }));
+    expect(incidentsService.createIncident).toHaveBeenCalledWith(
+      6,
+      expect.stringContaining('Producto detectado automáticamente como potencialmente peligroso')
+    );
     expect(res).toBe(saved);
   });
 

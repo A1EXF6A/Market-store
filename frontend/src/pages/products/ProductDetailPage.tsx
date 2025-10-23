@@ -22,12 +22,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { chatService } from '../../services/chat';
+import { ReportProductModal } from '@/components/ui/report-product-modal';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -230,7 +232,11 @@ const ProductDetailPage: React.FC = () => {
                 )}
                 
                 {user?.role === UserRole.BUYER && (
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setReportModalOpen(true)}
+                  >
                     <Flag className="h-4 w-4" />
                   </Button>
                 )}
@@ -269,6 +275,16 @@ const ProductDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      {product && (
+        <ReportProductModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          productId={product.itemId}
+          productName={product.name}
+        />
+      )}
     </div>
   );
 };

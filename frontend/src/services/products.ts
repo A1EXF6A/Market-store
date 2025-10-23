@@ -4,6 +4,7 @@ import type { Product, ProductFilters } from "../types";
 export interface CreateProductData {
   name: string;
   description?: string;
+  category?: string;
   price?: number;
   location?: string;
   type: "product" | "service";
@@ -20,6 +21,7 @@ export const productsService = {
     const params = new URLSearchParams();
 
     if (filters?.type) params.append("type", filters.type);
+    if (filters?.category) params.append("category", filters.category);
     if (filters?.minPrice)
       params.append("minPrice", filters.minPrice.toString());
     if (filters?.maxPrice)
@@ -56,6 +58,7 @@ export const productsService = {
     // Add text fields
     formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
+    if (data.category) formData.append("category", data.category);
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     formData.append("type", data.type);
@@ -82,6 +85,7 @@ export const productsService = {
     // Add text fields
     if (data.name) formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
+    if (data.category) formData.append("category", data.category);
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     if (data.type) formData.append("type", data.type);

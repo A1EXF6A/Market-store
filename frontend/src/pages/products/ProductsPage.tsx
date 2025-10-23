@@ -191,6 +191,17 @@ const ProductsPage: React.FC = () => {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Input
+                id="category"
+                placeholder="Ej: Electrónicos, Ropa..."
+                value={filters.category || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, category: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="minPrice">Precio Mínimo</Label>
               <Input
                 id="minPrice"

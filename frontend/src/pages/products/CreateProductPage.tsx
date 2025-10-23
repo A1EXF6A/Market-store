@@ -28,6 +28,7 @@ const productSchema = z.object({
     .min(1, "El nombre es requerido")
     .max(200, "Máximo 200 caracteres"),
   description: z.string().optional(),
+  category: z.string().max(100, "Máximo 100 caracteres").optional(),
   price: z.number().min(0, "El precio debe ser mayor a 0").optional(),
   location: z.string().max(150, "Máximo 150 caracteres").optional(),
   type: z.enum(["product", "service"]).refine((val) => val, {
@@ -64,6 +65,7 @@ const CreateProductPage: React.FC = () => {
       const createData: CreateProductData = {
         name: data.name,
         description: data.description,
+        category: data.category,
         price: data.price,
         location: data.location,
         type: data.type,
@@ -144,6 +146,20 @@ const CreateProductPage: React.FC = () => {
               {errors.description && (
                 <p className="text-sm text-red-600">
                   {errors.description.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Input
+                id="category"
+                placeholder="Ej: Electrónicos, Ropa, Servicios..."
+                {...register("category")}
+              />
+              {errors.category && (
+                <p className="text-sm text-red-600">
+                  {errors.category.message}
                 </p>
               )}
             </div>

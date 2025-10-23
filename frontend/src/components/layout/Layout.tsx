@@ -46,6 +46,7 @@ const Layout: React.FC = () => {
     { path: '/products', label: 'Productos', icon: ShoppingBag, roles: [UserRole.BUYER, UserRole.SELLER, UserRole.MODERATOR, UserRole.ADMIN] },
     { path: '/favorites', label: 'Favoritos', icon: Heart, roles: [UserRole.BUYER] },
     { path: '/my-products', label: 'Mis Productos', icon: ShoppingBag, roles: [UserRole.SELLER] },
+    { path: '/my-incidents', label: 'Mis Incidencias', icon: AlertTriangle, roles: [UserRole.SELLER] },
     { path: '/users', label: 'Usuarios', icon: Users, roles: [UserRole.ADMIN, UserRole.MODERATOR] },
     { path: '/incidents', label: 'Incidencias', icon: AlertTriangle, roles: [UserRole.ADMIN, UserRole.MODERATOR] },
     { path: '/reports', label: 'Reportes', icon: Flag, roles: [UserRole.ADMIN, UserRole.MODERATOR] },
@@ -63,7 +64,7 @@ const Layout: React.FC = () => {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
               <Link to="/dashboard" className="text-xl font-bold text-gray-900">
-                Marketplace
+                CommerceHub
               </Link>
               
               <div className="hidden md:flex items-center space-x-4">

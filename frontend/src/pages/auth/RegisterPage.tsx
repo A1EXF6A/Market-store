@@ -194,6 +194,13 @@ const RegisterPage: React.FC = () => {
               </Button>
             </form>
 
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                📧 Después del registro, recibirás un email de verificación. 
+                Debes verificar tu cuenta para acceder a todas las funcionalidades.
+              </p>
+            </div>
+
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 ¿Ya tienes cuenta?{' '}
@@ -202,6 +209,15 @@ const RegisterPage: React.FC = () => {
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Inicia sesión aquí
+                </Link>
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
+                ¿No recibiste el email de verificación?{' '}
+                <Link 
+                  to="/resend-verification" 
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
+                  Reenviar verificación
                 </Link>
               </p>
             </div>
