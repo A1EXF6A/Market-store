@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { productsService } from "../../services/products";
-import { API_BASE } from "../../services/api";
 import type { Product, ProductFilters } from "../../types";
 import { ItemType, UserRole } from "../../types";
 import { useAuthStore } from "../../store/authStore";
@@ -17,24 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { ProductCard } from "@/components/ui/product-card";
+import { ReportProductModal } from "@/components/ui/report-product-modal";
+
 import { 
-  Heart, 
-  MapPin, 
-  DollarSign, 
   Search, 
   Filter, 
   MoreHorizontal,
@@ -43,8 +33,8 @@ import {
   EyeOff,
   AlertTriangle,
   Ban,
-  Calendar,
-  X
+  X,
+  Flag
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +43,11 @@ const ProductsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [reportModal, setReportModal] = useState<{isOpen: boolean, productId: number, productName: string}>({
+    isOpen: false,
+    productId: 0,
+    productName: ""
+  });
   const { user } = useAuthStore();
 
   const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
@@ -61,10 +56,11 @@ const ProductsPage: React.FC = () => {
     loadProducts();
   }, []);
 
-  const loadProducts = async () => {
+  const loadProducts = async (customFilters?: ProductFilters) => {
     try {
       setLoading(true);
-      const data = await productsService.getAll(filters);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const data = await productsService.getAll(currentFilters);
       setProducts(data);
     } catch (error: any) {
       toast.error("Error al cargar productos");
@@ -75,15 +71,7 @@ const ProductsPage: React.FC = () => {
 
   const clearFilters = async () => {
     setFilters({});
-    try {
-      setLoading(true);
-      const data = await productsService.getAll({});
-      setProducts(data);
-    } catch (error: any) {
-      toast.error("Error al cargar productos");
-    } finally {
-      setLoading(false);
-    }
+    await loadProducts({});
   };
 
   const handleToggleFavorite = async (productId: number) => {
@@ -118,7 +106,7 @@ const ProductsPage: React.FC = () => {
           break;
       }
       
-      loadProducts();
+      await loadProducts();
     } catch (error: any) {
       toast.error("Error al actualizar producto");
     } finally {
@@ -126,25 +114,7 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      active: { text: "Activo", class: "bg-green-100 text-green-800" },
-      pending: { text: "Pendiente", class: "bg-yellow-100 text-yellow-800" },
-      suspended: { text: "Suspendido", class: "bg-red-100 text-red-800" },
-      hidden: { text: "Oculto", class: "bg-gray-100 text-gray-800" },
-      banned: { text: "Baneado", class: "bg-red-100 text-red-800" },
-    };
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.active;
-    return <Badge className={statusInfo.class}>{statusInfo.text}</Badge>;
-  };
 
-  const getTypeBadge = (type: ItemType) => {
-    return type === ItemType.PRODUCT ? (
-      <Badge variant="outline">Producto</Badge>
-    ) : (
-      <Badge variant="outline">Servicio</Badge>
-    );
-  };
 
   if (loading) {
     return (
@@ -252,7 +222,7 @@ const ProductsPage: React.FC = () => {
               <X className="h-4 w-4" />
               Limpiar
             </Button>
-            <Button onClick={loadProducts} className="flex items-center gap-2">
+            <Button onClick={() => loadProducts()} className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               Buscar
             </Button>
@@ -260,99 +230,77 @@ const ProductsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Products Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Productos ({products.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      {/* Products Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Productos ({products.length})
+          </h2>
+          {isAdmin && (
+            <div className="text-sm text-gray-600">
+              Vista de administrador - Acciones disponibles en cada producto
+            </div>
+          )}
+        </div>
+
+        {products.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se encontraron productos
+              </h3>
+              <p className="text-gray-600">
+                Intenta ajustar los filtros de búsqueda
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.filter(product => product.availability).map((product) => (
-                <TableRow key={product.itemId}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden">
-                        {product.photos.length > 0 ? (
-                          <img
-                            src={`${API_BASE}${product.photos[0].url}`}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400">
-                            <Package className="h-6 w-6" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        {product.location && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {product.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getTypeBadge(product.type)}</TableCell>
-                  <TableCell>
-                    {product.price ? (
-                      <div className="flex items-center text-green-600 font-semibold">
-                        <DollarSign className="h-4 w-4" />
-                        {product.price.toLocaleString()}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(product.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(product.publishedAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {user?.role === UserRole.BUYER && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleFavorite(product.itemId)}
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/products/${product.itemId}`}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Link>
-                      </Button>
-                      {isAdmin && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={actionLoading === product.itemId}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                <div key={product.itemId} className="relative">
+                  <ProductCard
+                    product={product}
+                    onToggleFavorite={handleToggleFavorite}
+                    userRole={user?.role}
+                    showActions={!isAdmin}
+                  />
+                  
+                  {/* Admin actions overlay */}
+                  {isAdmin && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-white/90 hover:bg-white shadow-sm"
+                            disabled={actionLoading === product.itemId}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/products/${product.itemId}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalles
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setReportModal({
+                                  isOpen: true,
+                                  productId: product.itemId,
+                                  productName: product.name
+                                })
+                              }
+                              className="text-blue-600"
+                            >
+                              <Flag className="h-4 w-4 mr-2" />
+                              Reportar
+                            </DropdownMenuItem>
                             {product.status === 'active' ? (
                               <>
                                 <DropdownMenuItem
@@ -395,28 +343,23 @@ const ProductsPage: React.FC = () => {
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                      </DropdownMenu>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  )}
+                </div>
               ))}
-            </TableBody>
-          </Table>
-
-          {products.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No se encontraron productos
-              </h3>
-              <p className="text-gray-600">
-                Intenta ajustar los filtros de búsqueda
-              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </>
+        )}
+      </div>
+
+      {/* Report Modal */}
+      <ReportProductModal
+        isOpen={reportModal.isOpen}
+        onClose={() => setReportModal({ isOpen: false, productId: 0, productName: "" })}
+        productId={reportModal.productId}
+        productName={reportModal.productName}
+      />
     </div>
   );
 };

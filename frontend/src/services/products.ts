@@ -17,11 +17,6 @@ export interface UpdateProductData extends Partial<CreateProductData> {
 
 export const productsService = {
   getAll: async (filters?: ProductFilters): Promise<Product[]> => {
-    if (!filters) {
-      const response = await api.get("/products");
-      return response.data;
-    }
-
     const params = new URLSearchParams();
 
     if (filters?.type) params.append("type", filters.type);
@@ -32,9 +27,12 @@ export const productsService = {
     if (filters?.location) params.append("location", filters.location);
     if (filters?.search) params.append("search", filters.search);
 
-    const response = await api.get(`/products?${params.toString()}`);
+    const queryString = params.toString();
+    const response = await api.get(`/products${queryString ? `?${queryString}` : ""}`);
     return response.data;
   },
+
+
 
   getById: async (id: number): Promise<Product> => {
     const response = await api.get(`/products/${id}`);

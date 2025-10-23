@@ -55,12 +55,12 @@ export const incidentsService = {
     if (filters?.type) params.append('type', filters.type);
     if (filters?.search) params.append('search', filters.search);
     
-    const response = await api.get(`/reports?${params.toString()}`);
+    const response = await api.get(`/incidents/reports?${params.toString()}`);
     return response.data;
   },
 
   createReport: async (data: CreateReportData): Promise<Report> => {
-    const response = await api.post('/reports', data);
+    const response = await api.post('/incidents/reports', data);
     return response.data;
   },
 
