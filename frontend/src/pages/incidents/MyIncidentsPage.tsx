@@ -1,19 +1,40 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { FileText, MessageSquare, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import { incidentsService } from '../../services/incidents';
-import CreateAppealModal from '../../components/ui/create-appeal-modal';
-import type { Incident } from '../../types';
-import { ItemStatus } from '../../types';
+import type { Incident } from "@/types";
+import { ItemStatus } from "@/types";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@components/ui/card";
+import CreateAppealModal from "@components/ui/create-appeal-modal";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@components/ui/table";
+import { incidentsService } from "@services/incidents";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
+  MessageSquare,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function MyIncidentsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
+    null,
+  );
   const [showAppealModal, setShowAppealModal] = useState(false);
 
   useEffect(() => {
@@ -25,7 +46,7 @@ export default function MyIncidentsPage() {
       const data = await incidentsService.getMyIncidents();
       setIncidents(data);
     } catch (error: any) {
-      toast.error('Error al cargar incidencias');
+      toast.error("Error al cargar incidencias");
     } finally {
       setIsLoading(false);
     }
@@ -33,14 +54,23 @@ export default function MyIncidentsPage() {
 
   const getStatusBadge = (status: ItemStatus) => {
     const variants = {
-      [ItemStatus.ACTIVE]: { variant: 'default' as const, label: 'Activo' },
-      [ItemStatus.SUSPENDED]: { variant: 'destructive' as const, label: 'Suspendido' },
-      [ItemStatus.HIDDEN]: { variant: 'secondary' as const, label: 'Oculto' },
-      [ItemStatus.PENDING]: { variant: 'outline' as const, label: 'Pendiente' },
-      [ItemStatus.BANNED]: { variant: 'destructive' as const, label: 'Baneado' },
+      [ItemStatus.ACTIVE]: { variant: "default" as const, label: "Activo" },
+      [ItemStatus.SUSPENDED]: {
+        variant: "destructive" as const,
+        label: "Suspendido",
+      },
+      [ItemStatus.HIDDEN]: { variant: "secondary" as const, label: "Oculto" },
+      [ItemStatus.PENDING]: { variant: "outline" as const, label: "Pendiente" },
+      [ItemStatus.BANNED]: {
+        variant: "destructive" as const,
+        label: "Baneado",
+      },
     };
 
-    const config = variants[status] || { variant: 'secondary' as const, label: status };
+    const config = variants[status] || {
+      variant: "secondary" as const,
+      label: status,
+    };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
@@ -59,9 +89,12 @@ export default function MyIncidentsPage() {
   };
 
   const canAppeal = (incident: Incident) => {
-    const hasActiveAppeal = incident.appeals?.some(appeal => !appeal.reviewed);
-    const isSuspendedOrBanned = incident.item?.status === ItemStatus.SUSPENDED || 
-                                incident.item?.status === ItemStatus.BANNED;
+    const hasActiveAppeal = incident.appeals?.some(
+      (appeal) => !appeal.reviewed,
+    );
+    const isSuspendedOrBanned =
+      incident.item?.status === ItemStatus.SUSPENDED ||
+      incident.item?.status === ItemStatus.BANNED;
     return isSuspendedOrBanned && !hasActiveAppeal;
   };
 
@@ -90,7 +123,8 @@ export default function MyIncidentsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Mis Incidencias</h1>
         <p className="text-gray-600">
-          Gestiona las incidencias relacionadas con tus productos y crea apelaciones cuando sea necesario.
+          Gestiona las incidencias relacionadas con tus productos y crea
+          apelaciones cuando sea necesario.
         </p>
       </div>
 
@@ -100,7 +134,8 @@ export default function MyIncidentsPage() {
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No tienes incidencias</h3>
             <p className="text-gray-600">
-              Cuando haya incidencias relacionadas con tus productos, aparecerán aquí.
+              Cuando haya incidencias relacionadas con tus productos, aparecerán
+              aquí.
             </p>
           </CardContent>
         </Card>
@@ -109,7 +144,8 @@ export default function MyIncidentsPage() {
           <CardHeader>
             <CardTitle>Incidencias de mis productos</CardTitle>
             <CardDescription>
-              {incidents.length} incidencia{incidents.length !== 1 ? 's' : ''} encontrada{incidents.length !== 1 ? 's' : ''}
+              {incidents.length} incidencia{incidents.length !== 1 ? "s" : ""}{" "}
+              encontrada{incidents.length !== 1 ? "s" : ""}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -132,7 +168,9 @@ export default function MyIncidentsPage() {
                         {getStatusIcon(incident.item?.status)}
                         <div>
                           <p className="font-medium">{incident.item?.name}</p>
-                          <p className="text-sm text-gray-500">ID: {incident.item?.itemId}</p>
+                          <p className="text-sm text-gray-500">
+                            ID: {incident.item?.itemId}
+                          </p>
                         </div>
                       </div>
                     </TableCell>
@@ -140,17 +178,23 @@ export default function MyIncidentsPage() {
                       {getStatusBadge(incident.item?.status)}
                     </TableCell>
                     <TableCell>
-                      <p className="max-w-xs truncate" title={incident.description}>
+                      <p
+                        className="max-w-xs truncate"
+                        title={incident.description}
+                      >
                         {incident.description}
                       </p>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">
-                        {new Date(incident.createdAt).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {new Date(incident.createdAt).toLocaleDateString(
+                          "es-ES",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -159,7 +203,9 @@ export default function MyIncidentsPage() {
                         <span className="text-sm">
                           {incident.appeals?.length || 0}
                         </span>
-                        {incident.appeals?.some(appeal => !appeal.reviewed) && (
+                        {incident.appeals?.some(
+                          (appeal) => !appeal.reviewed,
+                        ) && (
                           <Badge variant="outline" className="text-xs">
                             Pendiente
                           </Badge>
@@ -177,10 +223,9 @@ export default function MyIncidentsPage() {
                         </Button>
                       ) : (
                         <span className="text-sm text-gray-500">
-                          {incident.appeals?.some(appeal => !appeal.reviewed) 
-                            ? 'Apelación pendiente' 
-                            : 'No se puede apelar'
-                          }
+                          {incident.appeals?.some((appeal) => !appeal.reviewed)
+                            ? "Apelación pendiente"
+                            : "No se puede apelar"}
                         </span>
                       )}
                     </TableCell>
@@ -201,3 +246,4 @@ export default function MyIncidentsPage() {
     </div>
   );
 }
+

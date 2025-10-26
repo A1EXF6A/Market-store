@@ -1,39 +1,55 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useAuthStore } from '../../store/authStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { UserRole } from '../../types';
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useAuthStore } from "@/store/authStore";
+import { Button } from "@components/ui/button";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@components/ui/select";
+import { toast } from "sonner";
+import { UserRole } from "@/types";
 
-const registerSchema = z.object({
-  nationalId: z.string().min(1, 'Cédula requerida'),
-  firstName: z.string().min(1, 'Nombre requerido'),
-  lastName: z.string().min(1, 'Apellido requerido'),
-  email: z.string().email('Email inválido'),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  gender: z.enum(['male', 'female', 'other']).optional(),
-  role: z.nativeEnum(UserRole),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Las contraseñas no coinciden",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    nationalId: z.string().min(1, "Cédula requerida"),
+    firstName: z.string().min(1, "Nombre requerido"),
+    lastName: z.string().min(1, "Apellido requerido"),
+    email: z.string().email("Email inválido"),
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    gender: z.enum(["male", "female", "other"]).optional(),
+    role: z.nativeEnum(UserRole),
+    password: z
+      .string()
+      .min(6, "La contraseña debe tener al menos 6 caracteres"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 const RegisterPage: React.FC = () => {
   const { register: registerUser, isLoading } = useAuthStore();
   const navigate = useNavigate();
-  
+
   const {
     register,
     handleSubmit,
@@ -42,18 +58,18 @@ const RegisterPage: React.FC = () => {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      role: UserRole.BUYER
-    }
+      role: UserRole.BUYER,
+    },
   });
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
       const { confirmPassword, ...registerData } = data;
       await registerUser(registerData);
-      toast.success('Registro exitoso');
-      navigate('/dashboard');
+      toast.success("Registro exitoso");
+      navigate("/dashboard");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al registrarse');
+      toast.error(error.response?.data?.message || "Error al registrarse");
     }
   };
 
@@ -64,7 +80,7 @@ const RegisterPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-gray-900">Marketplace</h2>
           <p className="mt-2 text-gray-600">Crea tu cuenta</p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Registro</CardTitle>
@@ -80,10 +96,12 @@ const RegisterPage: React.FC = () => {
                   <Input
                     id="firstName"
                     placeholder="Tu nombre"
-                    {...register('firstName')}
+                    {...register("firstName")}
                   />
                   {errors.firstName && (
-                    <p className="text-sm text-red-600">{errors.firstName.message}</p>
+                    <p className="text-sm text-red-600">
+                      {errors.firstName.message}
+                    </p>
                   )}
                 </div>
 
@@ -92,10 +110,12 @@ const RegisterPage: React.FC = () => {
                   <Input
                     id="lastName"
                     placeholder="Tu apellido"
-                    {...register('lastName')}
+                    {...register("lastName")}
                   />
                   {errors.lastName && (
-                    <p className="text-sm text-red-600">{errors.lastName.message}</p>
+                    <p className="text-sm text-red-600">
+                      {errors.lastName.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -105,10 +125,12 @@ const RegisterPage: React.FC = () => {
                 <Input
                   id="nationalId"
                   placeholder="12345678901"
-                  {...register('nationalId')}
+                  {...register("nationalId")}
                 />
                 {errors.nationalId && (
-                  <p className="text-sm text-red-600">{errors.nationalId.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.nationalId.message}
+                  </p>
                 )}
               </div>
 
@@ -118,7 +140,7 @@ const RegisterPage: React.FC = () => {
                   id="email"
                   type="email"
                   placeholder="tu@email.com"
-                  {...register('email')}
+                  {...register("email")}
                 />
                 {errors.email && (
                   <p className="text-sm text-red-600">{errors.email.message}</p>
@@ -130,7 +152,7 @@ const RegisterPage: React.FC = () => {
                 <Input
                   id="phone"
                   placeholder="+1234567890"
-                  {...register('phone')}
+                  {...register("phone")}
                 />
               </div>
 
@@ -139,13 +161,15 @@ const RegisterPage: React.FC = () => {
                 <Input
                   id="address"
                   placeholder="Tu dirección"
-                  {...register('address')}
+                  {...register("address")}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Tipo de cuenta</Label>
-                <Select onValueChange={(value) => setValue('role', value as UserRole)}>
+                <Select
+                  onValueChange={(value) => setValue("role", value as UserRole)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona tu rol" />
                   </SelectTrigger>
@@ -165,10 +189,12 @@ const RegisterPage: React.FC = () => {
                   id="password"
                   type="password"
                   placeholder="••••••••"
-                  {...register('password')}
+                  {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -178,43 +204,42 @@ const RegisterPage: React.FC = () => {
                   id="confirmPassword"
                   type="password"
                   placeholder="••••••••"
-                  {...register('confirmPassword')}
+                  {...register("confirmPassword")}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Registrando...' : 'Crear Cuenta'}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Registrando..." : "Crear Cuenta"}
               </Button>
             </form>
 
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
-                📧 Después del registro, recibirás un email de verificación. 
-                Debes verificar tu cuenta para acceder a todas las funcionalidades.
+                📧 Después del registro, recibirás un email de verificación.
+                Debes verificar tu cuenta para acceder a todas las
+                funcionalidades.
               </p>
             </div>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                ¿Ya tienes cuenta?{' '}
-                <Link 
-                  to="/login" 
+                ¿Ya tienes cuenta?{" "}
+                <Link
+                  to="/login"
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Inicia sesión aquí
                 </Link>
               </p>
               <p className="text-sm text-gray-600 mt-2">
-                ¿No recibiste el email de verificación?{' '}
-                <Link 
-                  to="/resend-verification" 
+                ¿No recibiste el email de verificación?{" "}
+                <Link
+                  to="/resend-verification"
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Reenviar verificación
@@ -229,3 +254,4 @@ const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
+

@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { productsService } from '../../services/products';
-import { API_BASE } from '../../services/api';
-import type { Product } from '../../types';
-import { UserRole } from '../../types';
-import { useAuthStore } from '../../store/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Heart, 
-  MapPin, 
-  DollarSign, 
-  Calendar, 
-  User, 
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { productsService } from "@services/products";
+import { API_BASE } from "@services/api";
+import type { Product } from "@/types";
+import { UserRole } from "@/types";
+import { useAuthStore } from "@/store/authStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import { Button } from "@components/ui/button";
+import { Badge } from "@components/ui/badge";
+import { Separator } from "@components/ui/separator";
+import {
+  Heart,
+  MapPin,
+  DollarSign,
+  Calendar,
+  User,
   MessageCircle,
   Flag,
   ArrowLeft,
-  Clock
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { chatService } from '../../services/chat';
-import { ReportProductModal } from '@/components/ui/report-product-modal';
+  Clock,
+} from "lucide-react";
+import { toast } from "sonner";
+import { chatService } from "@services/chat";
+import { ReportProductModal } from "@components/ui/report-product-modal";
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,8 +45,8 @@ const ProductDetailPage: React.FC = () => {
       const data = await productsService.getById(productId);
       setProduct(data);
     } catch (error: any) {
-      toast.error('Error al cargar el producto');
-      navigate('/products');
+      toast.error("Error al cargar el producto");
+      navigate("/products");
     } finally {
       setLoading(false);
     }
@@ -54,12 +54,12 @@ const ProductDetailPage: React.FC = () => {
 
   const handleToggleFavorite = async () => {
     if (!product) return;
-    
+
     try {
       await productsService.toggleFavorite(product.itemId);
-      toast.success('Favorito actualizado');
+      toast.success("Favorito actualizado");
     } catch (error: any) {
-      toast.error('Error al actualizar favorito');
+      toast.error("Error al actualizar favorito");
     }
   };
   const handleContactSeller = async () => {
@@ -68,19 +68,21 @@ const ProductDetailPage: React.FC = () => {
       const chat = await chatService.findOrCreateChat(product.seller.userId);
       navigate(`/chat/${chat.chatId}`);
     } catch (error: any) {
-      toast.error('Error al iniciar chat con el vendedor');
+      toast.error("Error al iniciar chat con el vendedor");
       console.error(error);
     }
   };
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      active: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      suspended: 'bg-red-100 text-red-800',
-      hidden: 'bg-gray-100 text-gray-800',
-      banned: 'bg-red-100 text-red-800',
+      active: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      suspended: "bg-red-100 text-red-800",
+      hidden: "bg-gray-100 text-gray-800",
+      banned: "bg-red-100 text-red-800",
     };
-    return statusMap[status as keyof typeof statusMap] || 'bg-gray-100 text-gray-800';
+    return (
+      statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800"
+    );
   };
 
   if (loading) {
@@ -124,7 +126,7 @@ const ProductDetailPage: React.FC = () => {
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
                 {product.photos.length > 0 ? (
                   <img
-                     src={`${API_BASE}${product.photos[currentImageIndex]?.url || product.photos[0].url}`}
+                    src={`${API_BASE}${product.photos[currentImageIndex]?.url || product.photos[0].url}`}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -144,10 +146,12 @@ const ProductDetailPage: React.FC = () => {
                   key={photo.photoId}
                   onClick={() => setCurrentImageIndex(index)}
                   className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    currentImageIndex === index ? 'border-blue-500' : 'border-gray-200'
+                    currentImageIndex === index
+                      ? "border-blue-500"
+                      : "border-gray-200"
                   }`}
                 >
-                   <img
+                  <img
                     src={`${API_BASE}${photo.url}`}
                     alt={`${product.name} ${index + 1}`}
                     className="w-full h-full object-cover"
@@ -166,7 +170,7 @@ const ProductDetailPage: React.FC = () => {
                   <CardTitle className="text-2xl">{product.name}</CardTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">
-                      {product.type === 'product' ? 'Producto' : 'Servicio'}
+                      {product.type === "product" ? "Producto" : "Servicio"}
                     </Badge>
                     <Badge className={getStatusBadge(product.status)}>
                       {product.status}
@@ -205,7 +209,10 @@ const ProductDetailPage: React.FC = () => {
                 )}
                 <div className="flex items-center text-gray-600">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <span>Publicado: {new Date(product.publishedAt).toLocaleDateString()}</span>
+                  <span>
+                    Publicado:{" "}
+                    {new Date(product.publishedAt).toLocaleDateString()}
+                  </span>
                 </div>
                 {product.service?.workingHours && (
                   <div className="flex items-center text-gray-600">
@@ -220,7 +227,11 @@ const ProductDetailPage: React.FC = () => {
               <div className="flex gap-3">
                 {user?.role === UserRole.BUYER && (
                   <>
-                    <Button onClick={handleToggleFavorite} variant="outline" className="flex-1">
+                    <Button
+                      onClick={handleToggleFavorite}
+                      variant="outline"
+                      className="flex-1"
+                    >
                       <Heart className="h-4 w-4 mr-2" />
                       Favorito
                     </Button>
@@ -230,10 +241,10 @@ const ProductDetailPage: React.FC = () => {
                     </Button>
                   </>
                 )}
-                
+
                 {user?.role === UserRole.BUYER && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setReportModalOpen(true)}
                   >
@@ -258,9 +269,13 @@ const ProductDetailPage: React.FC = () => {
                     <p className="font-semibold">
                       {product.seller.firstName} {product.seller.lastName}
                     </p>
-                    <p className="text-sm text-gray-600">{product.seller.email}</p>
+                    <p className="text-sm text-gray-600">
+                      {product.seller.email}
+                    </p>
                     {product.seller.phone && (
-                      <p className="text-sm text-gray-600">{product.seller.phone}</p>
+                      <p className="text-sm text-gray-600">
+                        {product.seller.phone}
+                      </p>
                     )}
                   </div>
                   {user?.role === UserRole.BUYER && (
@@ -290,3 +305,4 @@ const ProductDetailPage: React.FC = () => {
 };
 
 export default ProductDetailPage;
+

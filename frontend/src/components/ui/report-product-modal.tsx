@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { ReportType } from "@/types";
+import { Button } from "@components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,19 +7,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@components/ui/dialog";
+import { Label } from "@components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ReportType } from "../../types";
-import { incidentsService } from "../../services/incidents";
+} from "@components/ui/select";
+import { Textarea } from "@components/ui/textarea";
+import { incidentsService } from "@services/incidents";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface ReportProductModalProps {
@@ -28,11 +28,11 @@ interface ReportProductModalProps {
   productName: string;
 }
 
-export function ReportProductModal({ 
-  isOpen, 
-  onClose, 
-  productId, 
-  productName 
+export function ReportProductModal({
+  isOpen,
+  onClose,
+  productId,
+  productName,
 }: ReportProductModalProps) {
   const [reportType, setReportType] = useState<ReportType | "">("");
   const [comment, setComment] = useState("");
@@ -58,7 +58,7 @@ export function ReportProductModal({
         type: reportType as ReportType,
         comment: comment || undefined,
       });
-      
+
       toast.success("Reporte enviado correctamente");
       handleClose();
     } catch (error: any) {
@@ -80,14 +80,18 @@ export function ReportProductModal({
         <DialogHeader>
           <DialogTitle>Reportar Producto</DialogTitle>
           <DialogDescription>
-            Reportar "{productName}" por violación de las políticas de la plataforma.
+            Reportar "{productName}" por violación de las políticas de la
+            plataforma.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="reportType">Tipo de reporte *</Label>
-            <Select value={reportType} onValueChange={(value) => setReportType(value as ReportType)}>
+            <Select
+              value={reportType}
+              onValueChange={(value) => setReportType(value as ReportType)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona el tipo de reporte" />
               </SelectTrigger>
@@ -100,7 +104,7 @@ export function ReportProductModal({
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="comment">Comentario (opcional)</Label>
             <Textarea
@@ -112,15 +116,12 @@ export function ReportProductModal({
             />
           </div>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting || !reportType}
-          >
+          <Button onClick={handleSubmit} disabled={isSubmitting || !reportType}>
             {isSubmitting ? "Enviando..." : "Enviar Reporte"}
           </Button>
         </DialogFooter>
@@ -128,3 +129,4 @@ export function ReportProductModal({
     </Dialog>
   );
 }
+

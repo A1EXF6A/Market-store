@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Product, ProductFilters } from "../types";
+import type { Product, ProductFilters } from "@/types";
 
 export interface CreateProductData {
   name: string;
@@ -30,11 +30,11 @@ export const productsService = {
     if (filters?.search) params.append("search", filters.search);
 
     const queryString = params.toString();
-    const response = await api.get(`/products${queryString ? `?${queryString}` : ""}`);
+    const response = await api.get(
+      `/products${queryString ? `?${queryString}` : ""}`,
+    );
     return response.data;
   },
-
-
 
   getById: async (id: number): Promise<Product> => {
     const response = await api.get(`/products/${id}`);
@@ -138,18 +138,18 @@ export const productsService = {
   },
 
   hideProduct: async (id: number, reason: string): Promise<void> => {
-    await api.patch(`/products/${id}/status`, { status: 'hidden', reason });
+    await api.patch(`/products/${id}/status`, { status: "hidden", reason });
   },
 
   suspendProduct: async (id: number, reason: string): Promise<void> => {
-    await api.patch(`/products/${id}/status`, { status: 'suspended', reason });
+    await api.patch(`/products/${id}/status`, { status: "suspended", reason });
   },
 
   banProduct: async (id: number, reason: string): Promise<void> => {
-    await api.patch(`/products/${id}/status`, { status: 'banned', reason });
+    await api.patch(`/products/${id}/status`, { status: "banned", reason });
   },
 
   activateProduct: async (id: number): Promise<void> => {
-    await api.patch(`/products/${id}/status`, { status: 'active' });
+    await api.patch(`/products/${id}/status`, { status: "active" });
   },
 };

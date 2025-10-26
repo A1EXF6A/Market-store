@@ -1,34 +1,44 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Button } from '../../components/ui/button';
-import { Label } from '../../components/ui/label';
-import { Mail, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
-import { authService } from '../../services/auth';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@components/ui/card";
+import { Input } from "@components/ui/input";
+import { Button } from "@components/ui/button";
+import { Label } from "@components/ui/label";
+import { Mail, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { authService } from "@services/auth";
 
 export default function ResendVerificationPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email) {
-      toast.error('Por favor ingresa tu email');
+      toast.error("Por favor ingresa tu email");
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       await authService.resendVerification(email);
       setIsSuccess(true);
-      toast.success('Si el email existe, se ha enviado un enlace de verificación');
+      toast.success(
+        "Si el email existe, se ha enviado un enlace de verificación",
+      );
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al reenviar verificación');
+      toast.error(
+        error.response?.data?.message || "Error al reenviar verificación",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -44,8 +54,8 @@ export default function ResendVerificationPage() {
             </div>
             <CardTitle className="text-2xl font-bold">¡Listo!</CardTitle>
             <CardDescription>
-              Si el email existe en nuestro sistema, hemos enviado un nuevo enlace de verificación.
-              Revisa tu bandeja de entrada y spam.
+              Si el email existe en nuestro sistema, hemos enviado un nuevo
+              enlace de verificación. Revisa tu bandeja de entrada y spam.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -68,7 +78,9 @@ export default function ResendVerificationPage() {
           <div className="mx-auto mb-4">
             <Mail className="h-12 w-12 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold">Reenviar verificación</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Reenviar verificación
+          </CardTitle>
           <CardDescription>
             Ingresa tu email para recibir un nuevo enlace de verificación
           </CardDescription>
@@ -87,12 +99,8 @@ export default function ResendVerificationPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
-              {isLoading ? 'Enviando...' : 'Reenviar verificación'}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Enviando..." : "Reenviar verificación"}
             </Button>
             <Button asChild variant="outline" className="w-full">
               <Link to="/login">
@@ -106,3 +114,4 @@ export default function ResendVerificationPage() {
     </div>
   );
 }
+

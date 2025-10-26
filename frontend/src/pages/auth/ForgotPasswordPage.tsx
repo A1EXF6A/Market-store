@@ -1,20 +1,20 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@components/ui/card";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { authService } from "@services/auth";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { authService } from "@/services/auth";
+import { z } from "zod";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -59,7 +59,8 @@ const ForgotPasswordPage: React.FC = () => {
           <CardHeader>
             <CardTitle>Recuperar Contraseña</CardTitle>
             <CardDescription>
-              Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña
+              Ingresa tu email y te enviaremos un enlace para restablecer tu
+              contraseña
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -101,3 +102,4 @@ const ForgotPasswordPage: React.FC = () => {
 };
 
 export default ForgotPasswordPage;
+
