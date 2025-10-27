@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
-import { incidentsService, type ReportFilters } from "@services/incidents";
+import { incidentsService, type ReportFilters, type IncidentFilters } from "@services/incidents";
 import {
   AlertTriangle,
   Ban,
@@ -36,6 +36,7 @@ import {
   CheckCircle,
   Clock,
   Eye,
+  EyeOff,
   FileText,
   Filter,
   Flag,
@@ -46,6 +47,7 @@ import {
   Trash,
   User,
   UserCheck,
+  X,
   XCircle,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -57,21 +59,28 @@ const ReportsPage: React.FC = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ReportFilters>({});
+  const [filters, setFilters] = useState<ReportFilters & IncidentFilters>({});
   const [activeTab, setActiveTab] = useState("reports");
 
   useEffect(() => {
     loadData();
-  }, [filters, activeTab]);
+  }, [activeTab]);
 
-  const loadData = async () => {
+  const clearFilters = async () => {
+    const emptyFilters = {};
+    setFilters(emptyFilters);
+    await loadData(emptyFilters);
+  };
+
+  const loadData = async (customFilters?: ReportFilters & IncidentFilters) => {
     try {
       setLoading(true);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
       if (activeTab === "reports") {
-        const data = await incidentsService.getReports(filters);
+        const data = await incidentsService.getReports(currentFilters);
         setReports(data);
       } else {
-        const data = await incidentsService.getIncidents(filters);
+        const data = await incidentsService.getIncidents(currentFilters);
         setIncidents(data);
       }
     } catch (error: any) {
@@ -254,6 +263,7 @@ const ReportsPage: React.FC = () => {
                     />
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label>Tipo de Reporte</Label>
                   <Select
@@ -308,6 +318,23 @@ const ReportsPage: React.FC = () => {
                     }
                   />
                 </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  onClick={clearFilters}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpiar
+                </Button>
+                <Button
+                  onClick={() => loadData()}
+                  className="flex items-center gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Buscar
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -467,6 +494,105 @@ const ReportsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="incidents" className="space-y-6">
+          {/* Filters for Incidents */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="search-incidents">Buscar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="search-incidents"
+                      placeholder="Producto, vendedor..."
+                      className="pl-10"
+                      value={filters.search || ""}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          search: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado</Label>
+                  <Select
+                    value={filters.status || "all"}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        status: value === "all" ? undefined : (value as ItemStatus),
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos los estados" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                      <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
+                      <SelectItem value={ItemStatus.SUSPENDED}>Suspendido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startDate-incidents">Fecha Inicio</Label>
+                  <Input
+                    id="startDate-incidents"
+                    type="date"
+                    value={filters.startDate || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        startDate: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate-incidents">Fecha Fin</Label>
+                  <Input
+                    id="endDate-incidents"
+                    type="date"
+                    value={filters.endDate || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        endDate: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  onClick={clearFilters}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpiar
+                </Button>
+                <Button
+                  onClick={() => loadData()}
+                  className="flex items-center gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Buscar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Incidents Table */}
           <Card>
             <CardHeader>

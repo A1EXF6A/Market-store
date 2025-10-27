@@ -23,11 +23,12 @@ import {
   Users,
 } from "lucide-react";
 import React from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -112,6 +113,13 @@ const Layout: React.FC = () => {
     (item) => user && item.roles.includes(user.role),
   );
 
+  const isActivePath = (path: string) => {
+    return (
+      location.pathname === path ||
+      (path !== "/dashboard" && location.pathname.startsWith(path))
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
@@ -125,11 +133,16 @@ const Layout: React.FC = () => {
               <div className="hidden md:flex items-center space-x-4">
                 {filteredNavItems.map((item) => {
                   const Icon = item.icon;
+                  const isActive = isActivePath(item.path);
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
-                      className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                      className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-gray-900 text-white"
+                          : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
@@ -157,9 +170,6 @@ const Layout: React.FC = () => {
                   >
                     <User className="h-4 w-4" />
                     <span className="hidden md:block">{user?.firstName}</span>
-                    <Badge className={roleColors[user?.role || UserRole.BUYER]}>
-                      {user?.role}
-                    </Badge>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -197,4 +207,3 @@ const Layout: React.FC = () => {
 };
 
 export default Layout;
-

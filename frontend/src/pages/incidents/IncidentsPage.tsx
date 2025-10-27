@@ -48,6 +48,7 @@ import {
   Search,
   User,
   UserCheck,
+  X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -72,18 +73,24 @@ const IncidentsPage: React.FC = () => {
 
   useEffect(() => {
     loadIncidents();
-  }, [filters]);
+  }, []);
 
-  const loadIncidents = async () => {
+  const loadIncidents = async (customFilters?: IncidentFilters) => {
     try {
       setLoading(true);
-      const data = await incidentsService.getIncidents(filters);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const data = await incidentsService.getIncidents(currentFilters);
       setIncidents(data);
     } catch (error: any) {
       toast.error("Error al cargar incidencias");
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearFilters = async () => {
+    setFilters({});
+    await loadIncidents({});
   };
 
   const handleAssignIncident = async (incidentId: number) => {
@@ -242,6 +249,23 @@ const IncidentsPage: React.FC = () => {
                 }
               />
             </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              onClick={clearFilters}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button
+              onClick={() => loadIncidents(filters)}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
           </div>
         </CardContent>
       </Card>

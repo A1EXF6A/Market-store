@@ -43,6 +43,7 @@ import {
   UserCheck,
   Users,
   UserX,
+  X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -56,18 +57,24 @@ const UsersPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, [filters]);
+  }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (customFilters?: UserFilters) => {
     try {
       setLoading(true);
-      const data = await usersService.getAll(filters);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const data = await usersService.getAll(currentFilters);
       setUsers(data);
     } catch (error: any) {
       toast.error("Error al cargar usuarios");
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearFilters = async () => {
+    setFilters({});
+    await loadUsers({});
   };
 
   const handleSuspendUser = async (userId: number, suspend: boolean) => {
@@ -257,6 +264,23 @@ const UsersPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              onClick={clearFilters}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button
+              onClick={() => loadUsers(filters)}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -4,6 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 
 import { AuthModule } from "./auth/auth.module";
 import { ChatModule } from "./chat/chat.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { IncidentsModule } from "./incidents/incidents.module";
 import { ProductsModule } from "./products/products.module";
 import { UsersModule } from "./users/users.module";
@@ -21,6 +22,7 @@ import AppDataSource from "./data-source";
     ProductsModule,
     IncidentsModule,
     ChatModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}
