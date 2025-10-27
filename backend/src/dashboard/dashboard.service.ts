@@ -8,7 +8,7 @@ import { Chat } from "../entities/chat.entity";
 import { Report } from "../entities/report.entity";
 import { Incident } from "../entities/incident.entity";
 import { Rating } from "../entities/rating.entity";
-import { ItemStatus } from "../entities/enums";
+import { ItemStatus, ItemType } from "../entities/enums";
 
 @Injectable()
 export class DashboardService {
@@ -30,7 +30,7 @@ export class DashboardService {
   ) {}
 
   async getBuyerStats(userId: number) {
-    const [favoritesCount, activeChatsCount] = await Promise.all([
+    const [favoritesCount, activeChatsCount, activeProductsCount] = await Promise.all([
       this.favoriteRepository.count({ 
         where: { 
           userId: userId 
@@ -41,13 +41,23 @@ export class DashboardService {
           buyer: { userId } 
         } 
       }),
+      // Count globally available active products for explorer
+      this.itemRepository.count({
+        where: {
+          status: ItemStatus.ACTIVE,
+          availability: true,
+          type: ItemType.PRODUCT,
+        },
+      }),
     ]);
 
     return {
       favoritesCount,
       activeChatsCount,
+      activeProductsCount,
     };
   }
+
 
   async getSellerStats(userId: number) {
     const [
@@ -56,9 +66,13 @@ export class DashboardService {
       averageRating,
       totalSales
     ] = await Promise.all([
+      // Count only seller's active & available products
       this.itemRepository.count({ 
         where: { 
-          sellerId: userId 
+          sellerId: userId,
+          status: ItemStatus.ACTIVE,
+          availability: true,
+          type: ItemType.PRODUCT,
         } 
       }),
       this.chatRepository.count({ 

@@ -86,8 +86,15 @@ export class ProductsService {
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.seller", "seller")
       .leftJoinAndSelect("item.photos", "photos")
-      .leftJoinAndSelect("item.service", "service")
-      .where("item.status = :status", { status: ItemStatus.ACTIVE });
+      .leftJoinAndSelect("item.service", "service");
+
+    // By default, show only ACTIVE items unless a specific status is requested.
+    // If filters.status === 'all' we don't filter by status (show all statuses).
+    if (!filters || !filters.status) {
+      queryBuilder.where("item.status = :status", { status: ItemStatus.ACTIVE });
+    } else if (filters.status !== "all") {
+      queryBuilder.where("item.status = :status", { status: filters.status });
+    }
 
     if (!filters) {
       return queryBuilder.getMany();

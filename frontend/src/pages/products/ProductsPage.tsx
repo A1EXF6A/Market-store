@@ -144,6 +144,15 @@ const ProductsPage: React.FC = () => {
     );
   }
 
+  const statuses = [
+    { key: "all", label: "Todos" },
+    { key: "active", label: "Activos" },
+    { key: "suspended", label: "Suspendidos" },
+    { key: "hidden", label: "Ocultos" },
+    { key: "pending", label: "Pendientes" },
+    { key: "banned", label: "Baneados" },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -160,8 +169,45 @@ const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar (admin statuses) */}
+        {isAdmin && (
+          <aside className="col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Estados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {statuses.map((s) => {
+                    const active = (filters.status || "all") === s.key;
+                    return (
+                      <button
+                        key={s.key}
+                        onClick={async () => {
+                          const newFilters = { ...filters } as any;
+                          // set status to the selected key; 'all' means show every status
+                          newFilters.status = s.key;
+                          setFilters(newFilters);
+                          await loadProducts(newFilters);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-md border ${
+                          active ? "bg-blue-50 border-blue-300" : "bg-white"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </aside>
+        )}
+
+        {/* Filters */}
+        <div className={isAdmin ? "col-span-3" : "col-span-1"}>
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -264,7 +310,9 @@ const ProductsPage: React.FC = () => {
             </Button>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </div>
+      </div>
 
       {/* Products Grid */}
       <div className="space-y-4">

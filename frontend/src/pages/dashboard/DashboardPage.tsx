@@ -76,7 +76,7 @@ const DashboardPage: React.FC = () => {
                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+1,000</div>
+                  <div className="text-2xl font-bold">{loading ? "..." : buyerStats?.activeProductsCount ?? "+1,000"}</div>
                   <p className="text-xs text-muted-foreground">
                     productos disponibles
                   </p>

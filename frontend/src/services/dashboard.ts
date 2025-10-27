@@ -3,6 +3,7 @@ import api from './api';
 export interface BuyerStats {
   favoritesCount: number;
   activeChatsCount: number;
+  activeProductsCount?: number;
 }
 
 export interface SellerStats {
