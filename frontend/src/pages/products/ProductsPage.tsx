@@ -54,18 +54,17 @@ const ProductsPage: React.FC = () => {
   });
   const { user } = useAuthStore();
 
-  const isAdmin =
-    user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
 
   useEffect(() => {
     loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadProducts = async (customFilters?: ProductFilters) => {
     try {
       setLoading(true);
-      const currentFilters =
-        customFilters !== undefined ? customFilters : filters;
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
       const data = await productsService.getAll(currentFilters);
       setProducts(data);
     } catch (error: any) {
@@ -144,15 +143,6 @@ const ProductsPage: React.FC = () => {
     );
   }
 
-  const statuses = [
-    { key: "all", label: "Todos" },
-    { key: "active", label: "Activos" },
-    { key: "suspended", label: "Suspendidos" },
-    { key: "hidden", label: "Ocultos" },
-    { key: "pending", label: "Pendientes" },
-    { key: "banned", label: "Baneados" },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -169,45 +159,8 @@ const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar (admin statuses) */}
-        {isAdmin && (
-          <aside className="col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Estados</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {statuses.map((s) => {
-                    const active = (filters.status || "all") === s.key;
-                    return (
-                      <button
-                        key={s.key}
-                        onClick={async () => {
-                          const newFilters = { ...filters } as any;
-                          // set status to the selected key; 'all' means show every status
-                          newFilters.status = s.key;
-                          setFilters(newFilters);
-                          await loadProducts(newFilters);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-md border ${
-                          active ? "bg-blue-50 border-blue-300" : "bg-white"
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
-        )}
-
-        {/* Filters */}
-        <div className={isAdmin ? "col-span-3" : "col-span-1"}>
-          <Card>
+      {/* Unified filters: show status filter for admins inside the filters card */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -220,28 +173,13 @@ const ProductsPage: React.FC = () => {
               <Label htmlFor="search">Buscar Producto</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Nombre del producto..."
-                  className="pl-10"
-                  value={filters.search || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                />
+                <Input id="search" placeholder="Nombre del producto..." className="pl-10" value={filters.search || ""} onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))} />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select
-                value={filters.type || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    type: value === "all" ? undefined : (value as ItemType),
-                  }))
-                }
-              >
+              <Select value={filters.type || "all"} onValueChange={(value) => setFilters((prev) => ({ ...prev, type: value === "all" ? undefined : (value as ItemType) }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los tipos" />
                 </SelectTrigger>
@@ -252,217 +190,135 @@ const ProductsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
-              <Input
-                id="category"
-                placeholder="Ej: Electrónicos, Ropa..."
-                value={filters.category || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, category: e.target.value }))
-                }
-              />
+              <Input id="category" placeholder="Ej: Electrónicos, Ropa..." value={filters.category || ""} onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="minPrice">Precio Mínimo</Label>
-              <Input
-                id="minPrice"
-                type="number"
-                placeholder="0"
-                value={filters.minPrice || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    minPrice: e.target.value
-                      ? parseFloat(e.target.value)
-                      : undefined,
-                  }))
-                }
-              />
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="location">Ubicación</Label>
-              <Input
-                id="location"
-                placeholder="Ciudad, región..."
-                value={filters.location || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, location: e.target.value }))
-                }
-              />
+              <Input id="location" placeholder="Ciudad, región..." value={filters.location || ""} onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))} />
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              onClick={clearFilters}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => loadProducts()}
-              className="flex items-center gap-2"
-            >
-              <Search className="h-4 w-4" />
-              Buscar
-            </Button>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select value={filters.status || "all"} onValueChange={(value) => {
+                  const v = value === "all" ? undefined : value;
+                  setFilters((prev) => ({ ...prev, status: v as any }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los estados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="suspended">Suspendidos</SelectItem>
+                    <SelectItem value="hidden">Ocultos</SelectItem>
+                    <SelectItem value="pending">Pendientes</SelectItem>
+                    <SelectItem value="banned">Baneados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="minPrice">Precio Mínimo</Label>
+              <Input id="minPrice" type="number" placeholder="0" value={filters.minPrice || ""} onChange={(e) => setFilters((prev) => ({ ...prev, minPrice: e.target.value ? parseFloat(e.target.value) : undefined }))} />
+            </div>
+
+            <div className="flex items-end justify-end">
+              <div className="flex gap-2">
+                <Button onClick={clearFilters} variant="outline" className="flex items-center gap-2">
+                  <X className="h-4 w-4" />
+                  Limpiar
+                </Button>
+                <Button onClick={() => loadProducts()} className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Buscar
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
-          </Card>
-        </div>
-      </div>
+      </Card>
 
-      {/* Products Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Productos ({products.length})
-          </h2>
-          {isAdmin && (
-            <div className="text-sm text-gray-600">
-              Vista de administrador - Acciones disponibles en cada producto
-            </div>
-          )}
+          <h2 className="text-xl font-semibold text-gray-900">Productos ({products.length})</h2>
+          {isAdmin && <div className="text-sm text-gray-600">Vista de administrador - Acciones disponibles en cada producto</div>}
         </div>
 
         {products.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No se encontraron productos
-              </h3>
-              <p className="text-gray-600">
-                Intenta ajustar los filtros de búsqueda
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron productos</h3>
+              <p className="text-gray-600">Intenta ajustar los filtros de búsqueda</p>
             </CardContent>
           </Card>
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products
-                .filter((product) => product.availability)
-                .map((product) => (
-                  <div key={product.itemId} className="relative">
-                    <ProductCard
-                      product={product}
-                      onToggleFavorite={handleToggleFavorite}
-                      userRole={user?.role}
-                      showActions={!isAdmin}
-                    />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.filter((product) => product.availability).map((product) => (
+              <div key={product.itemId} className="relative">
+                <ProductCard product={product} onToggleFavorite={handleToggleFavorite} userRole={user?.role} showActions={!isAdmin} />
 
-                    {/* Admin actions overlay */}
-                    {isAdmin && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="bg-white/90 hover:bg-white shadow-sm"
-                              disabled={actionLoading === product.itemId}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/products/${product.itemId}`}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Detalles
-                              </Link>
+                {/* Admin actions overlay */}
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="sm" className="bg-white/90 hover:bg-white shadow-sm" disabled={actionLoading === product.itemId}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link to={`/products/${product.itemId}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalles
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setReportModal({ isOpen: true, productId: product.itemId, productName: product.name })} className="text-blue-600">
+                          <Flag className="h-4 w-4 mr-2" />
+                          Reportar
+                        </DropdownMenuItem>
+                        {product.status === "active" ? (
+                          <>
+                            <DropdownMenuItem onClick={() => handleProductAction(product.itemId, "hide", "Oculto por administrador")} className="text-orange-600">
+                              <EyeOff className="h-4 w-4 mr-2" />
+                              Ocultar
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setReportModal({
-                                  isOpen: true,
-                                  productId: product.itemId,
-                                  productName: product.name,
-                                })
-                              }
-                              className="text-blue-600"
-                            >
-                              <Flag className="h-4 w-4 mr-2" />
-                              Reportar
+                            <DropdownMenuItem onClick={() => handleProductAction(product.itemId, "suspend", "Suspendido por violación de términos")} className="text-red-600">
+                              <AlertTriangle className="h-4 w-4 mr-2" />
+                              Suspender
                             </DropdownMenuItem>
-                            {product.status === "active" ? (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleProductAction(
-                                      product.itemId,
-                                      "hide",
-                                      "Oculto por administrador",
-                                    )
-                                  }
-                                  className="text-orange-600"
-                                >
-                                  <EyeOff className="h-4 w-4 mr-2" />
-                                  Ocultar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleProductAction(
-                                      product.itemId,
-                                      "suspend",
-                                      "Suspendido por violación de términos",
-                                    )
-                                  }
-                                  className="text-red-600"
-                                >
-                                  <AlertTriangle className="h-4 w-4 mr-2" />
-                                  Suspender
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleProductAction(
-                                      product.itemId,
-                                      "ban",
-                                      "Baneado por contenido inapropiado",
-                                    )
-                                  }
-                                  className="text-red-600"
-                                >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Banear
-                                </DropdownMenuItem>
-                              </>
-                            ) : (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleProductAction(
-                                    product.itemId,
-                                    "activate",
-                                  )
-                                }
-                                className="text-green-600"
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Activar
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
+                            <DropdownMenuItem onClick={() => handleProductAction(product.itemId, "ban", "Baneado por contenido inapropiado")} className="text-red-600">
+                              <Ban className="h-4 w-4 mr-2" />
+                              Banear
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleProductAction(product.itemId, "activate")} className="text-green-600">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Activar
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                ))}
-            </div>
-          </>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
       {/* Report Modal */}
-      <ReportProductModal
-        isOpen={reportModal.isOpen}
-        onClose={() =>
-          setReportModal({ isOpen: false, productId: 0, productName: "" })
-        }
-        productId={reportModal.productId}
-        productName={reportModal.productName}
-      />
+      <ReportProductModal isOpen={reportModal.isOpen} onClose={() => setReportModal({ isOpen: false, productId: 0, productName: "" })} productId={reportModal.productId} productName={reportModal.productName} />
     </div>
   );
 };
