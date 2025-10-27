@@ -214,132 +214,91 @@ const UsersPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar (user statuses) */}
-        {isManager && (
-          <aside className="col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Estados</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {statuses.map((s) => {
-                    const active = (filters.status || "all") === s.key;
-                    return (
-                      <button
-                        key={s.key}
-                        onClick={async () => {
-                          const newFilters = { ...filters } as any;
-                          newFilters.status = s.key === "all" ? undefined : s.key;
-                          setFilters(newFilters);
-                          await loadUsers(newFilters);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-md border ${
-                          active ? "bg-blue-50 border-blue-300" : "bg-white"
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
+      <div>
+        {/* Filters (status integrated) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="search">Buscar Usuario</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="search"
+                    placeholder="Nombre, email..."
+                    className="pl-10"
+                    value={filters.search || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, search: e.target.value }))
+                    }
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </aside>
-        )}
+              </div>
 
-        {/* Filters */}
-        <div className={isManager ? "col-span-3" : "col-span-1"}>
-          <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Buscar Usuario</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Nombre, email..."
-                  className="pl-10"
-                  value={filters.search || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
+              <div className="space-y-2">
+                <Label>Rol</Label>
+                <Select
+                  value={filters.role || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      role: value === "all" ? undefined : (value as UserRole),
+                    }))
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los roles</SelectItem>
+                    <SelectItem value={UserRole.ADMIN}>Administrador</SelectItem>
+                    <SelectItem value={UserRole.MODERATOR}>Moderador</SelectItem>
+                    <SelectItem value={UserRole.SELLER}>Vendedor</SelectItem>
+                    <SelectItem value={UserRole.BUYER}>Comprador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select
+                  value={filters.status || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      status: value === "all" ? undefined : (value as UserStatus),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los estados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="suspended">Suspendidos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Rol</Label>
-              <Select
-                value={filters.role || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    role: value === "all" ? undefined : (value as UserRole),
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los roles</SelectItem>
-                  <SelectItem value={UserRole.ADMIN}>Administrador</SelectItem>
-                  <SelectItem value={UserRole.MODERATOR}>Moderador</SelectItem>
-                  <SelectItem value={UserRole.SELLER}>Vendedor</SelectItem>
-                  <SelectItem value={UserRole.BUYER}>Comprador</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button onClick={clearFilters} variant="outline" className="flex items-center gap-2">
+                <X className="h-4 w-4" />
+                Limpiar
+              </Button>
+              <Button onClick={() => loadUsers(filters)} className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Buscar
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select
-                value={filters.status || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    status: value === "all" ? undefined : (value as UserStatus),
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Activos</SelectItem>
-                  <SelectItem value="suspended">Suspendidos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              onClick={clearFilters}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => loadUsers(filters)}
-              className="flex items-center gap-2"
-            >
-              <Search className="h-4 w-4" />
-              Buscar
-            </Button>
-          </div>
-        </CardContent>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Users Table */}
