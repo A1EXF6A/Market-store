@@ -45,6 +45,12 @@ export const usersService = {
     await api.patch(`/users/${id}/status`, { status: "active" });
   },
 
+  suspendWithUntil: async (id: number, suspendedUntil?: string): Promise<void> => {
+    const body: any = { status: "suspended" };
+    if (suspendedUntil) body.suspendedUntil = suspendedUntil;
+    await api.patch(`/users/${id}/status`, body);
+  },
+
   delete: async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
   },

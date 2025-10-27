@@ -54,9 +54,28 @@ export class UsersService {
     return queryBuilder.getMany();
   }
 
-  async updateUserStatus(userId: number, status: UserStatus): Promise<User> {
+  async updateUserStatus(
+    userId: number,
+    status: UserStatus,
+    suspendedUntil?: string,
+  ): Promise<User> {
     const user = await this.findById(userId);
     user.status = status;
+
+    if (status === UserStatus.SUSPENDED && suspendedUntil) {
+      // parse ISO string to Date
+      const dt = new Date(suspendedUntil);
+      if (isNaN(dt.getTime())) {
+        // invalid date string, ignore and keep null
+        user.suspendedUntil = null;
+      } else {
+        user.suspendedUntil = dt;
+      }
+    } else {
+      // clear suspension when setting other statuses
+      user.suspendedUntil = null;
+    }
+
     return this.userRepository.save(user);
   }
 

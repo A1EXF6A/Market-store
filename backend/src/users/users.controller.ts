@@ -33,8 +33,15 @@ export class UsersController {
   @Patch(":id/status")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MODERATOR)
-  updateStatus(@Param("id") id: string, @Body("status") status: UserStatus) {
-    return this.usersService.updateUserStatus(+id, status);
+  updateStatus(
+    @Param("id") id: string,
+    @Body() body: { status: UserStatus; suspendedUntil?: string },
+  ) {
+    return this.usersService.updateUserStatus(
+      +id,
+      body.status,
+      body.suspendedUntil,
+    );
   }
 
   @Patch(":id/verify")

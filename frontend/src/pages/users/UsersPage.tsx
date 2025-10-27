@@ -83,7 +83,18 @@ const UsersPage: React.FC = () => {
     try {
       setActionLoading(userId);
       if (suspend) {
-        await usersService.suspend(userId);
+        // Ask admin for suspension duration
+        const input = prompt("Duración de la suspensión. Ingresa número de horas (ej: 48), o 'perm' para suspensión permanente:");
+        let suspendedUntil: string | undefined = undefined;
+        if (input && input.trim().toLowerCase() !== "perm") {
+          const hours = parseFloat(input);
+          if (!isNaN(hours) && hours > 0) {
+            const until = new Date();
+            until.setHours(until.getHours() + hours);
+            suspendedUntil = until.toISOString();
+          }
+        }
+        await usersService.suspendWithUntil(userId, suspendedUntil);
         toast.success("Usuario suspendido");
       } else {
         await usersService.unsuspend(userId);

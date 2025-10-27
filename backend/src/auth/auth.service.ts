@@ -9,7 +9,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from "bcryptjs";
 import { Repository } from "typeorm";
 
-import { User, UserRole } from "../entities/user.entity";
+import { User, UserRole, UserStatus } from "../entities/user.entity";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { EmailService } from "../common/services/email.service";
@@ -98,6 +98,27 @@ export class AuthService {
 
     if (!user || !passwordCompare) {
       throw new UnauthorizedException("INVALID_CREDENTIALS");
+    }
+
+    // If user is suspended, verify if suspension expired
+    if (user.status === UserStatus.SUSPENDED) {
+      if (user.suspendedUntil) {
+        const now = new Date();
+        if (now > new Date(user.suspendedUntil)) {
+          // reactivate user automatically
+          user.status = UserStatus.ACTIVE;
+          user.suspendedUntil = null;
+          await this.userRepository.save(user);
+        } else {
+          throw new UnauthorizedException("ACCOUNT_SUSPENDED");
+        }
+      } else {
+        throw new UnauthorizedException("ACCOUNT_SUSPENDED");
+      }
+    }
+
+    if (user.status === UserStatus.BANNED) {
+      throw new UnauthorizedException("ACCOUNT_BANNED");
     }
 
     const payload = { email: user.email, sub: user.userId, role: user.role };
