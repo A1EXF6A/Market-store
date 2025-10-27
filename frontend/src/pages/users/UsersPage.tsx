@@ -54,6 +54,8 @@ const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const isManager =
+    currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MODERATOR;
 
   useEffect(() => {
     loadUsers();
@@ -160,6 +162,12 @@ const UsersPage: React.FC = () => {
     );
   };
 
+  const statuses = [
+    { key: "all", label: "Todos" },
+    { key: "active", label: "Activos" },
+    { key: "suspended", label: "Suspendidos" },
+  ];
+
   const canManageUser = (user: User) => {
     if (currentUser?.role === UserRole.ADMIN) return true;
     if (
@@ -195,8 +203,44 @@ const UsersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar (user statuses) */}
+        {isManager && (
+          <aside className="col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Estados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {statuses.map((s) => {
+                    const active = (filters.status || "all") === s.key;
+                    return (
+                      <button
+                        key={s.key}
+                        onClick={async () => {
+                          const newFilters = { ...filters } as any;
+                          newFilters.status = s.key === "all" ? undefined : s.key;
+                          setFilters(newFilters);
+                          await loadUsers(newFilters);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-md border ${
+                          active ? "bg-blue-50 border-blue-300" : "bg-white"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </aside>
+        )}
+
+        {/* Filters */}
+        <div className={isManager ? "col-span-3" : "col-span-1"}>
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -283,7 +327,9 @@ const UsersPage: React.FC = () => {
             </Button>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </div>
+      </div>
 
       {/* Users Table */}
       <Card>
