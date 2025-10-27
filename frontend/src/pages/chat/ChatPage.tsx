@@ -1,36 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { chatService } from '../../services/chat';
-import { socketService } from '../../services/websocket';
-import type { Chat, Message } from '../../types';
-import { useAuthStore } from '../../store/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import { Input } from "@components/ui/input";
+import { useAuthStore } from "@/store/authStore";
+import type { Chat, Message } from "@/types";
+import { chatService } from "@services/chat";
+import { socketService } from "@services/websocket";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
-  MessageSquare,
-  Send,
   ArrowLeft,
   Clock,
+  MessageSquare,
+  Plus,
   Search,
-  Plus
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { es, is } from 'date-fns/locale';
+  Send,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, getToken } = useAuthStore();
-  const [otherUser, setOtherUser] =useState(null);
+  const [otherUser, setOtherUser] = useState(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -44,7 +44,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (id && chats.length > 0) {
-      const chat = chats.find(c => c.chatId === Number(id));
+      const chat = chats.find((c) => c.chatId === Number(id));
       if (chat) {
         selectChat(chat);
       }
@@ -75,11 +75,11 @@ const ChatPage: React.FC = () => {
         message = JSON.parse(message.content);
 
         console.log("New message received via socket:", message);
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
 
         // Update chat list to move this chat to top
-        setChats(prev => {
-          const chatIndex = prev.findIndex(c => c.chatId === message.chatId);
+        setChats((prev) => {
+          const chatIndex = prev.findIndex((c) => c.chatId === message.chatId);
           if (chatIndex > -1) {
             const updatedChats = [...prev];
             const [chat] = updatedChats.splice(chatIndex, 1);
@@ -90,7 +90,7 @@ const ChatPage: React.FC = () => {
       });
 
       socketService.onUserTyping(({ userId, isTyping }) => {
-        setTypingUsers(prev => {
+        setTypingUsers((prev) => {
           const newSet = new Set(prev);
           if (isTyping) {
             newSet.add(userId);
@@ -100,9 +100,8 @@ const ChatPage: React.FC = () => {
           return newSet;
         });
       });
-
     } catch (error: any) {
-      toast.error('Error al cargar chats');
+      toast.error("Error al cargar chats");
     } finally {
       setLoading(false);
     }
@@ -128,12 +127,13 @@ const ChatPage: React.FC = () => {
       const messagesData = await chatService.getChatMessages(chat.chatId);
       setMessages(messagesData);
       //set other user
-      const otherUser = user?.userId === chat.buyerId ? chat.seller : chat.buyer;
+      const otherUser =
+        user?.userId === chat.buyerId ? chat.seller : chat.buyer;
       setOtherUser(otherUser);
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
     } catch (error: any) {
-      toast.error('Erro  r al cargar mensajes');
+      toast.error("Erro  r al cargar mensajes");
       console.error(error);
     }
   };
@@ -145,21 +145,24 @@ const ChatPage: React.FC = () => {
       const messageData = {
         chatId: selectedChat.chatId,
         content: newMessage.trim(),
-        senderId: user?.userId
+        senderId: user?.userId,
       };
 
       // Send via socket for real-time
-      socketService.sendMessage(selectedChat.chatId, JSON.stringify(messageData));
+      socketService.sendMessage(
+        selectedChat.chatId,
+        JSON.stringify(messageData),
+      );
 
       // Also send via API for persistence
       await chatService.sendMessage(messageData);
 
-      setNewMessage('');
+      setNewMessage("");
 
       // Stop typing indicator
       socketService.setTyping(selectedChat.chatId, false);
     } catch (error: any) {
-      toast.error('Error al enviar mensaje');
+      toast.error("Error al enviar mensaje");
     } finally {
       setSending(false);
     }
@@ -185,7 +188,7 @@ const ChatPage: React.FC = () => {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const getOtherUser = (chat: Chat) => {
@@ -193,10 +196,11 @@ const ChatPage: React.FC = () => {
     return user.userId === chat.buyerId ? chat.seller : chat.buyer;
   };
 
-  const filteredChats = chats.filter(chat => {
+  const filteredChats = chats.filter((chat) => {
     const otherUser = getOtherUser(chat);
     if (!otherUser) return false;
-    const fullName = `${otherUser.firstName} ${otherUser.lastName}`.toLowerCase();
+    const fullName =
+      `${otherUser.firstName} ${otherUser.lastName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
 
@@ -261,13 +265,15 @@ const ChatPage: React.FC = () => {
                     <div
                       key={chat.chatId}
                       onClick={() => selectChat(chat)}
-                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${isSelected ? 'bg-blue-50 border-blue-200' : ''
-                        }`}
+                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${
+                        isSelected ? "bg-blue-50 border-blue-200" : ""
+                      }`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-700">
-                            {otherUser.firstName[0]}{otherUser.lastName[0]}
+                            {otherUser.firstName[0]}
+                            {otherUser.lastName[0]}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -277,13 +283,17 @@ const ChatPage: React.FC = () => {
                             </p>
                             {lastMessage && (
                               <span className="text-xs text-gray-500">
-                                {format(new Date(lastMessage.sentAt), 'HH:mm', { locale: es })}
+                                {format(new Date(lastMessage.sentAt), "HH:mm", {
+                                  locale: es,
+                                })}
                               </span>
                             )}
                           </div>
                           {lastMessage && (
                             <p className="text-sm text-gray-600 truncate">
-                              {lastMessage.senderId === user?.userId ? 'Tú: ' : ''}
+                              {lastMessage.senderId === user?.userId
+                                ? "Tú: "
+                                : ""}
                               {lastMessage.content}
                             </p>
                           )}
@@ -306,7 +316,11 @@ const ChatPage: React.FC = () => {
             <div className="border-b bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/chat')}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/chat")}
+                  >
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   {(() => {
@@ -315,7 +329,8 @@ const ChatPage: React.FC = () => {
                       <>
                         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-700">
-                            {otherUser.firstName[0]}{otherUser.lastName[0]}
+                            {otherUser.firstName[0]}
+                            {otherUser.lastName[0]}
                           </span>
                         </div>
                         <div>
@@ -323,7 +338,9 @@ const ChatPage: React.FC = () => {
                             {otherUser.firstName} {otherUser.lastName}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            {user?.userId === selectedChat.buyerId ? 'Vendedor' : 'Comprador'}
+                            {user?.userId === selectedChat.buyerId
+                              ? "Vendedor"
+                              : "Comprador"}
                           </p>
                         </div>
                       </>
@@ -340,25 +357,30 @@ const ChatPage: React.FC = () => {
                 return (
                   <div
                     key={message.messageId}
-                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-900'
-                        }`}
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isOwn
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 text-gray-900"
+                      }`}
                     >
                       <p className="text-sm">{message.content}</p>
-                      <div className={`flex items-center justify-end mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
+                      <div
+                        className={`flex items-center justify-end mt-1 ${
+                          isOwn ? "text-blue-100" : "text-gray-500"
+                        }`}
+                      >
                         <Clock className="h-3 w-3 mr-1" />
                         <span className="text-xs">
                           {format(
-                            new Date(message.sentAt ?? new Date().toISOString()),
-                            'HH:mm',
-                            { locale: es }
+                            new Date(
+                              message.sentAt ?? new Date().toISOString(),
+                            ),
+                            "HH:mm",
+                            { locale: es },
                           )}
-
                         </span>
                       </div>
                     </div>
@@ -367,14 +389,22 @@ const ChatPage: React.FC = () => {
               })}
 
               {/* Typing Indicator */}
-              {Array.from(typingUsers).filter(userId => userId !== otherUser?.userId).length > 0 && (
+              {Array.from(typingUsers).filter(
+                (userId) => userId !== otherUser?.userId,
+              ).length > 0 && (
                 <div className="flex justify-start">
                   <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
                     <div className="flex items-center space-x-1">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
                       </div>
                       <span className="text-xs ml-2">Escribiendo...</span>
                     </div>
@@ -392,7 +422,7 @@ const ChatPage: React.FC = () => {
                   placeholder="Escribe un mensaje..."
                   value={newMessage}
                   onChange={(e) => handleTyping(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                   disabled={sending}
                   className="flex-1"
                 />
@@ -425,3 +455,4 @@ const ChatPage: React.FC = () => {
 };
 
 export default ChatPage;
+

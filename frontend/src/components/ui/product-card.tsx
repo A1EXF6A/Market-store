@@ -1,18 +1,18 @@
-import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import type { Product } from "@/types";
+import { ItemType, UserRole } from "@/types";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import { Card, CardContent } from "@components/ui/card";
+import { API_BASE } from "@services/api";
 import {
+  Calendar,
+  DollarSign,
+  Eye,
   Heart,
   MapPin,
-  DollarSign,
   Package,
-  Eye,
-  Calendar,
 } from "lucide-react";
-import { API_BASE } from "../../services/api";
-import type { Product } from "../../types";
-import { ItemType, UserRole } from "../../types";
+import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
@@ -137,4 +137,3 @@ export function ProductCard({
     </Card>
   );
 }
-

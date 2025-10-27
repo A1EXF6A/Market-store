@@ -1,26 +1,25 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { productsService } from "../../services/products";
-import type { CreateProductData } from "../../services/products";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import ImageUpload from "@components/ui/image-upload";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import ImageUpload from "@/components/ui/image-upload";
+} from "@components/ui/select";
+import { Textarea } from "@components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { CreateProductData } from "@services/products";
+import { productsService } from "@services/products";
 import { ArrowLeft, Save } from "lucide-react";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { z } from "zod";
 
 const productSchema = z.object({
   name: z
@@ -242,4 +241,3 @@ const CreateProductPage: React.FC = () => {
 };
 
 export default CreateProductPage;
-

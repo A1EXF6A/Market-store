@@ -1,40 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { usersService, type UserFilters } from "../../services/users";
-import type { User } from "../../types";
-import { UserRole, UserStatus } from "../../types";
-import { useAuthStore } from "../../store/authStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Users,
-  Search,
-  Filter,
-  UserCheck,
-  UserX,
-  Calendar,
-  Mail,
-  AlertTriangle,
-  MoreHorizontal,
-  Settings,
-} from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+import type { User } from "@/types";
+import { UserRole, UserStatus } from "@/types";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +13,39 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@components/ui/dropdown-menu";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@components/ui/table";
+import { usersService, type UserFilters } from "@services/users";
+import {
+  AlertTriangle,
+  Calendar,
+  Filter,
+  Mail,
+  MoreHorizontal,
+  Search,
+  Settings,
+  UserCheck,
+  Users,
+  UserX,
+  X,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const UsersPage: React.FC = () => {
@@ -56,18 +57,24 @@ const UsersPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, [filters]);
+  }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (customFilters?: UserFilters) => {
     try {
       setLoading(true);
-      const data = await usersService.getAll(filters);
+      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const data = await usersService.getAll(currentFilters);
       setUsers(data);
     } catch (error: any) {
       toast.error("Error al cargar usuarios");
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearFilters = async () => {
+    setFilters({});
+    await loadUsers({});
   };
 
   const handleSuspendUser = async (userId: number, suspend: boolean) => {
@@ -258,6 +265,23 @@ const UsersPage: React.FC = () => {
               </Select>
             </div>
           </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              onClick={clearFilters}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button
+              onClick={() => loadUsers(filters)}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -342,7 +366,7 @@ const UsersPage: React.FC = () => {
                                 Suspender
                               </DropdownMenuItem>
                             )}
-                            
+
                             {currentUser?.role === UserRole.ADMIN && (
                               <>
                                 <DropdownMenuSeparator />
@@ -355,12 +379,18 @@ const UsersPage: React.FC = () => {
                                     {Object.values(UserRole).map((role) => (
                                       <DropdownMenuItem
                                         key={role}
-                                        onClick={() => handleChangeRole(user.userId, role)}
+                                        onClick={() =>
+                                          handleChangeRole(user.userId, role)
+                                        }
                                         disabled={user.role === role}
-                                        className={user.role === role ? "opacity-50" : ""}
+                                        className={
+                                          user.role === role ? "opacity-50" : ""
+                                        }
                                       >
-                                        {role === UserRole.ADMIN && "Administrador"}
-                                        {role === UserRole.MODERATOR && "Moderador"}
+                                        {role === UserRole.ADMIN &&
+                                          "Administrador"}
+                                        {role === UserRole.MODERATOR &&
+                                          "Moderador"}
                                         {role === UserRole.SELLER && "Vendedor"}
                                         {role === UserRole.BUYER && "Comprador"}
                                       </DropdownMenuItem>
@@ -404,4 +434,3 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
-

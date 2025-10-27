@@ -1,40 +1,40 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { productsService } from "../../services/products";
-import type { Product, ProductFilters } from "../../types";
-import { ItemType, UserRole } from "../../types";
-import { useAuthStore } from "../../store/authStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useAuthStore } from "@/store/authStore";
+import type { Product, ProductFilters } from "@/types";
+import { ItemType, UserRole } from "@/types";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import { ProductCard } from "@components/ui/product-card";
+import { ReportProductModal } from "@components/ui/report-product-modal";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ProductCard } from "@/components/ui/product-card";
-import { ReportProductModal } from "@/components/ui/report-product-modal";
+} from "@components/ui/select";
+import { productsService } from "@services/products";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-import { 
-  Search, 
-  Filter, 
-  MoreHorizontal,
-  Package,
-  Eye,
-  EyeOff,
+import {
   AlertTriangle,
   Ban,
+  Eye,
+  EyeOff,
+  Filter,
+  Flag,
+  MoreHorizontal,
+  Package,
+  Search,
   X,
-  Flag
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,14 +43,19 @@ const ProductsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [reportModal, setReportModal] = useState<{isOpen: boolean, productId: number, productName: string}>({
+  const [reportModal, setReportModal] = useState<{
+    isOpen: boolean;
+    productId: number;
+    productName: string;
+  }>({
     isOpen: false,
     productId: 0,
-    productName: ""
+    productName: "",
   });
   const { user } = useAuthStore();
 
-  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
+  const isAdmin =
+    user?.role === UserRole.ADMIN || user?.role === UserRole.MODERATOR;
 
   useEffect(() => {
     loadProducts();
@@ -59,7 +64,8 @@ const ProductsPage: React.FC = () => {
   const loadProducts = async (customFilters?: ProductFilters) => {
     try {
       setLoading(true);
-      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const currentFilters =
+        customFilters !== undefined ? customFilters : filters;
       const data = await productsService.getAll(currentFilters);
       setProducts(data);
     } catch (error: any) {
@@ -83,29 +89,42 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleProductAction = async (productId: number, action: string, reason?: string) => {
+  const handleProductAction = async (
+    productId: number,
+    action: string,
+    reason?: string,
+  ) => {
     try {
       setActionLoading(productId);
-      
+
       switch (action) {
-        case 'hide':
-          await productsService.hideProduct(productId, reason || 'Oculto por administrador');
+        case "hide":
+          await productsService.hideProduct(
+            productId,
+            reason || "Oculto por administrador",
+          );
           toast.success("Producto oculto");
           break;
-        case 'suspend':
-          await productsService.suspendProduct(productId, reason || 'Suspendido por administrador');
+        case "suspend":
+          await productsService.suspendProduct(
+            productId,
+            reason || "Suspendido por administrador",
+          );
           toast.success("Producto suspendido");
           break;
-        case 'ban':
-          await productsService.banProduct(productId, reason || 'Baneado por administrador');
+        case "ban":
+          await productsService.banProduct(
+            productId,
+            reason || "Baneado por administrador",
+          );
           toast.success("Producto baneado");
           break;
-        case 'activate':
+        case "activate":
           await productsService.activateProduct(productId);
           toast.success("Producto activado");
           break;
       }
-      
+
       await loadProducts();
     } catch (error: any) {
       toast.error("Error al actualizar producto");
@@ -113,8 +132,6 @@ const ProductsPage: React.FC = () => {
       setActionLoading(null);
     }
   };
-
-
 
   if (loading) {
     return (
@@ -136,10 +153,9 @@ const ProductsPage: React.FC = () => {
             {isAdmin ? "Gestión de Productos" : "Productos"}
           </h1>
           <p className="text-gray-600 mt-2">
-            {isAdmin 
+            {isAdmin
               ? "Administra productos y servicios en la plataforma"
-              : "Explora nuestro catálogo de productos y servicios"
-            }
+              : "Explora nuestro catálogo de productos y servicios"}
           </p>
         </div>
       </div>
@@ -211,7 +227,9 @@ const ProductsPage: React.FC = () => {
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    minPrice: e.target.value ? parseFloat(e.target.value) : undefined,
+                    minPrice: e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined,
                   }))
                 }
               />
@@ -229,11 +247,18 @@ const ProductsPage: React.FC = () => {
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button onClick={clearFilters} variant="outline" className="flex items-center gap-2">
+            <Button
+              onClick={clearFilters}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
               <X className="h-4 w-4" />
               Limpiar
             </Button>
-            <Button onClick={() => loadProducts()} className="flex items-center gap-2">
+            <Button
+              onClick={() => loadProducts()}
+              className="flex items-center gap-2"
+            >
               <Search className="h-4 w-4" />
               Buscar
             </Button>
@@ -269,29 +294,31 @@ const ProductsPage: React.FC = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.filter(product => product.availability).map((product) => (
-                <div key={product.itemId} className="relative">
-                  <ProductCard
-                    product={product}
-                    onToggleFavorite={handleToggleFavorite}
-                    userRole={user?.role}
-                    showActions={!isAdmin}
-                  />
-                  
-                  {/* Admin actions overlay */}
-                  {isAdmin && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="bg-white/90 hover:bg-white shadow-sm"
-                            disabled={actionLoading === product.itemId}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
+              {products
+                .filter((product) => product.availability)
+                .map((product) => (
+                  <div key={product.itemId} className="relative">
+                    <ProductCard
+                      product={product}
+                      onToggleFavorite={handleToggleFavorite}
+                      userRole={user?.role}
+                      showActions={!isAdmin}
+                    />
+
+                    {/* Admin actions overlay */}
+                    {isAdmin && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="bg-white/90 hover:bg-white shadow-sm"
+                              disabled={actionLoading === product.itemId}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.itemId}`}>
@@ -304,7 +331,7 @@ const ProductsPage: React.FC = () => {
                                 setReportModal({
                                   isOpen: true,
                                   productId: product.itemId,
-                                  productName: product.name
+                                  productName: product.name,
                                 })
                               }
                               className="text-blue-600"
@@ -312,11 +339,15 @@ const ProductsPage: React.FC = () => {
                               <Flag className="h-4 w-4 mr-2" />
                               Reportar
                             </DropdownMenuItem>
-                            {product.status === 'active' ? (
+                            {product.status === "active" ? (
                               <>
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleProductAction(product.itemId, 'hide', 'Oculto por administrador')
+                                    handleProductAction(
+                                      product.itemId,
+                                      "hide",
+                                      "Oculto por administrador",
+                                    )
                                   }
                                   className="text-orange-600"
                                 >
@@ -325,7 +356,11 @@ const ProductsPage: React.FC = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleProductAction(product.itemId, 'suspend', 'Suspendido por violación de términos')
+                                    handleProductAction(
+                                      product.itemId,
+                                      "suspend",
+                                      "Suspendido por violación de términos",
+                                    )
                                   }
                                   className="text-red-600"
                                 >
@@ -334,7 +369,11 @@ const ProductsPage: React.FC = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    handleProductAction(product.itemId, 'ban', 'Baneado por contenido inapropiado')
+                                    handleProductAction(
+                                      product.itemId,
+                                      "ban",
+                                      "Baneado por contenido inapropiado",
+                                    )
                                   }
                                   className="text-red-600"
                                 >
@@ -345,7 +384,10 @@ const ProductsPage: React.FC = () => {
                             ) : (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleProductAction(product.itemId, 'activate')
+                                  handleProductAction(
+                                    product.itemId,
+                                    "activate",
+                                  )
                                 }
                                 className="text-green-600"
                               >
@@ -354,11 +396,11 @@ const ProductsPage: React.FC = () => {
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  )}
-                </div>
-              ))}
+                        </DropdownMenu>
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           </>
         )}
@@ -367,7 +409,9 @@ const ProductsPage: React.FC = () => {
       {/* Report Modal */}
       <ReportProductModal
         isOpen={reportModal.isOpen}
-        onClose={() => setReportModal({ isOpen: false, productId: 0, productName: "" })}
+        onClose={() =>
+          setReportModal({ isOpen: false, productId: 0, productName: "" })
+        }
         productId={reportModal.productId}
         productName={reportModal.productName}
       />
@@ -376,3 +420,4 @@ const ProductsPage: React.FC = () => {
 };
 
 export default ProductsPage;
+

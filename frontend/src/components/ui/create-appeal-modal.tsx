@@ -1,11 +1,17 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { toast } from 'sonner';
-import { incidentsService } from '../../services/incidents';
-import type { Incident } from '../../types';
+import type { Incident } from "@/types";
+import { Button } from "@components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog";
+import { Label } from "@components/ui/label";
+import { Textarea } from "@components/ui/textarea";
+import { incidentsService } from "@services/incidents";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CreateAppealModalProps {
   incident: Incident | null;
@@ -14,37 +20,39 @@ interface CreateAppealModalProps {
   onSuccess?: () => void;
 }
 
-export default function CreateAppealModal({ 
-  incident, 
-  isOpen, 
-  onClose, 
-  onSuccess 
+export default function CreateAppealModal({
+  incident,
+  isOpen,
+  onClose,
+  onSuccess,
 }: CreateAppealModalProps) {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!incident || !reason.trim()) {
-      toast.error('Por favor ingresa el motivo de la apelación');
+      toast.error("Por favor ingresa el motivo de la apelación");
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       await incidentsService.createAppeal({
         incidentId: incident.incidentId,
         reason: reason.trim(),
       });
 
-      toast.success('Apelación enviada exitosamente');
-      setReason('');
+      toast.success("Apelación enviada exitosamente");
+      setReason("");
       onClose();
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al enviar la apelación');
+      toast.error(
+        error.response?.data?.message || "Error al enviar la apelación",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +60,7 @@ export default function CreateAppealModal({
 
   const handleClose = () => {
     if (!isLoading) {
-      setReason('');
+      setReason("");
       onClose();
     }
   };
@@ -63,7 +71,8 @@ export default function CreateAppealModal({
         <DialogHeader>
           <DialogTitle>Crear Apelación</DialogTitle>
           <DialogDescription>
-            Solicita una revisión de la decisión tomada sobre tu producto "{incident?.item?.name}"
+            Solicita una revisión de la decisión tomada sobre tu producto "
+            {incident?.item?.name}"
           </DialogDescription>
         </DialogHeader>
 
@@ -81,7 +90,8 @@ export default function CreateAppealModal({
               className="resize-none"
             />
             <p className="text-xs text-gray-500">
-              Describe claramente por qué crees que tu producto no debería estar suspendido o baneado.
+              Describe claramente por qué crees que tu producto no debería estar
+              suspendido o baneado.
             </p>
           </div>
 
@@ -94,11 +104,8 @@ export default function CreateAppealModal({
             >
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || !reason.trim()}
-            >
-              {isLoading ? 'Enviando...' : 'Enviar Apelación'}
+            <Button type="submit" disabled={isLoading || !reason.trim()}>
+              {isLoading ? "Enviando..." : "Enviar Apelación"}
             </Button>
           </div>
         </form>
@@ -106,3 +113,4 @@ export default function CreateAppealModal({
     </Dialog>
   );
 }
+

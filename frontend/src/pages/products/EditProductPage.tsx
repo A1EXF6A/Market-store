@@ -1,28 +1,26 @@
-import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { productsService } from "../../services/products";
-import type { UpdateProductData } from "../../services/products";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type { Product } from "@/types";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import ImageUpload from "@components/ui/image-upload";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import ImageUpload from "@/components/ui/image-upload";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+} from "@components/ui/select";
+import { Textarea } from "@components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { UpdateProductData } from "@services/products";
+import { productsService } from "@services/products";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import type { Product } from "../../types";
+import { z } from "zod";
 
 const productSchema = z.object({
   name: z

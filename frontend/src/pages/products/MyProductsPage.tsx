@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { productsService } from "../../services/products";
-import { API_BASE } from "../../services/api";
-import type { Product } from "../../types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -13,23 +14,22 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@components/ui/table";
 import {
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  DollarSign,
   Calendar,
+  DollarSign,
+  Edit,
+  Eye,
   MoreHorizontal,
+  Plus,
+  Trash2,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { API_BASE } from "@services/api";
+import { productsService } from "@services/products";
+import type { Product } from "@/types";
 
 const MyProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);

@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { X, Upload, ImageIcon } from 'lucide-react';
+import { Button } from "@components/ui/button";
+import { Card, CardContent } from "@components/ui/card";
+import { API_BASE } from "@services/api";
+import { ImageIcon, Upload, X } from "lucide-react";
+import React, { useRef, useState } from "react";
 
 interface ImageUploadProps {
   images: File[];
@@ -16,7 +17,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   onImagesChange,
   maxImages = 5,
   existingImages = [],
-  onExistingImageRemove
+  onExistingImageRemove,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -24,9 +25,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -46,19 +47,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleFiles = (newFiles: File[]) => {
-    const validFiles = newFiles.filter(file => {
-      if (!file.type.startsWith('image/')) {
+    const validFiles = newFiles.filter((file) => {
+      if (!file.type.startsWith("image/")) {
         return false;
       }
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
         return false;
       }
       return true;
     });
 
-    const totalImages = images.length + existingImages.length + validFiles.length;
+    const totalImages =
+      images.length + existingImages.length + validFiles.length;
     if (totalImages > maxImages) {
-      const remainingSlots = maxImages - (images.length + existingImages.length);
+      const remainingSlots =
+        maxImages - (images.length + existingImages.length);
       validFiles.splice(remainingSlots);
     }
 
@@ -84,7 +88,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {totalImages < maxImages && (
         <Card
           className={`border-2 border-dashed transition-colors cursor-pointer ${
-            dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+            dragActive
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 hover:border-gray-400"
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -93,7 +99,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           onClick={() => fileInputRef.current?.click()}
         >
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Upload className={`h-12 w-12 mb-4 ${dragActive ? 'text-blue-500' : 'text-gray-400'}`} />
+            <Upload
+              className={`h-12 w-12 mb-4 ${dragActive ? "text-blue-500" : "text-gray-400"}`}
+            />
             <p className="text-lg font-medium text-gray-700 mb-2">
               Arrastra imágenes aquí o haz clic para seleccionar
             </p>
@@ -122,7 +130,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             <div key={`existing-${index}`} className="relative group">
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
                 <img
-                  src={url}
+                  src={`${API_BASE}${url}`}
                   alt={`Imagen ${index + 1}`}
                   className="w-full h-full object-cover"
                 />

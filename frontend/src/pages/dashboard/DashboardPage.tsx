@@ -1,24 +1,66 @@
-import React from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
-import { 
-  ShoppingBag, 
-  Heart, 
-  MessageCircle, 
-  Users, 
-  AlertTriangle, 
+import { useAuthStore } from "@/store/authStore";
+import { UserRole } from "@/types";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@components/ui/card";
+import {
+  AlertTriangle,
   Flag,
+  Heart,
+  MessageCircle,
   Plus,
+  ShoppingBag,
+  Star,
   TrendingUp,
-  Star
-} from 'lucide-react';
-import { UserRole } from '../../types';
+  Users,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { dashboardService, BuyerStats, SellerStats, AdminStats } from "@/services/dashboard";
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
+  const [buyerStats, setBuyerStats] = useState<BuyerStats | null>(null);
+  const [sellerStats, setSellerStats] = useState<SellerStats | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        switch (user.role) {
+          case UserRole.BUYER:
+            const buyerData = await dashboardService.getBuyerStats();
+            setBuyerStats(buyerData);
+            break;
+          case UserRole.SELLER:
+            const sellerData = await dashboardService.getSellerStats();
+            setSellerStats(sellerData);
+            break;
+          case UserRole.ADMIN:
+          case UserRole.MODERATOR:
+            const adminData = await dashboardService.getAdminStats();
+            setAdminStats(adminData);
+            break;
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
 
   const getDashboardContent = () => {
     switch (user?.role) {
@@ -28,12 +70,16 @@ const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Explorar Productos</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Explorar Productos
+                  </CardTitle>
                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">+1,000</div>
-                  <p className="text-xs text-muted-foreground">productos disponibles</p>
+                  <p className="text-xs text-muted-foreground">
+                    productos disponibles
+                  </p>
                   <Button asChild className="w-full mt-4">
                     <Link to="/products">Ver Productos</Link>
                   </Button>
@@ -42,12 +88,16 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Mis Favoritos</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Mis Favoritos
+                  </CardTitle>
                   <Heart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">productos guardados</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : buyerStats?.favoritesCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    productos guardados
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/favorites">Ver Favoritos</Link>
                   </Button>
@@ -56,11 +106,13 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Conversaciones</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Conversaciones
+                  </CardTitle>
                   <MessageCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{loading ? "..." : buyerStats?.activeChatsCount || 0}</div>
                   <p className="text-xs text-muted-foreground">chats activos</p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/chat">Ver Chats</Link>
@@ -70,11 +122,14 @@ const DashboardPage: React.FC = () => {
             </div>
 
             <div className="mt-8">
-              <h2 className="text-lg font-semibold mb-4">Productos Recomendados</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Productos Recomendados
+              </h2>
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground text-center">
-                    Explora nuestro catálogo para descubrir productos que te puedan interesar
+                    Explora nuestro catálogo para descubrir productos que te
+                    puedan interesar
                   </p>
                   <div className="flex justify-center mt-4">
                     <Button asChild>
@@ -93,12 +148,16 @@ const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Mis Productos</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Mis Productos
+                  </CardTitle>
                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">productos publicados</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : sellerStats?.productsCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    productos publicados
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/my-products">Ver Productos</Link>
                   </Button>
@@ -111,30 +170,40 @@ const DashboardPage: React.FC = () => {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$0</div>
-                  <p className="text-xs text-muted-foreground">ingresos totales</p>
+                  <div className="text-2xl font-bold">${loading ? "..." : sellerStats?.totalSales || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    ingresos totales
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Calificación</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Calificación
+                  </CardTitle>
                   <Star className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">5.0</div>
-                  <p className="text-xs text-muted-foreground">promedio de calificaciones</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : sellerStats?.averageRating || "5.0"}</div>
+                  <p className="text-xs text-muted-foreground">
+                    promedio de calificaciones
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Mensajes</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Mensajes
+                  </CardTitle>
                   <MessageCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">mensajes pendientes</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : sellerStats?.activeChatsCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    mensajes pendientes
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/chat">Ver Chats</Link>
                   </Button>
@@ -192,12 +261,16 @@ const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Usuarios Activos</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Usuarios Activos
+                  </CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">usuarios registrados</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : adminStats?.usersCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    usuarios registrados
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/users">Gestionar Usuarios</Link>
                   </Button>
@@ -206,12 +279,16 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Incidencias</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Incidencias
+                  </CardTitle>
                   <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">incidencias pendientes</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : adminStats?.incidentsCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    incidencias pendientes
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/incidents">Ver Incidencias</Link>
                   </Button>
@@ -220,12 +297,16 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Reportes</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Reportes
+                  </CardTitle>
                   <Flag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">reportes pendientes</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : adminStats?.reportsCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    reportes pendientes
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/reports">Ver Reportes</Link>
                   </Button>
@@ -234,12 +315,16 @@ const DashboardPage: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Productos</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Productos
+                  </CardTitle>
                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
-                  <p className="text-xs text-muted-foreground">productos activos</p>
+                  <div className="text-2xl font-bold">{loading ? "..." : adminStats?.productsCount || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    productos activos
+                  </p>
                   <Button asChild variant="outline" className="w-full mt-4">
                     <Link to="/products">Ver Productos</Link>
                   </Button>
@@ -248,7 +333,9 @@ const DashboardPage: React.FC = () => {
             </div>
 
             <div className="mt-8">
-              <h2 className="text-lg font-semibold mb-4">Panel de Moderación</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Panel de Moderación
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -308,10 +395,10 @@ const DashboardPage: React.FC = () => {
           </h1>
           <p className="text-gray-600 flex items-center mt-2">
             <Badge className="mr-2">
-              {user?.role === UserRole.BUYER && 'Comprador'}
-              {user?.role === UserRole.SELLER && 'Vendedor'}
-              {user?.role === UserRole.MODERATOR && 'Moderador'}
-              {user?.role === UserRole.ADMIN && 'Administrador'}
+              {user?.role === UserRole.BUYER && "Comprador"}
+              {user?.role === UserRole.SELLER && "Vendedor"}
+              {user?.role === UserRole.MODERATOR && "Moderador"}
+              {user?.role === UserRole.ADMIN && "Administrador"}
             </Badge>
             {!user?.verified && (
               <Badge variant="secondary">Cuenta no verificada</Badge>
@@ -326,3 +413,4 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
+
