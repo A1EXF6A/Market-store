@@ -36,6 +36,16 @@ export class CreateProductDto {
   @IsOptional()
   location?: string;
 
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => value ? parseFloat(value) : undefined)
+  latitude?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => value ? parseFloat(value) : undefined)
+  longitude?: number;
+
    @IsBoolean()
    @IsOptional()
    @Transform(({ value }) => value === 'true')

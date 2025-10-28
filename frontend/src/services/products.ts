@@ -7,6 +7,8 @@ export interface CreateProductData {
   category?: string;
   price?: number;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   type: "product" | "service";
   workingHours?: string;
   images?: File[];
@@ -62,6 +64,8 @@ export const productsService = {
     if (data.category) formData.append("category", data.category);
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
+    if (data.latitude) formData.append("latitude", data.latitude.toString());
+    if (data.longitude) formData.append("longitude", data.longitude.toString());
     formData.append("type", data.type);
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 
@@ -89,6 +93,8 @@ export const productsService = {
     if (data.category) formData.append("category", data.category);
     if (data.price) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
+    if (data.latitude) formData.append("latitude", data.latitude.toString());
+    if (data.longitude) formData.append("longitude", data.longitude.toString());
     if (data.type) formData.append("type", data.type);
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 

@@ -102,18 +102,30 @@ export class AuthService {
 
     // If user is suspended, verify if suspension expired
     if (user.status === UserStatus.SUSPENDED) {
-      if (user.suspendedUntil) {
+      console.log('User suspended, suspendedUntil:', user.suspendedUntil, 'type:', typeof user.suspendedUntil); // Debug
+      
+      if (user.suspendedUntil && user.suspendedUntil !== null) {
         const now = new Date();
-        if (now > new Date(user.suspendedUntil)) {
+        const suspensionDate = new Date(user.suspendedUntil);
+        
+        console.log('Now:', now, 'Suspension date:', suspensionDate); // Debug
+        
+        if (now > suspensionDate) {
           // reactivate user automatically
           user.status = UserStatus.ACTIVE;
           user.suspendedUntil = null;
           await this.userRepository.save(user);
         } else {
-          throw new UnauthorizedException("ACCOUNT_SUSPENDED");
+          throw new UnauthorizedException({
+            message: "ACCOUNT_SUSPENDED",
+            suspendedUntil: suspensionDate.toISOString(),
+          });
         }
       } else {
-        throw new UnauthorizedException("ACCOUNT_SUSPENDED");
+        throw new UnauthorizedException({
+          message: "ACCOUNT_SUSPENDED", 
+          suspendedUntil: null,
+        });
       }
     }
 

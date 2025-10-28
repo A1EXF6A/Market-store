@@ -133,7 +133,7 @@ const ChatPage: React.FC = () => {
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
     } catch (error: any) {
-      toast.error("Erro  r al cargar mensajes");
+      toast.error("Error al cargar mensajes");
       console.error(error);
     }
   };

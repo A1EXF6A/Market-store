@@ -19,6 +19,7 @@ import {
   Flag,
   ArrowLeft,
   Clock,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { chatService } from "@services/chat";
@@ -66,11 +67,19 @@ const ProductDetailPage: React.FC = () => {
     if (!product || !product.seller) return;
     try {
       const chat = await chatService.findOrCreateChat(product.seller.userId);
+      toast.success("Chat iniciado exitosamente");
       navigate(`/chat/${chat.chatId}`);
     } catch (error: any) {
       toast.error("Error al iniciar chat con el vendedor");
       console.error(error);
     }
+  };
+
+  const handleViewLocation = () => {
+    if (!product || !product.latitude || !product.longitude) return;
+    
+    const googleMapsUrl = `https://www.google.com/maps?q=${product.latitude},${product.longitude}`;
+    window.open(googleMapsUrl, '_blank');
   };
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -202,9 +211,22 @@ const ProductDetailPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {product.location && (
-                  <div className="flex items-center text-gray-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span>{product.location}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-gray-600">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span>{product.location}</span>
+                    </div>
+                    {product.latitude && product.longitude && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleViewLocation}
+                        className="ml-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Ver en Mapa
+                      </Button>
+                    )}
                   </div>
                 )}
                 <div className="flex items-center text-gray-600">

@@ -11,11 +11,14 @@ import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React from "react";
+import React, { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -27,6 +30,25 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuthStore();
   const navigate = useNavigate();
+  const [formError, setFormError] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [suspensionInfo, setSuspensionInfo] = useState<{
+    suspendedUntil: string | null;
+  } | null>(null);
+
+  const getSuspensionMessage = () => {
+    if (!suspensionInfo) return "";
+    
+    if (suspensionInfo.suspendedUntil) {
+      const suspendedUntil = new Date(suspensionInfo.suspendedUntil);
+      const formattedDate = format(suspendedUntil, "d 'de' MMMM 'de' yyyy 'a las' HH:mm", { 
+        locale: es 
+      });
+      return `Tu cuenta está suspendida hasta el ${formattedDate}. No podrás acceder hasta que se complete el período de suspensión.`;
+    } else {
+      return "Tu cuenta está suspendida indefinidamente. Contacta al soporte para más información.";
+    }
+  };
 
   const {
     register,
@@ -38,13 +60,31 @@ const LoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      setFormError("");
+      setSuspensionInfo(null);
       await login(data.email, data.password);
       toast.success("Inicio de sesión exitoso");
       navigate("/dashboard");
     } catch (error: any) {
-      const code = error.response?.data?.message;
-      const errorMessage = getErrorMessage(code, "es");
-      toast.error(errorMessage);
+      const errorData = error.response?.data;
+      
+      console.log("Error completo:", error.response?.data); // Para debug
+      
+      if (errorData?.message === "ACCOUNT_SUSPENDED") {
+        // Manejar suspensión - buscar suspendedUntil en errorData
+        const suspendedUntil = errorData?.suspendedUntil || null;
+        console.log("suspendedUntil recibido:", suspendedUntil, "type:", typeof suspendedUntil); // Para debug
+        setSuspensionInfo({
+          suspendedUntil: suspendedUntil
+        });
+        setFormError(""); // Clear general error since we're showing suspension specific message
+      } else if (errorData?.message === "ACCOUNT_BANNED") {
+        setFormError("Tu cuenta ha sido baneada permanentemente. Contacta al soporte para más información.");
+      } else {
+        const code = errorData?.message;
+        const errorMessage = getErrorMessage(code, "es");
+        setFormError(errorMessage);
+      }
     }
   };
 
@@ -65,6 +105,34 @@ const LoginPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Mensaje de error general */}
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-600">{formError}</p>
+                </div>
+              )}
+
+              {/* Mensaje de suspensión */}
+              {suspensionInfo && (
+                <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-orange-800">
+                        Cuenta Suspendida
+                      </h3>
+                      <p className="text-sm text-orange-700 mt-1">
+                        {getSuspensionMessage()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -80,12 +148,26 @@ const LoginPage: React.FC = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  {...register("password")}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    {...register("password")}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-red-600">
                     {errors.password.message}

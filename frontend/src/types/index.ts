@@ -39,6 +39,8 @@ export interface Product {
   category?: string;
   price?: number;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   availability: boolean;
   status: ItemStatus;
   publishedAt: string;

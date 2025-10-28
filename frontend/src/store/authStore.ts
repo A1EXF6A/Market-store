@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService } from "@services/auth";
 import type { User } from "@/types";
+import { toast } from "sonner";
 
 interface AuthState {
   user: User | null;
@@ -60,11 +61,13 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         Cookies.remove("access_token");
+        localStorage.removeItem("access_token");
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
+        toast.success("Sesión cerrada exitosamente");
       },
 
       initializeAuth: async () => {
@@ -78,10 +81,12 @@ export const useAuthStore = create<AuthState>()(
             });
           } catch (error) {
             Cookies.remove("access_token");
+            localStorage.removeItem("access_token");
             set({
               user: null,
               isAuthenticated: false,
             });
+            toast.error("Sesión expirada. Por favor, inicia sesión nuevamente");
           }
         }
       },

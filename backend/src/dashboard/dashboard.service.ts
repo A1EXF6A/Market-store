@@ -30,26 +30,27 @@ export class DashboardService {
   ) {}
 
   async getBuyerStats(userId: number) {
-    const [favoritesCount, activeChatsCount, activeProductsCount] = await Promise.all([
-      this.favoriteRepository.count({ 
-        where: { 
-          userId: userId 
-        } 
-      }),
-      this.chatRepository.count({ 
-        where: { 
-          buyer: { userId } 
-        } 
-      }),
-      // Count globally available active products for explorer
-      this.itemRepository.count({
-        where: {
-          status: ItemStatus.ACTIVE,
-          availability: true,
-          type: ItemType.PRODUCT,
-        },
-      }),
-    ]);
+    const [favoritesCount, activeChatsCount, activeProductsCount] =
+      await Promise.all([
+        this.favoriteRepository.count({
+          where: {
+            userId: userId,
+          },
+        }),
+        this.chatRepository.count({
+          where: {
+            buyerId: userId,
+          },
+        }),
+        // Count globally available active products for explorer
+        this.itemRepository.count({
+          where: {
+            status: ItemStatus.ACTIVE,
+            availability: true,
+            type: ItemType.PRODUCT,
+          },
+        }),
+      ]);
 
     return {
       favoritesCount,
@@ -58,68 +59,57 @@ export class DashboardService {
     };
   }
 
-
   async getSellerStats(userId: number) {
-    const [
-      productsCount,
-      activeChatsCount,
-      averageRating,
-      totalSales
-    ] = await Promise.all([
-      // Count only seller's active & available products
-      this.itemRepository.count({ 
-        where: { 
-          sellerId: userId,
-          status: ItemStatus.ACTIVE,
-          availability: true,
-          type: ItemType.PRODUCT,
-        } 
-      }),
-      this.chatRepository.count({ 
-        where: { 
-          seller: { userId } 
-        } 
-      }),
-      this.ratingRepository
-        .createQueryBuilder("rating")
-        .innerJoin("rating.item", "item")
-        .where("item.sellerId = :userId", { userId })
-        .select("AVG(rating.score)", "average")
-        .getRawOne()
-        .then(result => result?.average ? parseFloat(result.average).toFixed(1) : "5.0"),
-      this.itemRepository
-        .createQueryBuilder("item")
-        .where("item.sellerId = :userId", { userId })
-        .andWhere("item.availability = false")
-        .select("SUM(item.price)", "total")
-        .getRawOne()
-        .then(result => result?.total || 0),
-    ]);
+    const [productsCount, activeChatsCount, averageRating, totalSales] =
+      await Promise.all([
+        // Count ALL seller's products (remove status filter)
+        this.itemRepository.count({
+          where: {
+            sellerId: userId,
+          },
+        }),
+        this.chatRepository.count({
+          where: {
+            sellerId: userId,
+          },
+        }),
+        this.ratingRepository
+          .createQueryBuilder("rating")
+          .where("rating.sellerId = :userId", { userId })
+          .select("AVG(rating.score)", "average")
+          .getRawOne()
+          .then((result) => {
+            return result?.average ? parseFloat(result.average) : 0;
+          }),
+        // Count sold items (availability = false)
+        this.itemRepository.count({
+          where: {
+            sellerId: userId,
+            availability: false,
+          },
+        }),
+      ]);
 
     return {
       productsCount,
       activeChatsCount,
-      averageRating: parseFloat(averageRating),
+      averageRating,
       totalSales,
     };
   }
 
   async getAdminStats() {
-    const [
-      usersCount,
-      incidentsCount,
-      reportsCount,
-      productsCount,
-    ] = await Promise.all([
-      this.userRepository.count(),
-      this.incidentRepository.count({ 
-        where: { 
-          status: ItemStatus.PENDING 
-        } 
-      }),
-      this.reportRepository.count(),
-      this.itemRepository.count(),
-    ]);
+    const [usersCount, incidentsCount, reportsCount, productsCount] =
+      await Promise.all([
+        this.userRepository.count(),
+        this.incidentRepository.count({
+          where: {
+            status: ItemStatus.PENDING,
+          },
+        }),
+        this.reportRepository.count(),
+        this.itemRepository.count(),
+      ]);
 
     return {
       usersCount,
@@ -129,3 +119,4 @@ export class DashboardService {
     };
   }
 }
+

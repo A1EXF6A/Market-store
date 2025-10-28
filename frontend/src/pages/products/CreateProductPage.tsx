@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import ImageUpload from "@components/ui/image-upload";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
+import { LocationSelector } from "@components/ui/location-selector";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,8 @@ const productSchema = z.object({
   category: z.string().max(100, "Máximo 100 caracteres").optional(),
   price: z.number().min(0, "El precio debe ser mayor a 0").optional(),
   location: z.string().max(150, "Máximo 150 caracteres").optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   type: z.enum(["product", "service"]).refine((val) => val, {
     message: "Selecciona un tipo",
   }),
@@ -42,6 +45,11 @@ const CreateProductPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(false);
   const [images, setImages] = React.useState<File[]>([]);
+  const [selectedLocation, setSelectedLocation] = React.useState<{
+    latitude: number;
+    longitude: number;
+    address?: string;
+  } | null>(null);
 
   const {
     register,
@@ -67,6 +75,8 @@ const CreateProductPage: React.FC = () => {
         category: data.category,
         price: data.price,
         location: data.location,
+        latitude: selectedLocation?.latitude,
+        longitude: selectedLocation?.longitude,
         type: data.type,
         workingHours: data.workingHours,
         images: images,
@@ -81,6 +91,15 @@ const CreateProductPage: React.FC = () => {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLocationChange = (location: { latitude: number; longitude: number; address?: string } | null) => {
+    setSelectedLocation(location);
+    if (location?.address) {
+      setValue("location", location.address);
+    } else if (!location) {
+      setValue("location", "");
     }
   };
 
@@ -188,11 +207,16 @@ const CreateProductPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Ubicación</Label>
+                <Label>Ubicación</Label>
+                <LocationSelector
+                  value={selectedLocation}
+                  onChange={handleLocationChange}
+                  placeholder="Seleccionar ubicación en el mapa"
+                />
                 <Input
-                  id="location"
-                  placeholder="Ciudad, región..."
+                  placeholder="O escribe la ubicación..."
                   {...register("location")}
+                  className="mt-2"
                 />
                 {errors.location && (
                   <p className="text-sm text-red-600">

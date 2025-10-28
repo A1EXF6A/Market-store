@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import { toast } from 'sonner';
 
 export const API_BASE = 'http://localhost:3000';
 
@@ -27,8 +28,18 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      Cookies.remove('access_token');
-      // window.location.href = '/login';
+      // No mostrar toast de sesión expirada para rutas de autenticación
+      const isAuthRoute = error.config?.url?.includes('/auth/');
+      
+      if (!isAuthRoute) {
+        Cookies.remove('access_token');
+        localStorage.removeItem('access_token');
+        toast.error('Sesión expirada. Por favor, inicia sesión nuevamente');
+      }
+    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+      toast.error('Error de conexión. Verifica tu conexión a internet');
+    } else if (error.response?.status >= 500) {
+      toast.error('Error del servidor. Intenta nuevamente más tarde');
     }
     return Promise.reject(error);
   }
