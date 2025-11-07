@@ -31,15 +31,11 @@ export class DashboardService {
 
   async getBuyerStats(userId: number) {
     const [favoritesCount, activeChatsCount] = await Promise.all([
-      this.favoriteRepository.count({ 
-        where: { 
-          userId: userId 
-        } 
+      this.favoriteRepository.count({
+        where: { userId },
       }),
-      this.chatRepository.count({ 
-        where: { 
-          buyer: { userId } 
-        } 
+      this.chatRepository.count({
+        where: { buyer: { userId } },
       }),
     ]);
 
@@ -53,59 +49,59 @@ export class DashboardService {
     const [
       productsCount,
       activeChatsCount,
-      averageRating,
-      totalSales
+      averageRatingRow,
+      totalSalesRow,
     ] = await Promise.all([
-      this.itemRepository.count({ 
-        where: { 
-          sellerId: userId 
-        } 
-      }),
-      this.chatRepository.count({ 
-        where: { 
-          seller: { userId } 
-        } 
-      }),
+      // Total de ítems del vendedor
+      this.itemRepository.count({ where: { sellerId: userId } }),
+
+      // Chats activos del vendedor
+      this.chatRepository.count({ where: { seller: { userId } } }),
+
+      // PROMEDIO de ratings del vendedor
+      // Opción 1 (recomendada): unir a la relación 'seller'
       this.ratingRepository
         .createQueryBuilder("rating")
-        .innerJoin("rating.item", "item")
-        .where("item.sellerId = :userId", { userId })
-        .select("AVG(rating.score)", "average")
-        .getRawOne()
-        .then(result => result?.average ? parseFloat(result.average).toFixed(1) : "5.0"),
+        .innerJoin("rating.seller", "seller")
+        .where("seller.userId = :userId", { userId })
+        .select("COALESCE(AVG(rating.score), 0)", "average")
+        .getRawOne(),
+
+      // Suma de ventas = suma de price de items con availability = false
       this.itemRepository
         .createQueryBuilder("item")
         .where("item.sellerId = :userId", { userId })
         .andWhere("item.availability = false")
-        .select("SUM(item.price)", "total")
-        .getRawOne()
-        .then(result => result?.total || 0),
+        .select("COALESCE(SUM(item.price), 0)", "total")
+        .getRawOne(),
     ]);
+
+    const averageRating = averageRatingRow?.average
+      ? parseFloat(averageRatingRow.average)
+      : 0;
+
+    const totalSales = totalSalesRow?.total
+      ? parseFloat(totalSalesRow.total)
+      : 0;
 
     return {
       productsCount,
       activeChatsCount,
-      averageRating: parseFloat(averageRating),
+      averageRating,
       totalSales,
     };
   }
 
   async getAdminStats() {
-    const [
-      usersCount,
-      incidentsCount,
-      reportsCount,
-      productsCount,
-    ] = await Promise.all([
-      this.userRepository.count(),
-      this.incidentRepository.count({ 
-        where: { 
-          status: ItemStatus.PENDING 
-        } 
-      }),
-      this.reportRepository.count(),
-      this.itemRepository.count(),
-    ]);
+    const [usersCount, incidentsCount, reportsCount, productsCount] =
+      await Promise.all([
+        this.userRepository.count(),
+        this.incidentRepository.count({
+          where: { status: ItemStatus.PENDING },
+        }),
+        this.reportRepository.count(),
+        this.itemRepository.count(),
+      ]);
 
     return {
       usersCount,

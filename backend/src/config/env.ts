@@ -26,10 +26,10 @@ const env: Config = {
   port: process.env.PORT ? parseInt(process.env.PORT) : 3001,
   database: {
     host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5433,
     user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
-    name: process.env.DB_NAME || "postgres",
+    password: process.env.DB_PASSWORD || "12345",
+    name: process.env.DB_NAME || "marketstore",
   },
   email: {
     host: process.env.EMAIL_HOST || "smtp.gmail.com",

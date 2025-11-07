@@ -5,7 +5,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
-
+import { EmailModule } from '../email/email.module';
 import env from "src/config/env";
 import { User } from "../entities/user.entity";
 import { AuthController } from "./auth.controller";
@@ -16,6 +16,7 @@ import { EmailService } from '../common/services/email.service';
 
 @Module({
   imports: [
+      UsersModule, EmailModule,
     TypeOrmModule.forFeature([User]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({

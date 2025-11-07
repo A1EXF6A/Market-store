@@ -5,18 +5,20 @@ export const API_BASE = 'http://localhost:3000';
 
 export const api = axios.create({
   baseURL: API_BASE,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+ 
 });
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+     const token = localStorage.getItem("access_token");
+     if (token) config.headers.Authorization = `Bearer ${token}`;
+   // Si enviamos FormData, no fijar Content-Type (Axios añade boundary)
+    if (config.data instanceof FormData) {
+     if (config.headers && "Content-Type" in config.headers) {
+      delete (config.headers as any)["Content-Type"];
+      }
     }
-    return config;
+     return config;
   },
   (error) => {
     return Promise.reject(error);

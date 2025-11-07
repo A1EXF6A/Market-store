@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { productsService } from "@services/products";
 import { API_BASE } from "@services/api";
@@ -19,10 +19,18 @@ import {
   Flag,
   ArrowLeft,
   Clock,
+  CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { chatService } from "@services/chat";
 import { ReportProductModal } from "@components/ui/report-product-modal";
+
+const currency = new Intl.NumberFormat(undefined, {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,13 +38,13 @@ const ProductDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [isFavLoading, setIsFavLoading] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (id) {
-      loadProduct(parseInt(id));
-    }
+    if (id) void loadProduct(parseInt(id, 10));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadProduct = async (productId: number) => {
@@ -44,7 +52,8 @@ const ProductDetailPage: React.FC = () => {
       setLoading(true);
       const data = await productsService.getById(productId);
       setProduct(data);
-    } catch (error: any) {
+      setCurrentImageIndex(0);
+    } catch (_error) {
       toast.error("Error al cargar el producto");
       navigate("/products");
     } finally {
@@ -52,18 +61,43 @@ const ProductDetailPage: React.FC = () => {
     }
   };
 
-  const handleToggleFavorite = async () => {
-    if (!product) return;
+  const googleMapsHref = useMemo(() => {
+    if (!product?.location) return undefined;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      product.location,
+    )}`;
+  }, [product?.location]);
 
+  const staticMapUrl = useMemo(() => {
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    if (!product?.location || !key) return undefined;
+    const base = "https://maps.googleapis.com/maps/api/staticmap";
+    const qs = new URLSearchParams({
+      size: "800x280",
+      scale: "2",
+      zoom: "14",
+      markers: product.location,
+      key,
+    });
+    return `${base}?${qs.toString()}`;
+  }, [product?.location]);
+
+  const handleToggleFavorite = async () => {
+    if (!product || !user || user.role !== UserRole.BUYER) return;
     try {
+      setIsFavLoading(true);
+      // UI optimista (si en tu API devuelves isFavorite, puedes usarlo aquí)
       await productsService.toggleFavorite(product.itemId);
       toast.success("Favorito actualizado");
-    } catch (error: any) {
+    } catch (_error) {
       toast.error("Error al actualizar favorito");
+    } finally {
+      setIsFavLoading(false);
     }
   };
+
   const handleContactSeller = async () => {
-    if (!product || !product.seller) return;
+    if (!product?.seller) return;
     try {
       const chat = await chatService.findOrCreateChat(product.seller.userId);
       navigate(`/chat/${chat.chatId}`);
@@ -72,6 +106,7 @@ const ProductDetailPage: React.FC = () => {
       console.error(error);
     }
   };
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       active: "bg-green-100 text-green-800",
@@ -80,17 +115,15 @@ const ProductDetailPage: React.FC = () => {
       hidden: "bg-gray-100 text-gray-800",
       banned: "bg-red-100 text-red-800",
     };
-    return (
-      statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800"
-    );
+    return statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800";
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando producto...</p>
+      <div className="min-h-[60vh] grid place-items-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+          <p className="text-gray-600">Cargando producto...</p>
         </div>
       </div>
     );
@@ -107,29 +140,55 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
+  const mainImage =
+    product.photos.length > 0
+      ? `${API_BASE}${product.photos[currentImageIndex]?.url || product.photos[0].url}`
+      : undefined;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/products">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Link>
-        </Button>
-        <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+      {/* Header */}
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow">
+        <div className="rounded-2xl bg-white dark:bg-neutral-950 p-4 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/products">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver
+              </Link>
+            </Button>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{product.name}</h1>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline">
+              {product.type === "product" ? "Producto" : "Servicio"}
+            </Badge>
+            <Badge className={getStatusBadge(product.status)}>{product.status}</Badge>
+            {!product.availability ? (
+              <Badge variant="secondary" className="gap-1">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                No disponible
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Disponible
+              </Badge>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <Card>
+      {/* Body */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Gallery */}
+        <div className="lg:col-span-3 space-y-4">
+          <Card className="border-0 shadow-md">
             <CardContent className="p-0">
-              <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
-                {product.photos.length > 0 ? (
-                  <img
-                    src={`${API_BASE}${product.photos[currentImageIndex]?.url || product.photos[0].url}`}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
+              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                {mainImage ? (
+                  <img src={mainImage} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
                     Sin imagen disponible
@@ -145,11 +204,10 @@ const ProductDetailPage: React.FC = () => {
                 <button
                   key={photo.photoId}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    currentImageIndex === index
-                      ? "border-blue-500"
-                      : "border-gray-200"
+                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition ${
+                    currentImageIndex === index ? "border-indigo-500" : "border-transparent"
                   }`}
+                  title={`Imagen ${index + 1}`}
                 >
                   <img
                     src={`${API_BASE}${photo.url}`}
@@ -160,62 +218,96 @@ const ProductDetailPage: React.FC = () => {
               ))}
             </div>
           )}
+
+          {/* Optional static map preview */}
+          {product.location && staticMapUrl && (
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Ubicación</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <a
+                  href={googleMapsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Ver en Google Maps"
+                  className="block rounded-lg overflow-hidden"
+                >
+                  <img
+                    src={staticMapUrl}
+                    alt={`Mapa de ${product.location}`}
+                    className="w-full h-40 md:h-48 object-cover"
+                  />
+                </a>
+                <div className="flex items-center text-gray-700 gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <a
+                    href={googleMapsHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline hover:text-gray-900"
+                    title="Ver en Google Maps"
+                  >
+                    {product.location}
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        <div className="space-y-6">
-          <Card>
+        {/* Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-0 shadow-md">
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-2xl">{product.name}</CardTitle>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline">
-                      {product.type === "product" ? "Producto" : "Servicio"}
-                    </Badge>
-                    <Badge className={getStatusBadge(product.status)}>
-                      {product.status}
-                    </Badge>
-                    {!product.availability && (
-                      <Badge variant="secondary">No disponible</Badge>
-                    )}
-                  </div>
-                </div>
-                {product.price && (
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle className="text-2xl">{product.name}</CardTitle>
+                {typeof product.price === "number" && (
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-green-600 flex items-center">
+                    <div className="text-3xl font-bold text-emerald-600 flex items-center justify-end">
                       <DollarSign className="h-6 w-6" />
-                      {product.price.toLocaleString()}
+                      {currency.format(product.price)}
                     </div>
                   </div>
                 )}
               </div>
             </CardHeader>
+
             <CardContent className="space-y-4">
               {product.description && (
                 <div>
                   <h3 className="font-semibold mb-2">Descripción</h3>
-                  <p className="text-gray-700">{product.description}</p>
+                  <p className="text-gray-700 leading-relaxed">{product.description}</p>
                 </div>
               )}
 
               <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {product.location && (
-                  <div className="flex items-center text-gray-600">
+                {product.location && !staticMapUrl && (
+                  <div className="flex items-center text-gray-700">
                     <MapPin className="h-4 w-4 mr-2" />
-                    <span>{product.location}</span>
+                    <a
+                      href={googleMapsHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-gray-900"
+                      title="Ver en Google Maps"
+                    >
+                      {product.location}
+                    </a>
                   </div>
                 )}
-                <div className="flex items-center text-gray-600">
+
+                <div className="flex items-center text-gray-700">
                   <Calendar className="h-4 w-4 mr-2" />
                   <span>
-                    Publicado:{" "}
-                    {new Date(product.publishedAt).toLocaleDateString()}
+                    Publicado: {new Date(product.publishedAt).toLocaleDateString()}
                   </span>
                 </div>
+
                 {product.service?.workingHours && (
-                  <div className="flex items-center text-gray-600">
+                  <div className="flex items-center text-gray-700">
                     <Clock className="h-4 w-4 mr-2" />
                     <span>Horario: {product.service.workingHours}</span>
                   </div>
@@ -231,9 +323,10 @@ const ProductDetailPage: React.FC = () => {
                       onClick={handleToggleFavorite}
                       variant="outline"
                       className="flex-1"
+                      disabled={isFavLoading}
                     >
                       <Heart className="h-4 w-4 mr-2" />
-                      Favorito
+                      {isFavLoading ? "Actualizando..." : "Favorito"}
                     </Button>
                     <Button className="flex-1" onClick={handleContactSeller}>
                       <MessageCircle className="h-4 w-4 mr-2" />
@@ -247,6 +340,7 @@ const ProductDetailPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setReportModalOpen(true)}
+                    title="Reportar producto"
                   >
                     <Flag className="h-4 w-4" />
                   </Button>
@@ -256,7 +350,7 @@ const ProductDetailPage: React.FC = () => {
           </Card>
 
           {product.seller && (
-            <Card>
+            <Card className="border-0 shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <User className="h-5 w-5 mr-2" />
@@ -269,17 +363,13 @@ const ProductDetailPage: React.FC = () => {
                     <p className="font-semibold">
                       {product.seller.firstName} {product.seller.lastName}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {product.seller.email}
-                    </p>
+                    <p className="text-sm text-gray-600">{product.seller.email}</p>
                     {product.seller.phone && (
-                      <p className="text-sm text-gray-600">
-                        {product.seller.phone}
-                      </p>
+                      <p className="text-sm text-gray-600">{product.seller.phone}</p>
                     )}
                   </div>
                   {user?.role === UserRole.BUYER && (
-                    <Button size="sm">
+                    <Button size="sm" onClick={handleContactSeller}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Enviar Mensaje
                     </Button>
@@ -305,4 +395,3 @@ const ProductDetailPage: React.FC = () => {
 };
 
 export default ProductDetailPage;
-

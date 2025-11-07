@@ -1,99 +1,75 @@
+// src/pages/VerifyEmailPage.tsx
+import React from "react";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@components/ui/card";
 import { Button } from "@components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@components/ui/card";
-import { authService } from "@services/auth";
-import { CheckCircle, Loader2, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { authService } from "@/services/auth";
 import { toast } from "sonner";
+import { ShieldCheck, Loader2 } from "lucide-react";
 
-export default function VerifyEmailPage() {
-  const [searchParams] = useSearchParams();
+const VerifyEmailPage: React.FC = () => {
+  const [search] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading",
-  );
-  const [message, setMessage] = useState("");
+  const token = search.get("token");
+  const [loading, setLoading] = React.useState(false);
+  const [done, setDone] = React.useState<null | "ok" | "fail">(null);
 
-  useEffect(() => {
-    const token = searchParams.get("token");
-
+  const verify = async () => {
     if (!token) {
-      setStatus("error");
-      setMessage("Token de verificación no encontrado");
+      toast.error("Token inválido o faltante.");
+      setDone("fail");
       return;
     }
-
-    verifyEmail(token);
-  }, [searchParams]);
-
-  const verifyEmail = async (token: string) => {
     try {
-      const data = await authService.verifyEmail(token);
-      setStatus("success");
-      setMessage(data.message || "Email verificado exitosamente");
-      toast.success("¡Email verificado exitosamente!");
-    } catch (error: any) {
-      setStatus("error");
-      setMessage(
-        error.response?.data?.message || "Error al verificar el email",
-      );
-      toast.error("Error al verificar el email");
+      setLoading(true);
+      await authService.verifyEmail(token);
+      setDone("ok");
+      toast.success("Correo verificado con éxito");
+      // si quieres redirigir automático luego de 2s:
+      // setTimeout(() => navigate("/login"), 1800);
+    } catch (e: any) {
+      setDone("fail");
+      toast.error(e?.response?.data?.message || "No se pudo verificar el correo");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoToLogin = () => {
-    navigate("/login");
-  };
-
-  const handleResendVerification = () => {
-    navigate("/resend-verification");
-  };
+  React.useEffect(() => {
+    verify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            {status === "loading" && (
-              <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
-            )}
-            {status === "success" && (
-              <CheckCircle className="h-12 w-12 text-green-600" />
-            )}
-            {status === "error" && (
-              <XCircle className="h-12 w-12 text-red-600" />
-            )}
-          </div>
-          <CardTitle className="text-2xl font-bold">
-            {status === "loading" && "Verificando email..."}
-            {status === "success" && "¡Email verificado!"}
-            {status === "error" && "Error de verificación"}
-          </CardTitle>
-          <CardDescription>{message}</CardDescription>
+    <div className="min-h-screen grid place-items-center bg-[radial-gradient(1200px_600px_at_10%_-10%,#1e293b_15%,transparent_60%),radial-gradient(900px_400px_at_90%_10%,#0f172a_15%,transparent_60%)]">
+      <Card className="w-full max-w-md border-0 shadow-xl">
+        <CardHeader>
+          <CardTitle>Verificación de correo</CardTitle>
+          <CardDescription>Estamos validando tu enlace…</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {status === "success" && (
-            <Button className="w-full" onClick={handleGoToLogin}>
-              Ir a iniciar sesión
-            </Button>
+          {loading && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Verificando…
+            </div>
           )}
-          {status === "error" && (
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                onClick={handleResendVerification}
-                variant="outline"
-              >
-                Reenviar verificación
+          {done === "ok" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-emerald-600">
+                <ShieldCheck className="h-5 w-5" />
+                <span>¡Tu correo fue verificado!</span>
+              </div>
+              <Button asChild className="w-full">
+                <Link to="/login">Ir a iniciar sesión</Link>
               </Button>
-              <Button className="w-full" onClick={handleGoToLogin}>
-                Ir a iniciar sesión
+            </div>
+          )}
+          {done === "fail" && (
+            <div className="space-y-4">
+              <p className="text-rose-600">El enlace no es válido o expiró.</p>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/resend-verification">Reenviar verificación</Link>
               </Button>
             </div>
           )}
@@ -101,5 +77,6 @@ export default function VerifyEmailPage() {
       </Card>
     </div>
   );
-}
+};
 
+export default VerifyEmailPage;

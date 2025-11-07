@@ -33,53 +33,72 @@ export class ProductsService {
     @Inject(forwardRef(() => IncidentsService))
     private incidentsService: IncidentsService,
   ) {}
+async create(
+  createProductDto: CreateProductDto,
+  files: { images?: Express.Multer.File[] },
+  sellerId: number,
+): Promise<Item> {
 
-  async create(
-    createProductDto: CreateProductDto,
-    files: { images?: Express.Multer.File[] },
-    sellerId: number,
-  ): Promise<Item> {
-    const { workingHours, ...itemData } = createProductDto;
-
-    const code = await this.generateUniqueCode();
-
-    const isDangerous = this.detectProhibitedContent(itemData.name, itemData.description);
-    
-    const item = this.itemRepository.create({
-      ...itemData,
-      code,
-      sellerId,
-      status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
-    });
-
-    const savedItem = await this.itemRepository.save(item);
-
-    // Automatically create incident if dangerous content is detected
-    if (isDangerous) {
-      await this.incidentsService.createIncident(
-        savedItem.itemId,
-        `Producto detectado automáticamente como potencialmente peligroso. Palabras detectadas en: "${itemData.name}" ${itemData.description ? `- "${itemData.description}"` : ''}`,
-      );
-    }
-
-    if (files.images && files.images.length > 0) {
-      const photoUrls = await this.saveImages(files.images);
-      const photoEntities = photoUrls.map((url) =>
-        this.photoRepository.create({ itemId: savedItem.itemId, url }),
-      );
-      await this.photoRepository.save(photoEntities);
-    }
-
-    if (createProductDto.type === ItemType.SERVICE && workingHours) {
-      const service = this.serviceRepository.create({
-        itemId: savedItem.itemId,
-        workingHours,
-      });
-      await this.serviceRepository.save(service);
-    }
-
-    return this.findOne(savedItem.itemId);
+  // ✅ 1. Convertir strings a número
+  if (createProductDto.price && typeof createProductDto.price === "string") {
+    createProductDto.price = parseFloat(createProductDto.price);
   }
+
+  // ✅ 2. Validar servicios
+  if (createProductDto.type === ItemType.SERVICE && !createProductDto.workingHours) {
+    throw new Error("El campo 'workingHours' es obligatorio para servicios");
+  }
+
+  // ✅ 3. Generar código único
+  const code = await this.generateUniqueCode();
+
+  // ✅ 4. Detectar contenido peligroso
+  const isDangerous = this.detectProhibitedContent(
+    createProductDto.name,
+    createProductDto.description,
+  );
+
+  const { workingHours, ...itemData } = createProductDto;
+
+  const item = this.itemRepository.create({
+    ...itemData,
+    code,
+    sellerId,
+    status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
+  });
+
+  const savedItem = await this.itemRepository.save(item);
+
+  if (isDangerous) {
+    await this.incidentsService.createIncident(
+      savedItem.itemId,
+      `Producto detectado automáticamente como potencialmente peligroso. Palabras detectadas en: "${itemData.name}" ${
+        itemData.description ? `- "${itemData.description}"` : ""
+      }`,
+    );
+  }
+
+  // ✅ 5. Guardar imágenes si existen
+  if (files.images && files.images.length > 0) {
+    const photoUrls = await this.saveImages(files.images);
+    const photoEntities = photoUrls.map((url) =>
+      this.photoRepository.create({ itemId: savedItem.itemId, url }),
+    );
+    await this.photoRepository.save(photoEntities);
+  }
+
+  // ✅ 6. Crear fila en services si es tipo 'service'
+  if (createProductDto.type === ItemType.SERVICE && workingHours) {
+    const service = this.serviceRepository.create({
+      itemId: savedItem.itemId,
+      workingHours,
+    });
+    await this.serviceRepository.save(service);
+  }
+
+  return this.findOne(savedItem.itemId);
+}
+
 
   async findAll(filters?: any): Promise<Item[]> {
     const queryBuilder = this.itemRepository

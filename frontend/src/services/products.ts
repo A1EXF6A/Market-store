@@ -5,7 +5,7 @@ export interface CreateProductData {
   name: string;
   description?: string;
   category?: string;
-  price?: number;
+  price?: number; // ojo: 0 debe enviarse
   location?: string;
   type: "product" | "service";
   workingHours?: string;
@@ -22,9 +22,9 @@ export const productsService = {
 
     if (filters?.type) params.append("type", filters.type);
     if (filters?.category) params.append("category", filters.category);
-    if (filters?.minPrice)
+    if (filters?.minPrice !== undefined)
       params.append("minPrice", filters.minPrice.toString());
-    if (filters?.maxPrice)
+    if (filters?.maxPrice !== undefined)
       params.append("maxPrice", filters.maxPrice.toString());
     if (filters?.location) params.append("location", filters.location);
     if (filters?.search) params.append("search", filters.search);
@@ -48,68 +48,61 @@ export const productsService = {
 
   getFavorites: async (): Promise<Product[]> => {
     const response = await api.get("/products/favorites");
-
     return response.data;
   },
 
   create: async (data: CreateProductData): Promise<Product> => {
     const formData = new FormData();
 
-    // Add text fields
+    // Campos de texto
     formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
     if (data.category) formData.append("category", data.category);
-    if (data.price) formData.append("price", data.price.toString());
+    if (data.price !== undefined) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     formData.append("type", data.type);
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 
-    // Add images
-    if (data.images) {
+    // Archivos (nombre de campo debe ser EXACTAMENTE "images")
+    if (data.images?.length) {
       data.images.forEach((image) => {
         formData.append("images", image);
       });
     }
 
-    const response = await api.post("/products", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // No fijar Content-Type manualmente (Axios añade boundary)
+    const response = await api.post("/products", formData);
     return response.data;
   },
 
   update: async (id: number, data: UpdateProductData): Promise<Product> => {
     const formData = new FormData();
 
-    // Add text fields
+    // Campos de texto
     if (data.name) formData.append("name", data.name);
     if (data.description) formData.append("description", data.description);
     if (data.category) formData.append("category", data.category);
-    if (data.price) formData.append("price", data.price.toString());
+    if (data.price !== undefined) formData.append("price", data.price.toString());
     if (data.location) formData.append("location", data.location);
     if (data.type) formData.append("type", data.type);
     if (data.workingHours) formData.append("workingHours", data.workingHours);
 
-    // Add images
-    if (data.images) {
+    // Nuevas imágenes
+    if (data.images?.length) {
       data.images.forEach((image) => {
         formData.append("images", image);
       });
     }
 
-    // Add removed images
-    if (data.removedImages) {
+    // Imágenes a eliminar (si tu backend espera múltiples entradas con la misma key)
+    if (data.removedImages?.length) {
       data.removedImages.forEach((imageUrl) => {
         formData.append("removedImages", imageUrl);
       });
     }
 
-    const response = await api.patch(`/products/${id}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // No fijar Content-Type manualmente (Axios añade boundary)
+    const response = await api.patch(`/products/${id}`, formData);
     return response.data;
   },
 
