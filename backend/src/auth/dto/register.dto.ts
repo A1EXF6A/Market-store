@@ -28,8 +28,7 @@ export class RegisterDto {
   @IsOptional()
   phone?: string;
   
-  @IsString()
-  role?: string;
+ 
 
   @IsString()
   @IsOptional()
@@ -39,9 +38,9 @@ export class RegisterDto {
    @IsOptional()
    gender?: UserGender;
 
-   @IsEnum(UserRole)
+
    @IsOptional()
-   role?: UserRole;
+   role?: string;
 
    @IsString()
    @MinLength(8)
