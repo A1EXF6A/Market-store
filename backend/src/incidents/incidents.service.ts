@@ -13,6 +13,22 @@ import { User } from "../entities/user.entity";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 
+export interface IncidentFilters {
+  status?: ItemStatus;
+  startDate?: string;
+  endDate?: string;
+  moderatorId?: number;
+  sellerId?: number;
+  search?: string;
+}
+
+export interface ReportFilters {
+  type?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+}
+
 @Injectable()
 export class IncidentsService {
   constructor(
@@ -105,8 +121,7 @@ export class IncidentsService {
       .createQueryBuilder("incident")
       .leftJoinAndSelect("incident.item", "item")
       .leftJoinAndSelect("incident.seller", "seller")
-      .leftJoinAndSelect("incident.moderator", "moderator")
-      .leftJoinAndSelect("incident.appeals", "appeals");
+      .leftJoinAndSelect("incident.moderator", "moderator");
 
     if (filters?.startDate && filters?.endDate) {
       queryBuilder.andWhere(
@@ -124,14 +139,58 @@ export class IncidentsService {
       });
     }
 
+    if (filters?.moderatorId) {
+      queryBuilder.andWhere("incident.moderatorId = :moderatorId", {
+        moderatorId: +filters.moderatorId,
+      });
+    }
+
+    if (filters?.sellerId) {
+      queryBuilder.andWhere("incident.sellerId = :sellerId", {
+        sellerId: +filters.sellerId,
+      });
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        "(incident.description ILIKE :search OR item.name ILIKE :search OR item.code ILIKE :search OR seller.firstName ILIKE :search OR seller.lastName ILIKE :search)",
+        { search: `%${filters.search}%` }
+      );
+    }
+
     return queryBuilder.orderBy("incident.reportedAt", "DESC").getMany();
   }
 
-  async getReports(): Promise<Report[]> {
-    return this.reportRepository.find({
-      relations: ["item", "buyer"],
-      order: { reportedAt: "DESC" },
-    });
+  async getReports(filters?: ReportFilters): Promise<Report[]> {
+    const queryBuilder = this.reportRepository
+      .createQueryBuilder("report")
+      .leftJoinAndSelect("report.item", "item")
+      .leftJoinAndSelect("report.buyer", "buyer");
+
+    if (filters?.type) {
+      queryBuilder.andWhere("report.type = :type", {
+        type: filters.type,
+      });
+    }
+
+    if (filters?.startDate && filters?.endDate) {
+      queryBuilder.andWhere(
+        "report.reportedAt BETWEEN :startDate AND :endDate",
+        {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        },
+      );
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        "(report.comment ILIKE :search OR item.name ILIKE :search OR item.code ILIKE :search OR buyer.firstName ILIKE :search OR buyer.lastName ILIKE :search)",
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    return queryBuilder.orderBy("report.reportedAt", "DESC").getMany();
   }
 
   async assignModerator(

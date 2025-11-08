@@ -46,11 +46,21 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button"
 
+  // If we're rendering a real <button> element (not using asChild),
+  // ensure the default type is 'button' to avoid accidental form submits
+  // use a loose any here to avoid ref/type incompatibilities between Slot and button
+  const elementProps: any = { ...props }
+
+  if (!asChild && elementProps.type === undefined) {
+    // set default type to button
+    elementProps.type = 'button'
+  }
+
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      {...elementProps}
     />
   )
 }

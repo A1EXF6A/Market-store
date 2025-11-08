@@ -4,10 +4,15 @@ import Layout from "./components/layout/Layout";
 import { ProtectedRoute, PublicRoute } from "./components/routes/routes";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
+import ResendVerificationPage from "./pages/auth/ResendVerificationPage";
 import ChatPage from "./pages/chat/ChatPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import IncidentsPage from "./pages/incidents/IncidentsPage";
 import ReportsPage from "./pages/incidents/ReportsPage";
+import MyIncidentsPage from "./pages/incidents/MyIncidentsPage";
 import CreateProductPage from "./pages/products/CreateProductPage";
 import EditProductPage from "./pages/products/EditProductPage";
 import FavoritesPage from "./pages/products/FavoritesPage";
@@ -41,6 +46,38 @@ function AppRouter() {
           element={
             <PublicRoute>
               <RegisterPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPasswordPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <PublicRoute>
+              <VerifyEmailPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/resend-verification"
+          element={
+            <PublicRoute>
+              <ResendVerificationPage />
             </PublicRoute>
           }
         />
@@ -80,6 +117,14 @@ function AppRouter() {
             element={
               <ProtectedRoute allowedRoles={[UserRole.SELLER]}>
                 <EditProductPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="my-incidents"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.SELLER]}>
+                <MyIncidentsPage />
               </ProtectedRoute>
             }
           />

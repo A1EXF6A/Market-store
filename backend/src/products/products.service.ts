@@ -2,9 +2,11 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { Favorite } from "src/entities/favorite.entity";
 import { ItemPhoto } from "src/entities/item-photo.entity";
 import { ItemStatus, ItemType } from "../entities/enums";
@@ -13,6 +15,9 @@ import { User } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
+import { IncidentsService } from "../incidents/incidents.service";
+import * as fs from "fs";
+import * as path from "path";
 
 @Injectable()
 export class ProductsService {
@@ -25,44 +30,75 @@ export class ProductsService {
     private serviceRepository: Repository<Service>,
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
-  ) { }
+    @Inject(forwardRef(() => IncidentsService))
+    private incidentsService: IncidentsService,
+  ) {}
+async create(
+  createProductDto: CreateProductDto,
+  files: { images?: Express.Multer.File[] },
+  sellerId: number,
+): Promise<Item> {
 
-  async create(
-    createProductDto: CreateProductDto,
-    sellerId: number,
-  ): Promise<Item> {
-    const { photos, workingHours, ...itemData } = createProductDto;
-
-    const code = await this.generateUniqueCode();
-
-    const item = this.itemRepository.create({
-      ...itemData,
-      code,
-      sellerId,
-      status: this.detectProhibitedContent(itemData.name, itemData.description)
-        ? ItemStatus.PENDING
-        : ItemStatus.ACTIVE,
-    });
-
-    const savedItem = await this.itemRepository.save(item);
-
-    if (photos && photos.length > 0) {
-      const photoEntities = photos.map((url) =>
-        this.photoRepository.create({ itemId: savedItem.itemId, url }),
-      );
-      await this.photoRepository.save(photoEntities);
-    }
-
-    if (createProductDto.type === ItemType.SERVICE && workingHours) {
-      const service = this.serviceRepository.create({
-        itemId: savedItem.itemId,
-        workingHours,
-      });
-      await this.serviceRepository.save(service);
-    }
-
-    return this.findOne(savedItem.itemId);
+  // ✅ 1. Convertir strings a número
+  if (createProductDto.price && typeof createProductDto.price === "string") {
+    createProductDto.price = parseFloat(createProductDto.price);
   }
+
+  // ✅ 2. Validar servicios
+  if (createProductDto.type === ItemType.SERVICE && !createProductDto.workingHours) {
+    throw new Error("El campo 'workingHours' es obligatorio para servicios");
+  }
+
+  // ✅ 3. Generar código único
+  const code = await this.generateUniqueCode();
+
+  // ✅ 4. Detectar contenido peligroso
+  const isDangerous = this.detectProhibitedContent(
+    createProductDto.name,
+    createProductDto.description,
+  );
+
+  const { workingHours, ...itemData } = createProductDto;
+
+  const item = this.itemRepository.create({
+    ...itemData,
+    code,
+    sellerId,
+    status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
+  });
+
+  const savedItem = await this.itemRepository.save(item);
+
+  if (isDangerous) {
+    await this.incidentsService.createIncident(
+      savedItem.itemId,
+      `Producto detectado automáticamente como potencialmente peligroso. Palabras detectadas en: "${itemData.name}" ${
+        itemData.description ? `- "${itemData.description}"` : ""
+      }`,
+    );
+  }
+
+  // ✅ 5. Guardar imágenes si existen
+  if (files.images && files.images.length > 0) {
+    const photoUrls = await this.saveImages(files.images);
+    const photoEntities = photoUrls.map((url) =>
+      this.photoRepository.create({ itemId: savedItem.itemId, url }),
+    );
+    await this.photoRepository.save(photoEntities);
+  }
+
+  // ✅ 6. Crear fila en services si es tipo 'service'
+  if (createProductDto.type === ItemType.SERVICE && workingHours) {
+    const service = this.serviceRepository.create({
+      itemId: savedItem.itemId,
+      workingHours,
+    });
+    await this.serviceRepository.save(service);
+  }
+
+  return this.findOne(savedItem.itemId);
+}
+
 
   async findAll(filters?: any): Promise<Item[]> {
     const queryBuilder = this.itemRepository
@@ -71,6 +107,16 @@ export class ProductsService {
       .leftJoinAndSelect("item.photos", "photos")
       .leftJoinAndSelect("item.service", "service")
       .where("item.status = :status", { status: ItemStatus.ACTIVE });
+
+    if (!filters) {
+      return queryBuilder.getMany();
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere("item.name ILIKE :name", {
+        name: `%${filters.search}%`,
+      });
+    }
 
     if (filters?.type) {
       queryBuilder.andWhere("item.type = :type", { type: filters.type });
@@ -91,6 +137,12 @@ export class ProductsService {
     if (filters?.location) {
       queryBuilder.andWhere("item.location ILIKE :location", {
         location: `%${filters.location}%`,
+      });
+    }
+
+    if (filters?.category) {
+      queryBuilder.andWhere("item.category ILIKE :category", {
+        category: `%${filters.category}%`,
       });
     }
 
@@ -120,6 +172,7 @@ export class ProductsService {
   async update(
     id: number,
     updateProductDto: UpdateProductDto,
+    files: { images?: Express.Multer.File[] },
     user: User,
   ): Promise<Item> {
     const item = await this.findOne(id);
@@ -128,14 +181,20 @@ export class ProductsService {
       throw new ForbiddenException("You can only update your own products");
     }
 
-    const { photos, workingHours, ...updateData } = updateProductDto;
+    const { workingHours, removedImages, ...updateData } = updateProductDto;
 
     await this.itemRepository.update(id, updateData);
 
-    if (photos) {
+    if (removedImages && removedImages.length > 0) {
+      await this.removeImages(removedImages);
+      await this.photoRepository.delete({ itemId: id, url: In(removedImages) });
+    }
+
+    if (files.images) {
       await this.photoRepository.delete({ itemId: id });
-      if (photos.length > 0) {
-        const photoEntities = photos.map((url) =>
+      if (files.images.length > 0) {
+        const photoUrls = await this.saveImages(files.images);
+        const photoEntities = photoUrls.map((url) =>
           this.photoRepository.create({ itemId: id, url }),
         );
         await this.photoRepository.save(photoEntities);
@@ -150,6 +209,15 @@ export class ProductsService {
 
     return this.findOne(id);
   }
+
+  toggleAvailability = async (id: number, available: boolean) => {
+    const item = await this.findOne(id);
+
+    item.availability = available;
+    await this.itemRepository.save(item);
+
+    return item;
+  };
 
   async remove(id: number, user: User): Promise<void> {
     const item = await this.findOne(id);
@@ -182,7 +250,7 @@ export class ProductsService {
     }
   }
   async getFavorites(userId: number): Promise<Item[]> {
-    console.log('Buscando favoritos para usuario:', userId);
+    console.log("Buscando favoritos para usuario:", userId);
 
     const favorites = await this.favoriteRepository.find({
       where: { user: { userId } }, // 🔹 Filtra usando la relación
@@ -191,7 +259,6 @@ export class ProductsService {
 
     return favorites.map((fav) => fav.item);
   }
-
 
   private async generateUniqueCode(): Promise<string> {
     let code: string;
@@ -206,23 +273,95 @@ export class ProductsService {
     return code;
   }
 
+  private async saveImages(images: Express.Multer.File[]): Promise<string[]> {
+    const urls: string[] = [];
+    const uploadDir = path.join(__dirname, "..", "..", "uploads");
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    for (const image of images) {
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${path.extname(image.originalname)}`;
+      const filePath = path.join(uploadDir, uniqueName);
+      fs.writeFileSync(filePath, image.buffer);
+      urls.push(`/uploads/${uniqueName}`);
+    }
+
+    return urls;
+  }
+
+  private async removeImages(urls: string[]): Promise<void> {
+    const uploadDir = path.join(__dirname, "..", "..", "uploads");
+
+    for (const url of urls) {
+      const fileName = path.basename(url);
+      const filePath = path.join(uploadDir, fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+  }
+
+  async updateStatus(
+    id: number,
+    status: ItemStatus,
+    reason?: string,
+  ): Promise<Item> {
+    const item = await this.findOne(id);
+
+    await this.itemRepository.update(id, { status });
+
+    return this.findOne(id);
+  }
+
   private detectProhibitedContent(name: string, description?: string): boolean {
     const prohibitedWords = [
-      "arma",
-      "droga",
-      "explosivo",
-      "ilegal",
-      "robado",
-      "falsificado",
-      "weapon",
-      "drug",
-      "explosive",
-      "illegal",
-      "stolen",
-      "fake",
+      // Weapons/Armas
+      "arma", "weapon", "pistola", "rifle", "gun", "firearm", "ammunition", "munición",
+      "cuchillo", "knife", "blade", "sword", "espada", "dagger", "machete",
+      
+      // Drugs/Drogas
+      "droga", "drug", "narcótico", "narcotic", "cocaína", "cocaine", "heroína", "heroin",
+      "marihuana", "marijuana", "cannabis", "lsd", "éxtasis", "ecstasy", "metanfetamina",
+      
+      // Explosives/Explosivos
+      "explosivo", "explosive", "bomba", "bomb", "dinamita", "dynamite", "granada", "grenade",
+      "pólvora", "gunpowder", "nitrato", "nitrate",
+      
+      // Illegal/Ilegal
+      "ilegal", "illegal", "prohibido", "forbidden", "banned", "contrabando", "contraband",
+      "falsificado", "fake", "counterfeit", "robado", "stolen", "pirata", "pirated",
+      
+      // Adult/Pornographic content
+      "pornografía", "pornography", "xxx", "adulto", "sexual", "erótico", "erotic",
+      
+      // Human/Animal related prohibited
+      "órgano", "organ", "humano", "human", "esclavo", "slave", "tráfico", "trafficking",
+      "animal protegido", "endangered", "marfil", "ivory", "cuerno", "horn",
+      
+      // Chemical/Venenos
+      "veneno", "poison", "tóxico", "toxic", "químico peligroso", "dangerous chemical",
+      "ácido", "acid", "mercurio", "mercury", "asbesto", "asbestos",
+      
+      // Prescription drugs
+      "medicamento controlado", "prescription", "receta médica", "controlled substance",
+      
+      // Identity/Documents
+      "documento falso", "fake document", "identidad falsa", "fake id", "pasaporte falso",
+      "cedula falsa", "licencia falsa"
     ];
 
     const content = `${name} ${description || ""}`.toLowerCase();
-    return prohibitedWords.some((word) => content.includes(word));
+    
+    // Check for exact word matches (not just substring contains)
+    const words = content.split(/\s+/);
+    const contentText = words.join(" ");
+    
+    return prohibitedWords.some((prohibitedWord) => {
+      // Check for both exact matches and phrase matches
+      return contentText.includes(prohibitedWord.toLowerCase()) ||
+             words.some(word => word === prohibitedWord.toLowerCase());
+    });
   }
 }

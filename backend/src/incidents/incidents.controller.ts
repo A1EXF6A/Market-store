@@ -8,7 +8,7 @@ import {
   UseGuards,
   Query,
 } from "@nestjs/common";
-import { IncidentsService } from "./incidents.service";
+import { IncidentsService, IncidentFilters } from "./incidents.service";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -25,7 +25,7 @@ export class IncidentsController {
 
   @Post("reports")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.BUYER)
+  @Roles(UserRole.BUYER, UserRole.ADMIN)
   createReport(
     @Body() createReportDto: CreateReportDto,
     @GetUser() user: User,
@@ -53,8 +53,8 @@ export class IncidentsController {
   @Get("reports")
   @UseGuards(RolesGuard)
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
-  getReports() {
-    return this.incidentsService.getReports();
+  getReports(@Query() filters: any) {
+    return this.incidentsService.getReports(filters);
   }
 
   @Get("my-incidents")

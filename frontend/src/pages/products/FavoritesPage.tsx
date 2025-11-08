@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { productsService } from '../../services/products';
-import type { Product } from '../../types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuthStore } from '../../store/authStore';
-import Cookies from 'js-cookie';
+import { useAuthStore } from "@/store/authStore";
+import type { Product } from "@/types";
+import { Badge } from "@components/ui/badge";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import { API_BASE } from "@services/api";
+import { productsService } from "@services/products";
+import Cookies from "js-cookie";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
-  Heart,
-  DollarSign,
-  MapPin,
   Calendar,
+  DollarSign,
   Eye,
-  HeartOff
-} from 'lucide-react';
-import { toast } from 'sonner';
+  Heart,
+  HeartOff,
+  MapPin,
+} from "lucide-react";
+import { toast } from "sonner";
 
 const FavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<Product[]>([]);
@@ -32,12 +33,12 @@ const FavoritesPage: React.FC = () => {
       setLoading(true);
       console.log(Cookies.get("access_token"));
 
-      const data = await productsService.getFavorites((Number)(user?.userId));
+      const data = await productsService.getFavorites(Number(user?.userId));
 
       setFavorites(data);
     } catch (error: any) {
-      toast.error('Error al cargar tus favoritos');
-      console.error('Error fetching favorites:', error);
+      toast.error("Error al cargar tus favoritos");
+      console.error("Error fetching favorites:", error);
     } finally {
       setLoading(false);
     }
@@ -46,10 +47,12 @@ const FavoritesPage: React.FC = () => {
   const handleToggleFavorite = async (productId: number) => {
     try {
       await productsService.toggleFavorite(productId);
-      toast.success('Producto removido de favoritos');
-      setFavorites(prev => prev.filter(product => product.itemId !== productId));
+      toast.success("Producto removido de favoritos");
+      setFavorites((prev) =>
+        prev.filter((product) => product.itemId !== productId),
+      );
     } catch (error: any) {
-      toast.error('Error al actualizar favoritos');
+      toast.error("Error al actualizar favoritos");
     }
   };
 
@@ -84,25 +87,27 @@ const FavoritesPage: React.FC = () => {
               No tienes favoritos guardados
             </h3>
             <p className="text-gray-600 mb-6">
-              Explora productos y servicios, y marca como favoritos los que te interesen
+              Explora productos y servicios, y marca como favoritos los que te
+              interesen
             </p>
             <Button asChild>
-              <Link to="/products">
-                Explorar Productos
-              </Link>
+              <Link to="/products">Explorar Productos</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {favorites.map((product) => (
-            <Card key={product.itemId} className="group hover:shadow-lg transition-shadow">
+            <Card
+              key={product.itemId}
+              className="group hover:shadow-lg transition-shadow"
+            >
               <CardHeader className="pb-2">
                 <div className="relative">
                   <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden mb-3">
                     {product.photos.length > 0 ? (
                       <img
-                        src={product.photos[0].url}
+                        src={`${API_BASE}${product.photos[0].url}`}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -123,9 +128,11 @@ const FavoritesPage: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
+                    <CardTitle className="text-lg line-clamp-2">
+                      {product.name}
+                    </CardTitle>
                     <Badge variant="outline" className="ml-2 shrink-0">
-                      {product.type === 'product' ? 'Producto' : 'Servicio'}
+                      {product.type === "product" ? "Producto" : "Servicio"}
                     </Badge>
                   </div>
                   {product.description && (
@@ -153,12 +160,15 @@ const FavoritesPage: React.FC = () => {
 
                   <div className="flex items-center text-gray-500 text-xs">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Publicado {new Date(product.publishedAt).toLocaleDateString()}
+                    Publicado{" "}
+                    {new Date(product.publishedAt).toLocaleDateString()}
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center text-sm text-gray-600">
-                      <span className="font-medium">{product.seller?.firstName} {product.seller?.lastName}</span>
+                      <span className="font-medium">
+                        {product.seller?.firstName} {product.seller?.lastName}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button size="sm" asChild>
@@ -179,12 +189,11 @@ const FavoritesPage: React.FC = () => {
       {favorites.length > 0 && (
         <div className="text-center py-8">
           <p className="text-gray-600 mb-4">
-            {favorites.length} producto{favorites.length !== 1 ? 's' : ''} en favoritos
+            {favorites.length} producto{favorites.length !== 1 ? "s" : ""} en
+            favoritos
           </p>
           <Button variant="outline" asChild>
-            <Link to="/products">
-              Explorar más productos
-            </Link>
+            <Link to="/products">Explorar más productos</Link>
           </Button>
         </div>
       )}
@@ -193,3 +202,4 @@ const FavoritesPage: React.FC = () => {
 };
 
 export default FavoritesPage;
+

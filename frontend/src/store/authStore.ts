@@ -1,8 +1,7 @@
-import Cookies from "js-cookie";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authService } from "../services/auth";
-import type { User } from "../types";
+import { authService } from "@services/auth";
+import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
@@ -22,32 +21,34 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
+      // LOGIN
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-
           const response = await authService.login({ email, password });
-
           localStorage.setItem("access_token", response.access_token);
+          localStorage.setItem("user", JSON.stringify(response.user));
 
           set({
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
-          console.log("Error in login:", error);
+        } catch (err: any) {
           set({ isLoading: false });
-
-          throw error;
+          // 🚫 No uses toast ni navigate aquí
+          throw err; // Devuelve el error al componente
         }
       },
 
+      // REGISTER
       register: async (data) => {
         set({ isLoading: true });
         try {
           const response = await authService.register(data);
-          Cookies.set("access_token", response.access_token, { expires: 7 });
+          localStorage.setItem("access_token", response.access_token);
+          localStorage.setItem("user", JSON.stringify(response.user));
+
           set({
             user: response.user,
             isAuthenticated: true,
@@ -59,8 +60,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // LOGOUT
       logout: () => {
-        Cookies.remove("access_token");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
         set({
           user: null,
           isAuthenticated: false,
@@ -68,28 +71,33 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
+      // INIT
       initializeAuth: async () => {
-        const token = Cookies.get("access_token");
-        if (token) {
-          try {
-            const user = await authService.getProfile();
-            set({
-              user,
-              isAuthenticated: true,
-            });
-          } catch (error) {
-            Cookies.remove("access_token");
-            set({
-              user: null,
-              isAuthenticated: false,
-            });
-          }
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          set({ user: null, isAuthenticated: false });
+          return;
+        }
+
+        try {
+          const user = await authService.getProfile();
+          localStorage.setItem("user", JSON.stringify(user));
+          set({
+            user,
+            isAuthenticated: true,
+          });
+        } catch (error) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user");
+          set({
+            user: null,
+            isAuthenticated: false,
+          });
         }
       },
 
-      getToken: () => {
-        return localStorage.getItem("access_token") || undefined;
-      },
+      // GET TOKEN
+      getToken: () => localStorage.getItem("access_token") || undefined,
     }),
     {
       name: "auth-storage",
@@ -100,4 +108,3 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
-

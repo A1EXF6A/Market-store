@@ -1,32 +1,38 @@
-import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { productsService } from '../../services/products';
-import type { UpdateProductData } from '../../services/products';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import ImageUpload from '@/components/ui/image-upload';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
-import type { Product } from '../../types';
+import type { Product } from "@/types";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import ImageUpload from "@components/ui/image-upload";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@components/ui/select";
+import { Textarea } from "@components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { UpdateProductData } from "@services/products";
+import { productsService } from "@services/products";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { z } from "zod";
 
 const productSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').max(200, 'Máximo 200 caracteres'),
+  name: z
+    .string()
+    .min(1, "El nombre es requerido")
+    .max(200, "Máximo 200 caracteres"),
   description: z.string().optional(),
-  price: z.number().min(0, 'El precio debe ser mayor a 0').optional(),
-  location: z.string().max(150, 'Máximo 150 caracteres').optional(),
-  type: z.enum(['product', 'service']).refine(val => val, {
-    message: 'Selecciona un tipo'
+  price: z.number().min(0, "El precio debe ser mayor a 0").optional(),
+  location: z.string().max(150, "Máximo 150 caracteres").optional(),
+  type: z.enum(["product", "service"]).refine((val) => val, {
+    message: "Selecciona un tipo",
   }),
-  availability: z.boolean(),
   workingHours: z.string().optional(),
 });
 
@@ -41,7 +47,7 @@ const EditProductPage: React.FC = () => {
   const [images, setImages] = React.useState<File[]>([]);
   const [existingImages, setExistingImages] = React.useState<string[]>([]);
   const [removedImages, setRemovedImages] = React.useState<string[]>([]);
-  
+
   const {
     register,
     handleSubmit,
@@ -53,18 +59,18 @@ const EditProductPage: React.FC = () => {
     resolver: zodResolver(productSchema),
   });
 
-  const selectedType = watch('type');
+  const selectedType = watch("type");
 
   const handleExistingImageRemove = (url: string) => {
-    setExistingImages(prev => prev.filter(img => img !== url));
-    setRemovedImages(prev => [...prev, url]);
+    setExistingImages((prev) => prev.filter((img) => img !== url));
+    setRemovedImages((prev) => [...prev, url]);
   };
 
   React.useEffect(() => {
     const loadProduct = async () => {
       if (!id) {
-        toast.error('ID de producto no válido');
-        navigate('/my-products');
+        toast.error("ID de producto no válido");
+        navigate("/my-products");
         return;
       }
 
@@ -72,24 +78,23 @@ const EditProductPage: React.FC = () => {
         setIsLoadingProduct(true);
         const productData = await productsService.getById(Number(id));
         setProduct(productData);
-        
+
         // Load existing images
-        const imageUrls = productData.photos.map(photo => photo.url);
+        const imageUrls = productData.photos.map((photo) => photo.url);
         setExistingImages(imageUrls);
-        
+
         // Populate form with existing data
         reset({
           name: productData.name,
-          description: productData.description || '',
+          description: productData.description || "",
           price: productData.price,
-          location: productData.location || '',
+          location: productData.location || "",
           type: productData.type,
-          availability: productData.availability,
-          workingHours: productData.service?.workingHours || '',
+          workingHours: productData.service?.workingHours || "",
         });
       } catch (error: any) {
-        toast.error('Error al cargar el producto');
-        navigate('/my-products');
+        toast.error("Error al cargar el producto");
+        navigate("/my-products");
       } finally {
         setIsLoadingProduct(false);
       }
@@ -109,17 +114,18 @@ const EditProductPage: React.FC = () => {
         price: data.price,
         location: data.location,
         type: data.type,
-        availability: data.availability,
         workingHours: data.workingHours,
         images: images.length > 0 ? images : undefined,
         removedImages: removedImages.length > 0 ? removedImages : undefined,
       };
-      
+
       await productsService.update(Number(id), updateData);
-      toast.success('Producto actualizado exitosamente');
-      navigate('/my-products');
+      toast.success("Producto actualizado exitosamente");
+      navigate("/my-products");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al actualizar el producto');
+      toast.error(
+        error.response?.data?.message || "Error al actualizar el producto",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +176,7 @@ const EditProductPage: React.FC = () => {
               <Input
                 id="name"
                 placeholder="Ej: iPhone 15 Pro Max"
-                {...register('name')}
+                {...register("name")}
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
@@ -179,9 +185,11 @@ const EditProductPage: React.FC = () => {
 
             <div className="space-y-2">
               <Label htmlFor="type">Tipo *</Label>
-              <Select 
-                value={selectedType} 
-                onValueChange={(value) => setValue('type', value as 'product' | 'service')}
+              <Select
+                value={selectedType}
+                onValueChange={(value) =>
+                  setValue("type", value as "product" | "service")
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona el tipo" />
@@ -202,10 +210,12 @@ const EditProductPage: React.FC = () => {
                 id="description"
                 placeholder="Describe tu producto o servicio..."
                 rows={4}
-                {...register('description')}
+                {...register("description")}
               />
               {errors.description && (
-                <p className="text-sm text-red-600">{errors.description.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.description.message}
+                </p>
               )}
             </div>
 
@@ -228,7 +238,7 @@ const EditProductPage: React.FC = () => {
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  {...register('price', { valueAsNumber: true })}
+                  {...register("price", { valueAsNumber: true })}
                 />
                 {errors.price && (
                   <p className="text-sm text-red-600">{errors.price.message}</p>
@@ -240,40 +250,31 @@ const EditProductPage: React.FC = () => {
                 <Input
                   id="location"
                   placeholder="Ciudad, región..."
-                  {...register('location')}
+                  {...register("location")}
                 />
                 {errors.location && (
-                  <p className="text-sm text-red-600">{errors.location.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.location.message}
+                  </p>
                 )}
               </div>
             </div>
 
-            {selectedType === 'service' && (
+            {selectedType === "service" && (
               <div className="space-y-2">
                 <Label htmlFor="workingHours">Horario de Atención</Label>
                 <Input
                   id="workingHours"
                   placeholder="Ej: Lunes a Viernes 9:00 AM - 6:00 PM"
-                  {...register('workingHours')}
+                  {...register("workingHours")}
                 />
                 {errors.workingHours && (
-                  <p className="text-sm text-red-600">{errors.workingHours.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.workingHours.message}
+                  </p>
                 )}
               </div>
             )}
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="availability"
-                {...register('availability')}
-                className="rounded border-gray-300"
-              />
-              <Label htmlFor="availability">Producto disponible</Label>
-            </div>
-
-            <Separator />
-
             <div className="flex gap-4">
               <Button type="submit" disabled={isLoading} className="flex-1">
                 {isLoading ? (
