@@ -21,7 +21,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { email, nationalId, password, ...userData } = registerDto;
+    const { email, nationalId, password, role, ...userData } = registerDto;
 
     if (!email || !nationalId || !password) {
       throw new ConflictException("All fields are required");
@@ -48,7 +48,7 @@ export class AuthService {
       email,
       nationalId,
       passwordHash: hashedPassword,
-      role: UserRole.BUYER,
+      role: role==="admin"? UserRole.ADMIN : role==="moderator"? UserRole.MODERATOR : role==="seller"? UserRole.SELLER : UserRole.BUYER,
     });
 
     await this.userRepository.save(user);

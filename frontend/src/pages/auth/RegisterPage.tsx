@@ -33,17 +33,14 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const RegisterPage: React.FC = () => {
   const { register: registerUser, isLoading } = useAuthStore();
   const navigate = useNavigate();
-  
+
   const {
     register,
     handleSubmit,
     setValue,
     formState: { errors },
   } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      role: UserRole.BUYER
-    }
+    resolver: zodResolver(registerSchema)
   });
 
   const onSubmit = async (data: RegisterFormData) => {
@@ -64,7 +61,7 @@ const RegisterPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-gray-900">Marketplace</h2>
           <p className="mt-2 text-gray-600">Crea tu cuenta</p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Registro</CardTitle>
@@ -185,9 +182,9 @@ const RegisterPage: React.FC = () => {
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? 'Registrando...' : 'Crear Cuenta'}
@@ -197,8 +194,8 @@ const RegisterPage: React.FC = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 ¿Ya tienes cuenta?{' '}
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Inicia sesión aquí
