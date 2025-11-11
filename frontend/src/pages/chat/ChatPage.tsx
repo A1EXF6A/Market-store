@@ -18,6 +18,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { set } from "zod";
 
 const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,7 +93,9 @@ const ChatPage: React.FC = () => {
 
         // Actualizar orden de chats (traer chat al principio)
         setChats((prev) => {
+
           const chatIndex = prev.findIndex((c) => c.chatId === msg.chatId);
+          prev[chatIndex].messages?.push(msg);
           if (chatIndex > -1) {
             const copy = [...prev];
             const [chat] = copy.splice(chatIndex, 1);
@@ -161,7 +164,6 @@ const ChatPage: React.FC = () => {
       const content = newMessage.trim();
 
       const tempId = `temp-${Date.now()}`;
-       console.log(user);
       const optimisticMsg: Message = {
         chatId: selectedChat.chatId,
         content,
@@ -181,7 +183,7 @@ const ChatPage: React.FC = () => {
         senderId: user?.userId,
       });
 
-
+      setNewMessage("");
       
     } catch (error: any) {
       // quitar el mensaje optimista si falla
