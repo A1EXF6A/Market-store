@@ -22,7 +22,7 @@ import { toast } from "sonner";
 const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, getToken } = useAuthStore();
+  const {user, getToken } = useAuthStore();
   const [otherUser, setOtherUser] = useState(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
@@ -65,43 +65,58 @@ const ChatPage: React.FC = () => {
         socketService.connect(token);
       }
 
-      // Load chats
-      const chatData = await chatService.getChats();
-      setChats(chatData);
-//no funciona 
-      socketService.onNewMessage((payload: any) => {
-        let messageObj: any = payload;
-        messageObj = payload.content;
-        console.log("New message received via socket:", messageObj);
-        setMessages(
-          [...messages, messageObj]
-        );
+      // Subscribe handlers (asignar callbacks)
+      socketService.onNewMessage((msg: Message) => {
+        // msg es el objeto que envía el servidor (incluye chatId, content, sentAt, etc.)
+        setMessages((prev) => {
+          // si existe un mensaje optimista (temp-) con el mismo contenido y senderId y fue enviado recientemente,
+          // reemplazarlo por la versión real del servidor.
+          const tempIndex = prev.findIndex(
+            (m) =>
+              typeof m.messageId === "string" &&
+              (m.messageId as string).startsWith("temp-") &&
+              m.senderId === msg.senderId &&
+              m.content === msg.content,
+          );
 
+          if (tempIndex !== -1) {
+            const copy = [...prev];
+            copy[tempIndex] = msg;
+            return copy;
+          }
+          console.log("New message received via socket:", msg);
+
+          // Si no hay optimista, agregar al final
+          return [...prev, msg];
+        });
+
+        // Actualizar orden de chats (traer chat al principio)
         setChats((prev) => {
-          const chatIndex = prev.findIndex((c) => c.chatId === messageObj.chatId);
+          const chatIndex = prev.findIndex((c) => c.chatId === msg.chatId);
           if (chatIndex > -1) {
-            const updatedChats = [...prev];
-            const [chat] = updatedChats.splice(chatIndex, 1);
-            return [chat, ...updatedChats];
+            const copy = [...prev];
+            const [chat] = copy.splice(chatIndex, 1);
+            return [chat, ...copy];
           }
           return prev;
         });
       });
 
-
       socketService.onUserTyping(({ userId, isTyping }) => {
         setTypingUsers((prev) => {
           const newSet = new Set(prev);
-          if (isTyping) {
-            newSet.add(userId);
-          } else {
-            newSet.delete(userId);
-          }
+          if (isTyping) newSet.add(userId);
+          else newSet.delete(userId);
           return newSet;
         });
       });
+
+      // Load chats
+      const chatData = await chatService.getChats();
+      setChats(chatData);
     } catch (error: any) {
       toast.error("Error al cargar chats");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -119,57 +134,58 @@ const ChatPage: React.FC = () => {
       setSelectedChat(chat);
       setMessages([]);
 
-      // Join new chat
+      // Join new chat (si socket no está conectado, joinChat lo manejará)
       socketService.joinChat(chat.chatId);
+
       // Load messages
       const messagesData = await chatService.getChatMessages(chat.chatId);
       setMessages(messagesData);
-      //set other user
-      const otherUser =
+
+      // set other user
+      const other =
         user?.userId === chat.buyerId ? chat.seller : chat.buyer;
-      setOtherUser(otherUser);
+      setOtherUser(other);
+
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
     } catch (error: any) {
-      toast.error("Erro  r al cargar mensajes");
+      toast.error("Error al cargar mensajes");
       console.error(error);
     }
   };
+
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedChat) return;
     try {
       setSending(true);
       const content = newMessage.trim();
 
       const tempId = `temp-${Date.now()}`;
+       console.log(user);
       const optimisticMsg: Message = {
-        messageId: tempId as any,
         chatId: selectedChat.chatId,
         content,
-        senderId: user?.userId!,
-        sentAt: new Date().toISOString(),
+        senderId: user?.userId,
       };
-      console.log("Sending message:", content);
-      setMessages((prev) => [...prev, optimisticMsg]);
-      setNewMessage("");
+
 
       socketService.setTyping(selectedChat.chatId, false);
 
-      socketService.sendMessage(selectedChat.chatId, content);
+      // Emitir al servidor (el servidor reenviará "new-message" a todos)
+      socketService.sendMessage(optimisticMsg);
 
+      // También guardar por API (para obtener id real, etc.)
       const savedMessage = await chatService.sendMessage({
         chatId: selectedChat.chatId,
         content,
         senderId: user?.userId,
       });
 
-      // reemplazar optimista por la versión guardada (si devuelve id)
-      setMessages((prev) =>
-        prev.map((m) => (m.messageId === tempId ? savedMessage : m)),
-      );
+
+      
     } catch (error: any) {
       // quitar el mensaje optimista si falla
-      setMessages((prev) => prev.filter((m) => !String(m.messageId).startsWith("temp-")));
+     
       toast.error("Error al enviar mensaje");
       console.error(error);
     } finally {
@@ -190,7 +206,7 @@ const ChatPage: React.FC = () => {
       socketService.setTyping(selectedChat.chatId, true);
 
       // Stop typing after 2 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = window.setTimeout(() => {
         socketService.setTyping(selectedChat.chatId, false);
       }, 2000);
     }
@@ -206,10 +222,10 @@ const ChatPage: React.FC = () => {
   };
 
   const filteredChats = chats.filter((chat) => {
-    const otherUser = getOtherUser(chat);
-    if (!otherUser) return false;
+    const other = getOtherUser(chat);
+    if (!other) return false;
     const fullName =
-      `${otherUser.firstName} ${otherUser.lastName}`.toLowerCase();
+      `${other.firstName} ${other.lastName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
 
