@@ -13,9 +13,9 @@ class WebSocketService {
       autoConnect: true,
     });
 
-    this.socket.on("connect", () => {});
+    this.socket.on("connect", () => { });
 
-    this.socket.on("disconnect", () => {});
+    this.socket.on("disconnect", () => { });
 
     this.socket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
@@ -30,8 +30,8 @@ class WebSocketService {
       (data: { userId: number; isTyping: boolean }) =>
         this._typingCallback?.(data),
     );
-    this.socket.on("joined-chat", (chatId: string) => {});
-    this.socket.on("left-chat", (chatId: string) => {});
+    this.socket.on("joined-chat", (chatId: string) => { });
+    this.socket.on("left-chat", (chatId: string) => { });
   }
 
   disconnect(): void {
@@ -43,7 +43,12 @@ class WebSocketService {
 
   joinChat(chatId: number): void {
     if (this.socket?.connected) {
-      this.socket.emit("join-chat", chatId);
+
+      try {
+        this.socket.emit("join-chat", chatId);
+      } catch (error) {
+        console.error("Error joining chat:", error);
+      }
     }
   }
 

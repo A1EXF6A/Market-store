@@ -68,18 +68,17 @@ const ChatPage: React.FC = () => {
       // Load chats
       const chatData = await chatService.getChats();
       setChats(chatData);
+//no funciona 
+      socketService.onNewMessage((payload: any) => {
+        let messageObj: any = payload;
+        messageObj = payload.content;
+        console.log("New message received via socket:", messageObj);
+        setMessages(
+          [...messages, messageObj]
+        );
 
-      // Set up socket listeners
-      socketService.onNewMessage((message: Message) => {
-        //codificamos el mensaje que llega por websocket
-        message = JSON.parse(message.content);
-
-        console.log("New message received via socket:", message);
-        setMessages((prev) => [...prev, message]);
-
-        // Update chat list to move this chat to top
         setChats((prev) => {
-          const chatIndex = prev.findIndex((c) => c.chatId === message.chatId);
+          const chatIndex = prev.findIndex((c) => c.chatId === messageObj.chatId);
           if (chatIndex > -1) {
             const updatedChats = [...prev];
             const [chat] = updatedChats.splice(chatIndex, 1);
@@ -88,6 +87,7 @@ const ChatPage: React.FC = () => {
           return prev;
         });
       });
+
 
       socketService.onUserTyping(({ userId, isTyping }) => {
         setTypingUsers((prev) => {
@@ -121,9 +121,7 @@ const ChatPage: React.FC = () => {
 
       // Join new chat
       socketService.joinChat(chat.chatId);
-
       // Load messages
-
       const messagesData = await chatService.getChatMessages(chat.chatId);
       setMessages(messagesData);
       //set other user
@@ -137,32 +135,43 @@ const ChatPage: React.FC = () => {
       console.error(error);
     }
   };
-
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedChat || sending) return;
+    if (!newMessage.trim()) return;
     try {
       setSending(true);
-      const messageData = {
+      const content = newMessage.trim();
+
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMsg: Message = {
+        messageId: tempId as any,
         chatId: selectedChat.chatId,
-        content: newMessage.trim(),
-        senderId: user?.userId,
+        content,
+        senderId: user?.userId!,
+        sentAt: new Date().toISOString(),
       };
-
-      // Send via socket for real-time
-      socketService.sendMessage(
-        selectedChat.chatId,
-        JSON.stringify(messageData),
-      );
-
-      // Also send via API for persistence
-      await chatService.sendMessage(messageData);
-
+      console.log("Sending message:", content);
+      setMessages((prev) => [...prev, optimisticMsg]);
       setNewMessage("");
 
-      // Stop typing indicator
       socketService.setTyping(selectedChat.chatId, false);
+
+      socketService.sendMessage(selectedChat.chatId, content);
+
+      const savedMessage = await chatService.sendMessage({
+        chatId: selectedChat.chatId,
+        content,
+        senderId: user?.userId,
+      });
+
+      // reemplazar optimista por la versión guardada (si devuelve id)
+      setMessages((prev) =>
+        prev.map((m) => (m.messageId === tempId ? savedMessage : m)),
+      );
     } catch (error: any) {
+      // quitar el mensaje optimista si falla
+      setMessages((prev) => prev.filter((m) => !String(m.messageId).startsWith("temp-")));
       toast.error("Error al enviar mensaje");
+      console.error(error);
     } finally {
       setSending(false);
     }
@@ -265,9 +274,8 @@ const ChatPage: React.FC = () => {
                     <div
                       key={chat.chatId}
                       onClick={() => selectChat(chat)}
-                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${
-                        isSelected ? "bg-blue-50 border-blue-200" : ""
-                      }`}
+                      className={`p-4 cursor-pointer border-b hover:bg-gray-100 transition-colors ${isSelected ? "bg-blue-50 border-blue-200" : ""
+                        }`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -360,17 +368,15 @@ const ChatPage: React.FC = () => {
                     className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        isOwn
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 text-gray-900"
-                      }`}
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-900"
+                        }`}
                     >
                       <p className="text-sm">{message.content}</p>
                       <div
-                        className={`flex items-center justify-end mt-1 ${
-                          isOwn ? "text-blue-100" : "text-gray-500"
-                        }`}
+                        className={`flex items-center justify-end mt-1 ${isOwn ? "text-blue-100" : "text-gray-500"
+                          }`}
                       >
                         <Clock className="h-3 w-3 mr-1" />
                         <span className="text-xs">
@@ -392,25 +398,25 @@ const ChatPage: React.FC = () => {
               {Array.from(typingUsers).filter(
                 (userId) => userId !== otherUser?.userId,
               ).length > 0 && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
-                    <div className="flex items-center space-x-1">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.1s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
+                  <div className="flex justify-start">
+                    <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
+                      <div className="flex items-center space-x-1">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.1s" }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                        </div>
+                        <span className="text-xs ml-2">Escribiendo...</span>
                       </div>
-                      <span className="text-xs ml-2">Escribiendo...</span>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <div ref={messagesEndRef} />
             </div>

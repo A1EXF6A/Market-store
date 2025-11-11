@@ -47,7 +47,6 @@ export class ChatController {
     @Body("content") content: string,
     @GetUser() user: User,
   ) {
-    console.log("Creating message in chat:", id, "by user:", user.userId);
     return this.chatService.createMessage(+id, user.userId, content);
   }
 }

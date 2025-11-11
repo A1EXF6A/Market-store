@@ -33,8 +33,6 @@ export const chatService = {
   },
 
   sendMessage: async (data: SendMessageData): Promise<Message> => {
-    console.log(data);
-
     const response = await api.post("/chats/messages", data);
     return response.data;
   },
