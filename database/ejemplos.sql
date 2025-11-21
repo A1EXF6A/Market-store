@@ -1,34 +1,33 @@
 -- Script SQL para generar datos de ejemplo
 -- Base de datos de sistema de gestión/marketplace
 
--- Insertar usuarios con diferentes roles
 INSERT INTO users (national_id, first_name, last_name, email, phone, address, gender, role, status, password_hash, verified, created_at) VALUES
 -- Compradores
-('12345678', 'Juan', 'Pérez', 'juan.perez@email.com', '+1234567890', 'Calle 123, Ciudad', 'male', 'buyer', 'active', '$2b$10$hash1', true, NOW()),
-('87654321', 'María', 'González', 'maria.gonzalez@email.com', '+0987654321', 'Avenida 456, Ciudad', 'female', 'buyer', 'active', '$2b$10$hash2', true, NOW()),
-('11223344', 'Carlos', 'López', 'carlos.lopez@email.com', '+1122334455', 'Plaza 789, Ciudad', 'male', 'buyer', 'active', '$2b$10$hash3', false, NOW()),
+('12345678', 'Juan', 'Pérez', 'juan.perez@email.com', '+1234567890', 'Calle 123, Ciudad', 'male', 'buyer', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
+('87654321', 'María', 'González', 'maria.gonzalez@email.com', '+0987654321', 'Avenida 456, Ciudad', 'female', 'buyer', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
+('11223344', 'Carlos', 'López', 'carlos.lopez@email.com', '+1122334455', 'Plaza 789, Ciudad', 'male', 'buyer', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', false, NOW()),
 
 -- Vendedores
-('99887766', 'Ana', 'Martín', 'ana.martin@email.com', '+9988776655', 'Boulevard 321, Ciudad', 'female', 'seller', 'active', '$2b$10$hash4', true, NOW()),
-('55443322', 'Luis', 'Rodríguez', 'luis.rodriguez@email.com', '+5544332211', 'Carrera 654, Ciudad', 'male', 'seller', 'active', '$2b$10$hash5', true, NOW()),
-('77665544', 'Sofia', 'Hernández', 'sofia.hernandez@email.com', '+7766554433', 'Diagonal 987, Ciudad', 'female', 'seller', 'suspended', '$2b$10$hash6', true, NOW()),
+('99887766', 'Ana', 'Martín', 'ana.martin@email.com', '+9988776655', 'Boulevard 321, Ciudad', 'female', 'seller', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
+('55443322', 'Luis', 'Rodríguez', 'luis.rodriguez@email.com', '+5544332211', 'Carrera 654, Ciudad', 'male', 'seller', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
+('77665544', 'Sofia', 'Hernández', 'sofia.hernandez@email.com', '+7766554433', 'Diagonal 987, Ciudad', 'female', 'seller', 'suspended', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
 
 -- Moderadores y Admins
-('11111111', 'Admin', 'Principal', 'admin@sistema.com', '+1111111111', 'Oficina Central', 'other', 'admin', 'active', '$2b$10$hashadmin', true, NOW()),
-('22222222', 'Moderador', 'Uno', 'mod1@sistema.com', '+2222222222', 'Oficina Moderación', 'male', 'moderator', 'active', '$2b$10$hashmod1', true, NOW());
+('11111111', 'Admin', 'Principal', 'admin@sistema.com', '+1111111111', 'Oficina Central', 'other', 'admin', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW()),
+('22222222', 'Moderador', 'Uno', 'mod1@sistema.com', '+2222222222', 'Oficina Moderación', 'male', 'moderator', 'active', '$2b$10$TgzlwT.lGnx674iJ3gB2iOhSKf28S2h6rVkqjcE4QOQzyry2cdaRW', true, NOW());
 
 -- Insertar items (productos y servicios)
-INSERT INTO items (code, seller_id, type, name, description, price, location, availability, status, published_at) VALUES
+INSERT INTO items (code, seller_id, type, name, description, price, location, availability, status, published_at, category) VALUES
 -- Productos
-('PROD001', 4, 'product', 'Laptop Gaming Asus ROG', 'Laptop para gaming con RTX 3060, 16GB RAM, SSD 512GB', 1299.99, 'Ciudad Norte', true, 'active', NOW()),
-('PROD002', 4, 'product', 'iPhone 14 Pro', 'iPhone 14 Pro 256GB, color azul, como nuevo', 899.99, 'Ciudad Norte', true, 'active', NOW()),
-('PROD003', 5, 'product', 'Bicicleta Montaña', 'Bicicleta de montaña Trek, 21 velocidades, muy buen estado', 450.00, 'Ciudad Sur', true, 'active', NOW()),
-('PROD004', 5, 'product', 'Mesa de Oficina', 'Mesa de oficina de madera, 1.5m x 0.8m, con cajones', 180.00, 'Ciudad Sur', false, 'active', NOW()),
+('PROD001', 4, 'product', 'Laptop Gaming Asus ROG', 'Laptop para gaming con RTX 3060, 16GB RAM, SSD 512GB', 1299.99, 'Ciudad Norte', true, 'active', NOW(), 'Electronics'),
+('PROD002', 4, 'product', 'iPhone 14 Pro', 'iPhone 14 Pro 256GB, color azul, como nuevo', 899.99, 'Ciudad Norte', true, 'active', NOW(), 'Electronics'),
+('PROD003', 5, 'product', 'Bicicleta Montaña', 'Bicicleta de montaña Trek, 21 velocidades, muy buen estado', 450.00, 'Ciudad Sur', true, 'active', NOW(), 'Sports'),
+('PROD004', 5, 'product', 'Mesa de Oficina', 'Mesa de oficina de madera, 1.5m x 0.8m, con cajones', 180.00, 'Ciudad Sur', false, 'active', NOW(), 'Furniture'),
 
 -- Servicios
-('SERV001', 4, 'service', 'Clases de Programación', 'Clases particulares de programación en Python y JavaScript', 25.00, 'Online/Presencial', true, 'active', NOW()),
-('SERV002', 5, 'service', 'Reparación de Computadoras', 'Servicio técnico especializado en reparación y mantenimiento', 40.00, 'Ciudad Centro', true, 'active', NOW()),
-('SERV003', 6, 'service', 'Diseño Gráfico', 'Servicios de diseño gráfico y branding para empresas', 80.00, 'Ciudad Oeste', true, 'suspended', NOW());
+('SERV001', 4, 'service', 'Clases de Programación', 'Clases particulares de programación en Python y JavaScript', 25.00, 'Online/Presencial', true, 'active', NOW(), 'Education'),
+('SERV002', 5, 'service', 'Reparación de Computadoras', 'Servicio técnico especializado en reparación y mantenimiento', 40.00, 'Ciudad Centro', true, 'active', NOW(), 'Technical'),
+('SERV003', 6, 'service', 'Diseño Gráfico', 'Servicios de diseño gráfico y branding para empresas', 80.00, 'Ciudad Oeste', true, 'suspended', NOW(), 'Design');
 
 -- Insertar servicios (tabla services para items de tipo service)
 INSERT INTO services (item_id, working_hours) VALUES

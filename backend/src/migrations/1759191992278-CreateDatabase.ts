@@ -13,30 +13,67 @@ export class CreateDatabase1759191992278 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE "favorites" ("user_id" integer NOT NULL, "item_id" integer NOT NULL, "saved_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_c1d5564ca16032bdf87efbeffcc" PRIMARY KEY ("user_id", "item_id"))`,
     );
+
+    /* crear enum reports_type si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."reports_type_enum" AS ENUM('spam', 'inappropriate', 'illegal', 'other')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reports_type_enum') THEN
+          CREATE TYPE "public"."reports_type_enum" AS ENUM('spam', 'inappropriate', 'illegal', 'other');
+        END IF;
+      END
+      $$;`,
     );
+
     await queryRunner.query(
       `CREATE TABLE "reports" ("report_id" SERIAL NOT NULL, "item_id" integer NOT NULL, "buyer_id" integer NOT NULL, "type" "public"."reports_type_enum" NOT NULL, "comment" text, "reported_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_e5cb9f2cacc967a3de2f6635323" PRIMARY KEY ("report_id"))`,
     );
     await queryRunner.query(
       `CREATE TABLE "appeals" ("appeal_id" SERIAL NOT NULL, "incident_id" integer NOT NULL, "seller_id" integer NOT NULL, "reason" text NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "reviewed" boolean NOT NULL DEFAULT false, CONSTRAINT "PK_321a5ce4877cceb21240231ddf7" PRIMARY KEY ("appeal_id"))`,
     );
+
+    /* crear enum incidents_status si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."incidents_status_enum" AS ENUM('active', 'suspended', 'hidden', 'pending', 'banned')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'incidents_status_enum') THEN
+          CREATE TYPE "public"."incidents_status_enum" AS ENUM('active', 'suspended', 'hidden', 'pending', 'banned');
+        END IF;
+      END
+      $$;`,
     );
+
     await queryRunner.query(
       `CREATE TABLE "incidents" ("incident_id" SERIAL NOT NULL, "item_id" integer NOT NULL, "reported_at" TIMESTAMP NOT NULL DEFAULT now(), "status" "public"."incidents_status_enum" NOT NULL, "description" text, "moderator_id" integer, "seller_id" integer, CONSTRAINT "PK_ff3b5892a4fc0c8fcc55ae936c2" PRIMARY KEY ("incident_id"))`,
     );
+
+    /* crear enum items_type si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."items_type_enum" AS ENUM('product', 'service')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'items_type_enum') THEN
+          CREATE TYPE "public"."items_type_enum" AS ENUM('product', 'service');
+        END IF;
+      END
+      $$;`,
     );
+
+    /* crear enum items_status si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."items_status_enum" AS ENUM('active', 'suspended', 'hidden', 'pending', 'banned')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'items_status_enum') THEN
+          CREATE TYPE "public"."items_status_enum" AS ENUM('active', 'suspended', 'hidden', 'pending', 'banned');
+        END IF;
+      END
+      $$;`,
     );
+
+    /* agrego columna category en items (nullable, varchar 100) */
     await queryRunner.query(
-      `CREATE TABLE "items" ("item_id" SERIAL NOT NULL, "code" character varying(50) NOT NULL, "seller_id" integer NOT NULL, "type" "public"."items_type_enum" NOT NULL, "name" character varying(200) NOT NULL, "description" text, "price" numeric(12,2), "location" character varying(150), "availability" boolean NOT NULL DEFAULT true, "status" "public"."items_status_enum" NOT NULL DEFAULT 'active', "published_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_1b0a705ce0dc5430c020a0ec31f" UNIQUE ("code"), CONSTRAINT "PK_d0249fbc104e3bd71b5a0ecf3b1" PRIMARY KEY ("item_id"))`,
+      `CREATE TABLE "items" ("item_id" SERIAL NOT NULL, "code" character varying(50) NOT NULL, "seller_id" integer NOT NULL, "type" "public"."items_type_enum" NOT NULL, "name" character varying(200) NOT NULL, "description" text, "price" numeric(12,2), "location" character varying(150), "availability" boolean NOT NULL DEFAULT true, "status" "public"."items_status_enum" NOT NULL DEFAULT 'active', "published_at" TIMESTAMP NOT NULL DEFAULT now(), "category" character varying(100), CONSTRAINT "UQ_1b0a705ce0dc5430c020a0ec31f" UNIQUE ("code"), CONSTRAINT "PK_d0249fbc104e3bd71b5a0ecf3b1" PRIMARY KEY ("item_id"))`,
     );
+
     await queryRunner.query(
       `CREATE TABLE "messages" ("message_id" SERIAL NOT NULL, "chat_id" integer NOT NULL, "sender_id" integer NOT NULL, "content" text NOT NULL, "sent_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_6187089f850b8deeca0232cfeba" PRIMARY KEY ("message_id"))`,
     );
@@ -46,15 +83,40 @@ export class CreateDatabase1759191992278 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE "ratings" ("rating_id" SERIAL NOT NULL, "seller_id" integer NOT NULL, "buyer_id" integer NOT NULL, "score" integer NOT NULL, "comment" text, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_dc4f636dd0dd5a75e84115a606f" PRIMARY KEY ("rating_id"))`,
     );
+
+    /* crear enum users_gender si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."users_gender_enum" AS ENUM('male', 'female', 'other')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'users_gender_enum') THEN
+          CREATE TYPE "public"."users_gender_enum" AS ENUM('male', 'female', 'other');
+        END IF;
+      END
+      $$;`,
     );
+
+    /* crear enum users_role si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."users_role_enum" AS ENUM('buyer', 'seller', 'moderator', 'admin')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'users_role_enum') THEN
+          CREATE TYPE "public"."users_role_enum" AS ENUM('buyer', 'seller', 'moderator', 'admin');
+        END IF;
+      END
+      $$;`,
     );
+
+    /* crear enum users_status si no existe */
     await queryRunner.query(
-      `CREATE TYPE "public"."users_status_enum" AS ENUM('active', 'suspended')`,
+      `DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'users_status_enum') THEN
+          CREATE TYPE "public"."users_status_enum" AS ENUM('active', 'suspended');
+        END IF;
+      END
+      $$;`,
     );
+
     await queryRunner.query(
       `CREATE TABLE "users" ("user_id" SERIAL NOT NULL, "national_id" character varying(20) NOT NULL, "first_name" character varying(100) NOT NULL, "last_name" character varying(100) NOT NULL, "email" character varying(150) NOT NULL, "phone" character varying(20), "address" text, "gender" "public"."users_gender_enum", "role" "public"."users_role_enum" NOT NULL DEFAULT 'buyer', "status" "public"."users_status_enum" NOT NULL DEFAULT 'active', "password_hash" text NOT NULL, "verified" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_232b9597ff9a89b2c2fc5d1b5e5" UNIQUE ("national_id"), CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_96aac72f1574b88752e9fb00089" PRIMARY KEY ("user_id"))`,
     );
@@ -169,21 +231,22 @@ export class CreateDatabase1759191992278 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "item_photos" DROP CONSTRAINT "FK_230c81b221e78373a2fcf20753f"`,
     );
+
     await queryRunner.query(`DROP TABLE "users"`);
-    await queryRunner.query(`DROP TYPE "public"."users_status_enum"`);
-    await queryRunner.query(`DROP TYPE "public"."users_role_enum"`);
-    await queryRunner.query(`DROP TYPE "public"."users_gender_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."users_status_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."users_role_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."users_gender_enum"`);
     await queryRunner.query(`DROP TABLE "ratings"`);
     await queryRunner.query(`DROP TABLE "chats"`);
     await queryRunner.query(`DROP TABLE "messages"`);
     await queryRunner.query(`DROP TABLE "items"`);
-    await queryRunner.query(`DROP TYPE "public"."items_status_enum"`);
-    await queryRunner.query(`DROP TYPE "public"."items_type_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."items_status_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."items_type_enum"`);
     await queryRunner.query(`DROP TABLE "incidents"`);
-    await queryRunner.query(`DROP TYPE "public"."incidents_status_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."incidents_status_enum"`);
     await queryRunner.query(`DROP TABLE "appeals"`);
     await queryRunner.query(`DROP TABLE "reports"`);
-    await queryRunner.query(`DROP TYPE "public"."reports_type_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."reports_type_enum"`);
     await queryRunner.query(`DROP TABLE "favorites"`);
     await queryRunner.query(`DROP TABLE "services"`);
     await queryRunner.query(`DROP TABLE "item_photos"`);
