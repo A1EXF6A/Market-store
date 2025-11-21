@@ -7,9 +7,8 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    // Valores por defecto para YAHOO
     const DEFAULTS = {
-      host: "smtp.mail.yahoo.com",
+      host: "",
       port: 465, 
       user: "commercehub_ad@yahoo.com",
       pass: "",

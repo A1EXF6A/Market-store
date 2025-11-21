@@ -164,6 +164,7 @@ export class AuthService {
   }
 
   async verifyEmail(token: string) {
+    console.log("Verifying email with token:", token);
     try {
       const payload = this.jwtService.verify(token, {
         secret: process.env.EMAIL_VERIFICATION_SECRET || process.env.JWT_SECRET,
