@@ -197,6 +197,7 @@ const Layout: React.FC = () => {
   const handleSettings = () => {
     // abrir modal; el form ya contiene los datos actuales de localUser (por useEffect)
     setIsModalOpen(true);
+     console.log("User update response:", localUser);
     setError(null);
     setSuccessMessage(null);
   };
@@ -253,12 +254,12 @@ const Layout: React.FC = () => {
 
     try {
       const res = await usersService.updateMe(payload);
-
+     
       const updatedUser = {
         ...(localUser ?? {}),
         firstName: payload.firstName ?? (localUser as any).firstName,
         lastName: payload.lastName ?? (localUser as any).lastName,
-        phone: payload.phoneNumber ?? (localUser as any).phone,
+        phoneNumber: payload.phoneNumber ?? (localUser as any).phone,
         address: payload.address ?? (localUser as any).address,
         gender: payload.gender ?? (localUser as any).gender,
         ...(res?.data || {}),

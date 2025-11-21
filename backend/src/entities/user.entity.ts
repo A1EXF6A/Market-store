@@ -48,16 +48,16 @@ export class User {
   @Column({ name: "last_name", type: "varchar", length: 100 })
   lastName: string;
 
-  @Column({ type: "varchar", length: 150, unique: true })
+  @Column({ name:"email", type: "varchar", length: 150, unique: true })
   email: string;
 
-  @Column({ type: "varchar", length: 20, nullable: true })
+  @Column({ name:"phone", type: "varchar", length: 20, nullable: true })
   phone: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ name:"address", type: "text", nullable: true })
   address: string;
 
-  @Column({ type: "enum", enum: UserGender, nullable: true })
+  @Column({ name:"gender", type: "enum", enum: UserGender, nullable: true })
   gender: UserGender;
 
   @Column({ type: "enum", enum: UserRole, default: UserRole.BUYER })
