@@ -1,9 +1,15 @@
 import { useAuthStore } from "@/store/authStore";
 import type { User } from "@/types";
 import { UserRole, UserStatus } from "@/types";
+
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +37,10 @@ import {
   TableHeader,
   TableRow,
 } from "@components/ui/table";
+
 import { usersService, type UserFilters } from "@services/users";
+import { adminService } from "@services/admin";
+
 import {
   AlertTriangle,
   Calendar,
@@ -44,6 +53,11 @@ import {
   Users,
   UserX,
   X,
+  UserPlus,
+  IdCard,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -55,8 +69,20 @@ const UsersPage: React.FC = () => {
   const [filters, setFilters] = useState<UserFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
+  // 👇 Estado para el formulario de moderador
+  const [modFirstName, setModFirstName] = useState("");
+  const [modLastName, setModLastName] = useState("");
+  const [modEmail, setModEmail] = useState("");
+  const [modNationalId, setModNationalId] = useState("");
+  const [modPassword, setModPassword] = useState("");
+  const [modConfirmPassword, setModConfirmPassword] = useState("");
+  const [modLoading, setModLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUsers = async (customFilters?: UserFilters) => {
@@ -170,6 +196,62 @@ const UsersPage: React.FC = () => {
     return false;
   };
 
+  // 👇 Crear moderador (ADMIN solamente)
+  const handleCreateModerator = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!modFirstName.trim() || !modLastName.trim() || !modEmail.trim()) {
+      toast.error("Nombre, apellido y email son obligatorios");
+      return;
+    }
+
+    if (!modPassword) {
+      toast.error("La contraseña es obligatoria");
+      return;
+    }
+
+    if (modPassword.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (modPassword !== modConfirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+
+    try {
+      setModLoading(true);
+      await adminService.createModerator({
+        firstName: modFirstName,
+        lastName: modLastName,
+        email: modEmail,
+        nationalId: modNationalId || undefined,
+        password: modPassword,
+      });
+
+      toast.success("Moderador creado correctamente");
+
+      // limpiar formulario
+      setModFirstName("");
+      setModLastName("");
+      setModEmail("");
+      setModNationalId("");
+      setModPassword("");
+      setModConfirmPassword("");
+
+      // recargar usuarios
+      await loadUsers();
+    } catch (err: any) {
+      console.error(err);
+      const msg =
+        err?.response?.data?.message || "Error al crear el moderador";
+      toast.error(msg);
+    } finally {
+      setModLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -183,6 +265,7 @@ const UsersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Users className="h-8 w-8 text-blue-600" />
         <div>
@@ -194,6 +277,136 @@ const UsersPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* 🔹 Bloque: Crear moderador (solo ADMIN) */}
+      {currentUser?.role === UserRole.ADMIN && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Crear Moderador
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={handleCreateModerator}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="modFirstName">Nombre</Label>
+                <Input
+                  id="modFirstName"
+                  placeholder="Nombre"
+                  value={modFirstName}
+                  onChange={(e) => setModFirstName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modLastName">Apellido</Label>
+                <Input
+                  id="modLastName"
+                  placeholder="Apellido"
+                  value={modLastName}
+                  onChange={(e) => setModLastName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modEmail">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="modEmail"
+                    type="email"
+                    placeholder="moderador@correo.com"
+                    className="pl-9"
+                    value={modEmail}
+                    onChange={(e) => setModEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modNationalId">Cédula (opcional)</Label>
+                <div className="relative">
+                  <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="modNationalId"
+                    placeholder="0000000000"
+                    className="pl-9"
+                    value={modNationalId}
+                    onChange={(e) => setModNationalId(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modPassword">Contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="modPassword"
+                    type={showPass ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="pl-9 pr-10"
+                    value={modPassword}
+                    onChange={(e) => setModPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-800"
+                  >
+                    {showPass ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modConfirmPassword">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="modConfirmPassword"
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="pl-9 pr-10"
+                    value={modConfirmPassword}
+                    onChange={(e) => setModConfirmPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-800"
+                  >
+                    {showConfirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  type="submit"
+                  disabled={modLoading}
+                  className="w-full md:w-auto"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  {modLoading ? "Creando..." : "Crear Moderador"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -250,7 +463,8 @@ const UsersPage: React.FC = () => {
                 onValueChange={(value) =>
                   setFilters((prev) => ({
                     ...prev,
-                    status: value === "all" ? undefined : (value as UserStatus),
+                    status:
+                      value === "all" ? undefined : (value as UserStatus),
                   }))
                 }
               >

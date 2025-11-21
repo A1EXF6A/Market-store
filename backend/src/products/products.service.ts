@@ -9,7 +9,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In } from "typeorm";
 import { Favorite } from "src/entities/favorite.entity";
 import { ItemPhoto } from "src/entities/item-photo.entity";
-import { ItemStatus, ItemType } from "../entities/enums";
+import { ItemStatus, ItemType,IncidentStatus } from "../entities/enums";
 import { Service } from "src/entities/service.entity";
 import { User } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";

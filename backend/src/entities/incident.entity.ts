@@ -1,3 +1,4 @@
+// src/entities/incident.entity.ts
 import {
   Entity,
   Column,
@@ -10,7 +11,7 @@ import {
 import { Item } from "./item.entity";
 import { User } from "./user.entity";
 import { Appeal } from "./appeal.entity";
-import { ItemStatus } from "./enums";
+import { ItemStatus, IncidentStatus, IncidentType } from "./enums";
 
 @Entity("incidents")
 export class Incident {
@@ -23,50 +24,40 @@ export class Incident {
   @CreateDateColumn({ name: "reported_at" })
   reportedAt: Date;
 
-  @Column({
-    type: "enum",
-    enum: ItemStatus,
-    default: ItemStatus.PENDING,
-  })
-  status: ItemStatus;
+  // 👇 AHORA usa IncidentStatus, no ItemStatus
+  @Column({ type: "enum", enum: IncidentStatus, default: IncidentStatus.PENDING })
+  status: IncidentStatus;
+
+  // Tipo de incidente (auto detectado, reporte comprador, manual…)
+  @Column({ type: "enum", enum: IncidentType, default: IncidentType.AUTO_DETECTED })
+  type: IncidentType;
 
   @Column({ type: "text", nullable: true })
-  description?: string | null;
+  description: string;
 
   @Column({ name: "moderator_id", nullable: true, type: "int" })
-  moderatorId?: number | null;
+  moderatorId: number | null;
 
   @Column({ name: "seller_id", nullable: true, type: "int" })
-  sellerId?: number | null;
+  sellerId: number | null;
 
-  // ✅ Producto asociado
-  @ManyToOne(() => Item, (item) => item.incidents, {
-    onDelete: "CASCADE",
-  })
+  @Column({ name: "resolved_at", type: "timestamp", nullable: true })
+  resolvedAt: Date | null;
+
+  /* ========= Relaciones ========= */
+
+  @ManyToOne(() => Item, (item) => item.incidents, { onDelete: "CASCADE" })
   @JoinColumn({ name: "item_id" })
   item: Item;
 
-  // ✅ Moderador puede ser null sin romper joins
-  @ManyToOne(() => User, (user) => user.moderatedIncidents, {
-    nullable: true,
-    onDelete: "SET NULL",
-  })
+  @ManyToOne(() => User, (user) => user.moderatedIncidents, { nullable: true })
   @JoinColumn({ name: "moderator_id" })
-  moderator?: User | null;
+  moderator: User;
 
-  // ✅ Vendedor asociado (si borras vendedor, se borran incidentes)
-  @ManyToOne(() => User, (user) => user.sellerIncidents, {
-    nullable: true,
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(() => User, (user) => user.sellerIncidents, { nullable: true })
   @JoinColumn({ name: "seller_id" })
-  seller?: User | null;
+  seller: User;
 
-  // ✅ Apelaciones ligadas a esta incidencia
   @OneToMany(() => Appeal, (appeal) => appeal.incident)
   appeals: Appeal[];
-
-  // ✅ Fecha de resolución
-  @Column({ name: "resolved_at", type: "timestamp", nullable: true })
-  resolvedAt?: Date | null;
 }

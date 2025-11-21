@@ -9,6 +9,7 @@ import { Report } from "../entities/report.entity";
 import { Incident } from "../entities/incident.entity";
 import { Rating } from "../entities/rating.entity";
 import { ItemStatus } from "../entities/enums";
+import { IncidentStatus } from "../entities/enums";
 
 @Injectable()
 export class DashboardService {
@@ -97,7 +98,7 @@ export class DashboardService {
       await Promise.all([
         this.userRepository.count(),
         this.incidentRepository.count({
-          where: { status: ItemStatus.PENDING },
+          where: { status: IncidentStatus.PENDING },
         }),
         this.reportRepository.count(),
         this.itemRepository.count(),

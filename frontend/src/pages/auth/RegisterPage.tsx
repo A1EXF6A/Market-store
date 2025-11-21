@@ -26,7 +26,17 @@ import {
 } from "@components/ui/select";
 
 import AuthLayout from "@/components/AuthLayout";
-import { UserPlus, IdCard, Mail, Lock, MapPin, Phone, User, Eye, EyeOff } from "lucide-react";
+import {
+  UserPlus,
+  IdCard,
+  Mail,
+  Lock,
+  MapPin,
+  Phone,
+  User,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 /* ========= Validación ========= */
 const registerSchema = z
@@ -67,14 +77,24 @@ const RegisterPage: React.FC = () => {
     },
   });
 
+  /* ===== Envío del formulario ===== */
   const onSubmit = async (data: RegisterFormData) => {
     try {
       const { confirmPassword, ...registerData } = data;
-      await registerUser(registerData);
-      toast.success("Registro exitoso");
-      navigate("/dashboard");
+
+      // Enviar datos al backend
+      const response = await registerUser(registerData);
+
+      // Mostrar mensaje de éxito
+      toast.success(
+        response?.message ||
+          "Registro exitoso. Revisa tu correo para verificar tu cuenta."
+      );
+
+      // Redirigir a pantalla de confirmación (o login si no existe la primera)
+      navigate("/verify-email-sent"); // si no existe esta ruta, usa "/login"
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Error al registrarse");
+      toast.error(error?.response?.data?.message || "Error al registrarte");
     }
   };
 
@@ -114,7 +134,9 @@ const RegisterPage: React.FC = () => {
                     />
                   </div>
                   {errors.firstName && (
-                    <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                    <p className="text-sm text-red-500">
+                      {errors.firstName.message}
+                    </p>
                   )}
                 </div>
 
@@ -129,14 +151,18 @@ const RegisterPage: React.FC = () => {
                     {...register("lastName")}
                   />
                   {errors.lastName && (
-                    <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                    <p className="text-sm text-red-500">
+                      {errors.lastName.message}
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* Cédula */}
               <div className="space-y-2">
-                <Label htmlFor="nationalId" className="text-cyan-100">Cédula</Label>
+                <Label htmlFor="nationalId" className="text-cyan-100">
+                  Cédula
+                </Label>
                 <div className="relative">
                   <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                   <Input
@@ -147,13 +173,17 @@ const RegisterPage: React.FC = () => {
                   />
                 </div>
                 {errors.nationalId && (
-                  <p className="text-sm text-red-500">{errors.nationalId.message}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.nationalId.message}
+                  </p>
                 )}
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-cyan-100">Email</Label>
+                <Label htmlFor="email" className="text-cyan-100">
+                  Email
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                   <Input
@@ -164,13 +194,17 @@ const RegisterPage: React.FC = () => {
                     {...register("email")}
                   />
                 </div>
-                {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                )}
               </div>
 
               {/* Teléfono y Dirección */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-cyan-100">Teléfono</Label>
+                  <Label htmlFor="phone" className="text-cyan-100">
+                    Teléfono
+                  </Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                     <Input
@@ -183,7 +217,9 @@ const RegisterPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="text-cyan-100">Dirección</Label>
+                  <Label htmlFor="address" className="text-cyan-100">
+                    Dirección
+                  </Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                     <Input
@@ -208,13 +244,17 @@ const RegisterPage: React.FC = () => {
                     <SelectItem value={UserRole.SELLER}>Vendedor</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.role && <p className="text-sm text-red-500">{errors.role.message}</p>}
+                {errors.role && (
+                  <p className="text-sm text-red-500">{errors.role.message}</p>
+                )}
               </div>
 
               {/* Contraseñas */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-cyan-100">Contraseña</Label>
+                  <Label htmlFor="password" className="text-cyan-100">
+                    Contraseña
+                  </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                     <Input
@@ -229,13 +269,19 @@ const RegisterPage: React.FC = () => {
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-cyan-300 hover:text-white hover:bg-cyan-600/20 rounded-md"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-cyan-100">Confirmar</Label>
+                  <Label htmlFor="confirmPassword" className="text-cyan-100">
+                    Confirmar
+                  </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-400" />
                     <Input
@@ -250,11 +296,17 @@ const RegisterPage: React.FC = () => {
                       onClick={() => setShowConfirm((s) => !s)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-cyan-300 hover:text-white hover:bg-cyan-600/20 rounded-md"
                     >
-                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirm ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {errors.confirmPassword && (
-                    <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+                    <p className="text-sm text-red-500">
+                      {errors.confirmPassword.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -271,12 +323,18 @@ const RegisterPage: React.FC = () => {
 
             <div className="mt-6 text-center text-sm text-gray-400">
               ¿Ya tienes cuenta?{" "}
-              <Link to="/login" className="font-semibold text-cyan-400 hover:text-cyan-300">
+              <Link
+                to="/login"
+                className="font-semibold text-cyan-400 hover:text-cyan-300"
+              >
                 Inicia sesión aquí
               </Link>
               <br />
               ¿No recibiste el correo de verificación?{" "}
-              <Link to="/resend-verification" className="font-semibold text-cyan-400 hover:text-cyan-300">
+              <Link
+                to="/resend-verification"
+                className="font-semibold text-cyan-400 hover:text-cyan-300"
+              >
                 Reenviar verificación
               </Link>
             </div>

@@ -1,11 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Habilita variant 'dark' basada en clase .dark */
+/* ========= Habilita variant 'dark' basada en clase .dark ========= */
 
 @custom-variant dark (&:is(.dark *));
 
-/* ===================== THEME (igual que lo tenías) ===================== */
+/* ===================== THEME ===================== */
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -121,7 +121,7 @@
 }
 
 
-/* ===================== BASE LAYER ===================== */
+/* ===================== BASE ===================== */
 
 @layer base {
     html,
@@ -129,7 +129,7 @@
     #root {
         @apply h-full min-h-[100dvh];
     }
-    /* NADA de 'dark:' en @apply. Define una regla separada */
+    /* No usar 'dark:' en @apply. Reglas separadas */
     body {
         @apply bg-neutral-50 text-neutral-900 antialiased;
     }
@@ -137,6 +137,34 @@
         @apply bg-neutral-950 text-neutral-50;
     }
 }
+
+
+/* ===================== HELPERS ===================== */
+
+
+/* Full width section (rompe el max-width del contenedor) */
+
+.full-bleed {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;
+}
+
+
+/* Overlay de cuadrícula suave (opcional) */
+
+.bg-grid-overlay {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: .06;
+    pointer-events: none;
+}
+
+
+/* Animación de fondo utilizada en Login y páginas Auth */
 
 @keyframes bgFlow {
     0% {

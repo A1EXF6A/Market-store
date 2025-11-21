@@ -1,74 +1,65 @@
-// src/pages/VerifyEmailPage.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@components/ui/card";
-import { Button } from "@components/ui/button";
-import { authService } from "@/services/auth";
 import { toast } from "sonner";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { Button } from "@components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
+import { ShieldCheck, AlertCircle, Loader2 } from "lucide-react";
+import { api } from "@services/api"; // tu wrapper de fetch/axios
 
 const VerifyEmailPage: React.FC = () => {
-  const [search] = useSearchParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const token = search.get("token");
-  const [loading, setLoading] = React.useState(false);
-  const [done, setDone] = React.useState<null | "ok" | "fail">(null);
+  const token = params.get("token");
+  const [status, setStatus] = useState<"loading"|"ok"|"error">("loading");
 
-  const verify = async () => {
-    if (!token) {
-      toast.error("Token inválido o faltante.");
-      setDone("fail");
-      return;
-    }
-    try {
-      setLoading(true);
-      await authService.verifyEmail(token);
-      setDone("ok");
-      toast.success("Correo verificado con éxito");
-      // si quieres redirigir automático luego de 2s:
-      // setTimeout(() => navigate("/login"), 1800);
-    } catch (e: any) {
-      setDone("fail");
-      toast.error(e?.response?.data?.message || "No se pudo verificar el correo");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    verify();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => {
+    const run = async () => {
+      if (!token) {
+        setStatus("error");
+        return;
+      }
+      try {
+        // GET /auth/verify-email?token=...
+        await api.get(`/auth/verify-email`, { params: { token } });
+        setStatus("ok");
+        toast.success("Correo verificado correctamente");
+        // Opcional: redirigir a login después de 1.5s
+        setTimeout(() => navigate("/login"), 1500);
+      } catch (e:any) {
+        setStatus("error");
+        toast.error(e?.response?.data?.message || "Token inválido o expirado");
+      }
+    };
+    void run();
+  }, [token, navigate]);
 
   return (
-    <div className="min-h-screen grid place-items-center bg-[radial-gradient(1200px_600px_at_10%_-10%,#1e293b_15%,transparent_60%),radial-gradient(900px_400px_at_90%_10%,#0f172a_15%,transparent_60%)]">
-      <Card className="w-full max-w-md border-0 shadow-xl">
+    <div className="min-h-screen grid place-items-center px-4">
+      <Card className="max-w-md w-full">
         <CardHeader>
           <CardTitle>Verificación de correo</CardTitle>
-          <CardDescription>Estamos validando tu enlace…</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {loading && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Verificando…
+        <CardContent className="space-y-4 text-center">
+          {status === "loading" && (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <p>Verificando tu correo…</p>
             </div>
           )}
-          {done === "ok" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-600">
-                <ShieldCheck className="h-5 w-5" />
-                <span>¡Tu correo fue verificado!</span>
-              </div>
-              <Button asChild className="w-full">
-                <Link to="/login">Ir a iniciar sesión</Link>
+          {status === "ok" && (
+            <div className="flex flex-col items-center gap-2">
+              <ShieldCheck className="h-10 w-10 text-emerald-600" />
+              <p>¡Todo listo! Redirigiendo al inicio de sesión…</p>
+              <Button asChild>
+                <Link to="/login">Ir al login</Link>
               </Button>
             </div>
           )}
-          {done === "fail" && (
-            <div className="space-y-4">
-              <p className="text-rose-600">El enlace no es válido o expiró.</p>
-              <Button asChild variant="outline" className="w-full">
+          {status === "error" && (
+            <div className="flex flex-col items-center gap-2">
+              <AlertCircle className="h-10 w-10 text-rose-600" />
+              <p>El enlace no es válido o expiró.</p>
+              <Button asChild variant="outline">
                 <Link to="/resend-verification">Reenviar verificación</Link>
               </Button>
             </div>

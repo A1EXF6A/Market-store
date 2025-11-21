@@ -14,7 +14,7 @@ import { Service } from "./service.entity";
 import { Favorite } from "./favorite.entity";
 import { Report } from "./report.entity";
 import { Incident } from "./incident.entity";
-import { ItemStatus, ItemType } from "./enums";
+import { ItemStatus, ItemType} from "./enums";
 
 @Entity("items")
 export class Item {

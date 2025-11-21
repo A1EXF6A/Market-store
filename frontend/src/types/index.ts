@@ -1,3 +1,23 @@
+// src/types/index.ts
+
+/* ========= USER ========= */
+
+export const UserRole = {
+  BUYER: "buyer",
+  SELLER: "seller",
+  MODERATOR: "moderator",
+  ADMIN: "admin",
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export const UserStatus = {
+  ACTIVE: "active",
+  SUSPENDED: "suspended",
+} as const;
+
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
 export interface User {
   userId: number;
   nationalId: string;
@@ -6,28 +26,43 @@ export interface User {
   email: string;
   phone?: string;
   address?: string;
-  gender?: 'male' | 'female' | 'other';
+  gender?: "male" | "female" | "other";
   role: UserRole;
   status: UserStatus;
   verified: boolean;
   createdAt: string;
 }
 
-export const UserRole = {
-  BUYER: 'buyer',
-  SELLER: 'seller',
-  MODERATOR: 'moderator',
-  ADMIN: 'admin'
+/* ========= ITEMS / PRODUCTS ========= */
+
+export const ItemType = {
+  PRODUCT: "product",
+  SERVICE: "service",
 } as const;
 
-export type UserRole = typeof UserRole[keyof typeof UserRole];
+export type ItemType = (typeof ItemType)[keyof typeof ItemType];
 
-export const UserStatus = {
-  ACTIVE: 'active',
-  SUSPENDED: 'suspended'
+export const ItemStatus = {
+  ACTIVE: "active",      // visible y aprobado
+  SUSPENDED: "suspended", // suspendido por tiempo o admin
+  HIDDEN: "hidden",      // oculto temporalmente
+  PENDING: "pending",    // en revisión
+  BANNED: "banned",      // prohibido / peligroso
 } as const;
 
-export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
+export type ItemStatus = (typeof ItemStatus)[keyof typeof ItemStatus];
+
+export interface ItemPhoto {
+  photoId: number;
+  itemId: number;
+  url: string;
+}
+
+export interface Service {
+  serviceId: number;
+  itemId: number;
+  workingHours: string;
+}
 
 export interface Product {
   itemId: number;
@@ -47,40 +82,24 @@ export interface Product {
   service?: Service;
 }
 
-export const ItemType = {
-  PRODUCT: 'product',
-  SERVICE: 'service'
-} as const;
-
-export type ItemType = typeof ItemType[keyof typeof ItemType];
-
-export const ItemStatus = {
-  ACTIVE: 'active',
-  SUSPENDED: 'suspended',
-  HIDDEN: 'hidden',
-  PENDING: 'pending',
-  BANNED: 'banned'
-} as const;
-
-export type ItemStatus = typeof ItemStatus[keyof typeof ItemStatus];
-
-export interface ItemPhoto {
-  photoId: number;
-  itemId: number;
-  url: string;
-}
-
-export interface Service {
-  serviceId: number;
-  itemId: number;
-  workingHours: string;
-}
+/* ========= FAVORITOS ========= */
 
 export interface Favorite {
   userId: number;
   itemId: number;
   savedAt: string;
 }
+
+/* ========= REPORTES ========= */
+
+export const ReportType = {
+  SPAM: "spam",
+  INAPPROPRIATE: "inappropriate",
+  ILLEGAL: "illegal",
+  OTHER: "other",
+} as const;
+
+export type ReportType = (typeof ReportType)[keyof typeof ReportType];
 
 export interface Report {
   reportId: number;
@@ -89,30 +108,37 @@ export interface Report {
   type: ReportType;
   comment?: string;
   reportedAt: string;
+
+  // 🔹 Navegaciones opcionales que vienen del backend (getReports)
+  item?: Product;
+  buyer?: User;
 }
 
-export const ReportType = {
-  SPAM: 'spam',
-  INAPPROPRIATE: 'inappropriate',
-  ILLEGAL: 'illegal',
-  OTHER: 'other'
+/* ========= INCIDENTES ========= */
+/**
+ * ESTO ES LO NUEVO IMPORTANTE:
+ * La incidencia tiene su propio estado (flujo de revisión),
+ * distinto al estado del producto.
+ */
+
+export const IncidentStatus = {
+  PENDING: "pending",
+  REVIEWING: "reviewing",
+  RESOLVED: "resolved",
+  REJECTED: "rejected",
 } as const;
 
-export type ReportType = typeof ReportType[keyof typeof ReportType];
+export type IncidentStatus =
+  (typeof IncidentStatus)[keyof typeof IncidentStatus];
 
-export interface Incident {
-  incidentId: number;
-  itemId: number;
-  reportedAt: string;
-  status: ItemStatus;
-  description?: string;
-  moderatorId?: number;
-  sellerId?: number;
-  item?: Product;
-  moderator?: User;
-  seller?: User;
-  appeals?: Appeal[];
-}
+export const IncidentType = {
+  AUTO_DETECTED: "auto_detected",
+  BUYER_REPORT: "buyer_report",
+  MANUAL: "manual",
+} as const;
+
+export type IncidentType =
+  (typeof IncidentType)[keyof typeof IncidentType];
 
 export interface Appeal {
   appealId: number;
@@ -122,6 +148,23 @@ export interface Appeal {
   createdAt: string;
   reviewed: boolean;
 }
+
+export interface Incident {
+  incidentId: number;
+  itemId: number;
+  reportedAt: string;
+  status: IncidentStatus;   // ⬅️ ANTES era ItemStatus, ahora el estado de la incidencia
+  type: IncidentType;       // ⬅️ tipo de incidencia (auto, reporte comprador, manual)
+  description?: string;
+  moderatorId?: number;
+  sellerId?: number;
+  item?: Product;
+  moderator?: User;
+  seller?: User;
+  appeals?: Appeal[];
+}
+
+/* ========= CHAT / MENSAJES ========= */
 
 export interface Chat {
   chatId: number;
@@ -142,6 +185,8 @@ export interface Message {
   sender?: User;
 }
 
+/* ========= RATING ========= */
+
 export interface Rating {
   ratingId: number;
   sellerId: number;
@@ -151,10 +196,14 @@ export interface Rating {
   createdAt: string;
 }
 
+/* ========= AUTH ========= */
+
 export interface AuthResponse {
   access_token: string;
   user: User;
 }
+
+/* ========= FILTROS ========= */
 
 export interface ProductFilters {
   type?: ItemType;

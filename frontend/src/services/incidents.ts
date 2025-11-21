@@ -1,99 +1,89 @@
-import api from "./api";
-import type { Incident, Report, Appeal } from "@/types";
-import { ItemStatus, ReportType } from "@/types";
+// src/services/incidents.ts
+import { api } from "./api";
+
+// Importa los tipos reales del proyecto
+import type {
+  Incident,
+  Report,
+  IncidentStatus,
+  ItemStatus,
+  ReportType,
+  IncidentType,
+} from "@/types";
 
 export interface IncidentFilters {
-  status?: ItemStatus;
-  moderatorId?: number;
-  search?: string;
+  status?: IncidentStatus;
   startDate?: string;
   endDate?: string;
+  moderatorId?: number;
+  sellerId?: number;
+  search?: string;
 }
 
 export interface ReportFilters {
-  type?: ReportType;
-  search?: string;
+  type?: ReportType | string;
   startDate?: string;
   endDate?: string;
-}
-
-export interface CreateReportData {
-  itemId: number;
-  type: ReportType;
-  comment?: string;
-}
-
-export interface CreateAppealData {
-  incidentId: number;
-  reason: string;
+  search?: string;
 }
 
 export const incidentsService = {
-  getIncidents: async (filters?: IncidentFilters): Promise<Incident[]> => {
-    const params = new URLSearchParams();
-    if (filters?.status) params.append("status", filters.status);
-    if (filters?.moderatorId)
-      params.append("moderatorId", filters.moderatorId.toString());
-    if (filters?.search) params.append("search", filters.search);
-    if (filters?.startDate) params.append("startDate", filters.startDate);
-    if (filters?.endDate) params.append("endDate", filters.endDate);
-
-    const response = await api.get(`/incidents?${params.toString()}`);
-    return response.data;
+  /** ========================
+   **  LISTA DE INCIDENCIAS
+   ** ======================== */
+  async getIncidents(filters?: IncidentFilters): Promise<Incident[]> {
+    const res = await api.get("/incidents", { params: filters });
+    return res.data;
   },
 
-  getIncidentById: async (id: number): Promise<Incident> => {
-    const response = await api.get(`/incidents/${id}`);
-    return response.data;
+  /** ========================
+   **  LISTA DE REPORTES
+   ** ======================== */
+  async getReports(filters?: ReportFilters): Promise<Report[]> {
+    const res = await api.get("/incidents/reports", { params: filters });
+    return res.data;
   },
 
-  assignIncident: async (id: number): Promise<Incident> => {
-    const response = await api.patch(`/incidents/${id}/assign`);
-    return response.data;
+  /** ========================
+   **  CREAR REPORTE (COMPRADOR)
+   ** ======================== */
+  async createReport(data: {
+    itemId: number;
+    type: ReportType;
+    comment?: string;
+  }): Promise<Report> {
+    const res = await api.post("/incidents/reports", data);
+    return res.data;
   },
 
-  resolveIncident: async (
-    id: number,
-    status: ItemStatus,
-  ): Promise<Incident> => {
-    const response = await api.patch(`/incidents/${id}/resolve`, { status });
-    return response.data;
+  /** ========================
+   **  INCIDENCIAS DEL VENDEDOR
+   ** ======================== */
+  async getMyIncidents(): Promise<Incident[]> {
+    const res = await api.get("/incidents/my-incidents");
+    return res.data;
   },
 
-  getReports: async (filters?: ReportFilters): Promise<Report[]> => {
-    const params = new URLSearchParams();
-    if (filters?.type) params.append("type", filters.type);
-    if (filters?.search) params.append("search", filters.search);
-    if (filters?.startDate) params.append("startDate", filters.startDate);
-    if (filters?.endDate) params.append("endDate", filters.endDate);
-
-    const response = await api.get(`/incidents/reports?${params.toString()}`);
-    return response.data;
+  /** ========================
+   **  ASIGNAR INCIDENCIA A MODERADOR
+   ** ======================== */
+  async assign(incidentId: number): Promise<Incident> {
+    const res = await api.patch(`/incidents/${incidentId}/assign`);
+    return res.data;
   },
 
-  createReport: async (data: CreateReportData): Promise<Report> => {
-    const response = await api.post("/incidents/reports", data);
-    return response.data;
-  },
-
-  getAppeals: async (): Promise<Appeal[]> => {
-    const response = await api.get("/appeals");
-    return response.data;
-  },
-
-  createAppeal: async (data: CreateAppealData): Promise<Appeal> => {
-    const response = await api.post("/incidents/appeals", data);
-    return response.data;
-  },
-
-  getMyIncidents: async (): Promise<Incident[]> => {
-    const response = await api.get("/incidents/my-incidents");
-    return response.data;
-  },
-
-  reviewAppeal: async (id: number, approved: boolean): Promise<Appeal> => {
-    const response = await api.patch(`/appeals/${id}`, { approved });
-    return response.data;
+  /** ========================
+   **  RESOLVER INCIDENCIA
+   ** ======================== */
+  async resolve(data: {
+    incidentId: number;
+    incidentStatus: IncidentStatus;
+    itemStatus?: ItemStatus;
+  }): Promise<Incident> {
+    const res = await api.patch(`/incidents/${data.incidentId}/resolve`, {
+      incidentStatus: data.incidentStatus,
+      itemStatus: data.itemStatus,
+    });
+    return res.data;
   },
 };
-
