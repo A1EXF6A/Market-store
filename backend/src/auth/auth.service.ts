@@ -21,7 +21,7 @@ export class AuthService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(EmailService) private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, nationalId, password, role, ...userData } = registerDto;
@@ -76,16 +76,32 @@ export class AuthService {
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
+
     const ok = await bcrypt.compare(password, user?.passwordHash ?? "");
 
-    if (!user || !ok) throw new UnauthorizedException("INVALID_CREDENTIALS");
+    if (!user || !ok) {
+      throw new UnauthorizedException("INVALID_CREDENTIALS");
+    }
 
-    if (!user.verified) throw new UnauthorizedException("EMAIL_NOT_VERIFIED");
+    // Verificación de correo
+    if (!user.verified) {
+      throw new UnauthorizedException("EMAIL_NOT_VERIFIED");
+    }
 
-    const payload: Record<string, any> = { email: user.email, sub: user.userId, role: user.role };
+    // NUEVA VERIFICACIÓN: Usuario suspendido
+    if (user.status === "suspended") {
+      throw new UnauthorizedException("USER_SUSPENDED");
+    }
+
+    const payload: Record<string, any> = {
+      email: user.email,
+      sub: user.userId,
+      role: user.role,
+    };
+
     const access_token = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: ("24h" as any),
+      expiresIn: "24h",
     });
 
     return {
@@ -97,13 +113,14 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         verified: user.verified,
+        status: user.status,
       },
     };
   }
 
   async validateUser(userId: number): Promise<User> {
     return this.userRepository.findOne({ where: { userId } });
-    }
+  }
 
   async forgotPassword(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });

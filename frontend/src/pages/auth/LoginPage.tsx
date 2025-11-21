@@ -60,6 +60,8 @@ const LoginPage: React.FC = () => {
     }
 
     const errorMessage = getErrorMessage(code, "es") || "Error al iniciar sesión";
+    console.log(errorMessage);
+
     toast.error(errorMessage);
   }
 };
