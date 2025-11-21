@@ -22,17 +22,172 @@ import {
   User,
   Users,
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { usersService } from "@/services/users";
+
+type FormState = {
+  firstName: string;
+  lastName: string;
+  email: string; // readonly in UI
+  phone?: string;
+  address?: string;
+  gender: "male" | "female" | "other";
+};
+
+const normalizeGender = (g: any): FormState["gender"] => {
+  if (!g) return "other";
+  const s = String(g).trim().toLowerCase();
+  if (s === "male" || s === "m" || s === "hombre" || s === "masculino") return "male";
+  if (s === "female" || s === "f" || s === "mujer" || s === "femenino") return "female";
+  return "other";
+};
 
 const Layout: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setUser } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState<FormState>({
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
+    address: user?.address ?? "",
+    gender: normalizeGender(user?.gender),
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setForm({
+      firstName: user?.firstName ?? "",
+      lastName: user?.lastName ?? "",
+      email: user?.email ?? "",
+      phone: user?.phone ?? "",
+      address: user?.address ?? "",
+      gender: normalizeGender(user?.gender),
+    });
+  }, [user]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleSettings = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setError(null);
+    setIsModalOpen(false);
+    setForm({
+      firstName: user?.firstName ?? "",
+      lastName: user?.lastName ?? "",
+      email: user?.email ?? "",
+      phone: user?.phone ?? "",
+      address: user?.address ?? "",
+      gender: normalizeGender(user?.gender),
+    });
+    setSuccessMessage(null);
+  };
+
+  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    const newForm = { ...form, [field]: value };
+    setForm(newForm);
+
+    if (typeof setUser === "function" && user) {
+      try {
+        setUser({ ...user, ...newForm });
+      } catch (e) {
+        // do nothing, don't block UI
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) {
+      setError("Usuario no encontrado.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    console.log("Form data to save:", form);
+
+    const genderToSend = normalizeGender(form.gender);
+
+    const payload: {
+      userId?: number | string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      phoneNumber?: string;
+      address?: string;
+      gender?: string;
+    } = {
+      email: user.email,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      phoneNumber: form.phone,
+      address: form.address,
+      gender: genderToSend,
+    };
+
+    if ((user as any).userId !== undefined) {
+      payload.userId = (user as any).userId;
+    } else if ((user as any).id !== undefined) {
+      payload.userId = (user as any).id;
+    }
+
+    try {
+      const res = await usersService.updateMe(payload);
+
+      // actualizar la store con la respuesta (si viene) o con payload
+      const updatedUser = {
+        ...user,
+        firstName: payload.firstName ?? user.firstName,
+        lastName: payload.lastName ?? user.lastName,
+        phone: payload.phoneNumber ?? (user as any).phone,
+        address: payload.address ?? (user as any).address,
+        gender: payload.gender ?? (user as any).gender,
+        // si la respuesta incluye campos extra, mezclar:
+        ...(res?.data || {}),
+      };
+
+      if (typeof setUser === "function") {
+        try {
+          setUser(updatedUser);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      setSaving(false);
+      setSuccessMessage("Datos guardados exitosamente.");
+      // cerrar el modal opcionalmente después de 1.5s o dejarlo abierto — aquí lo cerramos después de 1s
+      setTimeout(() => {
+        setIsModalOpen(false);
+      }, 1000);
+
+      // limpiar mensaje después de 3s
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Error al actualizar el usuario",
+      );
+      setSaving(false);
+      // no cerramos el modal para que el usuario pueda corregir
+    }
   };
 
   const roleColors = {
@@ -180,7 +335,7 @@ const Layout: React.FC = () => {
                     <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSettings}>
                     <Settings className="h-4 w-4 mr-2" />
                     Configuración
                   </DropdownMenuItem>
@@ -202,6 +357,140 @@ const Layout: React.FC = () => {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <Outlet />
       </main>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          aria-modal="true"
+          role="dialog"
+        >
+          {/* backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={closeModal}
+            aria-hidden
+          />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 z-10">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-medium">Editar Perfil</h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    value={form.firstName}
+                    onChange={(e) => updateField("firstName", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Apellido
+                  </label>
+                  <input
+                    type="text"
+                    value={form.lastName}
+                    onChange={(e) => updateField("lastName", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Correo
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    disabled
+                    className="mt-1 block w-full rounded-md border-gray-200 bg-gray-50 text-gray-600 shadow-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    El correo no puede ser modificado desde aquí.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Teléfono
+                  </label>
+                  <input
+                    type="text"
+                    value={form.phone ?? ""}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    value={form.address ?? ""}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Género
+                  </label>
+                  <select
+                    value={form.gender}
+                    onChange={(e) =>
+                      updateField("gender", e.target.value as FormState["gender"])
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="male">Hombre</option>
+                    <option value="female">Mujer</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+
+                {error && <div className="text-sm text-red-600">{error}</div>}
+                {successMessage && (
+                  <div className="text-sm text-green-600">{successMessage}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t flex justify-end gap-3">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-md border hover:bg-gray-50"
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+                disabled={saving}
+              >
+                {saving ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

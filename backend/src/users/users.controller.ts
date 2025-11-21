@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Body, UseGuards, Put, Delete, Query } from "@nestjs/common";
+import { Controller, Get, Param, Req, Patch, Body, UseGuards, Put, Delete, Query,   BadRequestException} from "@nestjs/common";
 import { UsersService, UserFilters } from "./users.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -11,7 +11,7 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 @Controller("users")
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @Get()
   @UseGuards(RolesGuard)
@@ -53,6 +53,24 @@ export class UsersController {
   async changePassword(@GetUser() user: User, @Body() changePasswordDto: ChangePasswordDto) {
     await this.usersService.changePassword(user.userId, changePasswordDto);
     return { message: "Password changed successfully" };
+  }
+  @Patch('me')
+  @UseGuards(JwtAuthGuard,) // solo autenticados
+  async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+    if (!userId || !userEmail||userEmail!==updateUserDto.email) {
+      throw new BadRequestException('Usuario no autenticado correctamente');
+    }
+    console.log("Authenticated user ID:", updateUserDto);
+    // Impedir que usuarios normales intenten cambiar role o status desde /me
+    // (si quieres permitirlo para admins, tendrías que verificar el role)
+    const dto = { ...updateUserDto } as any;
+    if (dto.role) delete dto.role;
+    if (dto.status) delete dto.status;
+
+    // Dejar que el servicio haga la comprobación de email (conflictos) como ya tienes
+    return this.usersService.updateUser(userId, dto);
   }
 
   @Patch(":id")

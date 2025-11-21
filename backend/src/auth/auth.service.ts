@@ -109,6 +109,9 @@ export class AuthService {
       user: {
         userId: user.userId,
         email: user.email,
+        phone: user.phone,
+        address: user.address,
+        gender: user.gender,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,

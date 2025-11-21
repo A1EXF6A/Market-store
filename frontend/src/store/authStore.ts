@@ -25,10 +25,12 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
+
           const response = await authService.login({ email, password });
           localStorage.setItem("access_token", response.access_token);
           localStorage.setItem("user", JSON.stringify(response.user));
-
+          
+          console.log ("Logged in user:", response.user);
           set({
             user: response.user,
             isAuthenticated: true,

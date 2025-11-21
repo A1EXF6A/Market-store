@@ -33,9 +33,17 @@ export const usersService = {
   },
 
   update: async (id: number, data: UpdateUserData): Promise<User> => {
+    console.log("Updating user with data:", data);
+    console.log("User ID:", id);
     const response = await api.patch(`/users/${id}`, data);
     return response.data;
   },
+  updateMe: async (data: UpdateUserData): Promise<User> => {
+    console.log("Updating current user with data:", data);
+    const response = await api.patch(`/users/me`, data);
+    return response.data;
+  },
+
 
   suspend: async (id: number): Promise<void> => {
     await api.patch(`/users/${id}/status`, { status: "suspended" });
