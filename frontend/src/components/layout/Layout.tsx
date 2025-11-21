@@ -49,7 +49,6 @@ const readUserFromLocalStorage = () => {
   try {
     const raw = localStorage.getItem("user");
     if (!raw) return null;
-    // raw is a JSON string like '{"userId":12,...}'
     return JSON.parse(raw);
   } catch (e) {
     console.warn("localStorage 'user' parse error:", e);
@@ -63,7 +62,6 @@ const writeUserToLocalStorage = (u: any) => {
       localStorage.removeItem("user");
       return;
     }
-    // ensure we write as JSON string (same shape you showed)
     localStorage.setItem("user", JSON.stringify(u));
   } catch (e) {
     console.warn("Failed to write user to localStorage:", e);
@@ -87,7 +85,7 @@ const Layout: React.FC = () => {
   // Estado local que representa el usuario (lee de localStorage al montar)
   const [localUser, setLocalUser] = useState<any>(() => readUserFromLocalStorage());
 
-  // Debounce para escrituras en localStorage
+  // Debounce para escritura en localStorage (usado solo cuando guardamos/cerramos sesión)
   const writeTimer = useRef<number | null>(null);
   const debouncedWriteUser = useCallback((u: any) => {
     if (writeTimer.current) {
@@ -114,12 +112,7 @@ const Layout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Sync localUser -> localStorage (debounced)
-  useEffect(() => {
-    debouncedWriteUser(localUser);
-  }, [localUser, debouncedWriteUser]);
-
-  // Sync localUser -> form
+  // Cuando cambie localUser (por ejemplo después de handleSave o por storage event), sincronizamos el form
   useEffect(() => {
     if (localUser) {
       setForm({
@@ -142,7 +135,7 @@ const Layout: React.FC = () => {
     }
   }, [localUser]);
 
-  // Sync across tabs
+  // Escuchar cambios en localStorage desde otras pestañas y sincronizar
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "user") {
@@ -160,31 +153,23 @@ const Layout: React.FC = () => {
     debouncedWriteUser(u);
   }, [debouncedWriteUser]);
 
+  // ---------- << IMPORTANTE >> ----------
+  // updateField ahora SOLO actualiza el form (no toca localUser ni localStorage)
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
-    setForm((prev) => {
-      const newForm = { ...prev, [field]: value };
-      const tentativeUser = {
-        ...(localUser ?? {}),
-        ...newForm,
-      };
-      tentativeUser.gender = normalizeGender(tentativeUser.gender);
-      setUserLocal(tentativeUser);
-      return newForm;
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
+  // --------------------------------------
 
   // Logout que *usa* el logout que te funcionó antes y además limpia localStorage
   const logoutLocal = async () => {
     try {
       if (logout && typeof logout === "function") {
         try {
-          // llamar al logout de la store (el que dices que funcionaba)
           await logout();
         } catch (e) {
           console.warn("store logout failed (continuando):", e);
         }
       } else if (authService && typeof authService.logout === "function") {
-        // fallback: intentar logout remoto
         try {
           await authService.logout();
         } catch (e) {
@@ -202,7 +187,6 @@ const Layout: React.FC = () => {
       localStorage.removeItem("token");
     } catch {}
 
-    // forzar navegación al login
     navigate("/login");
   };
 
@@ -211,13 +195,17 @@ const Layout: React.FC = () => {
   };
 
   const handleSettings = () => {
+    // abrir modal; el form ya contiene los datos actuales de localUser (por useEffect)
     setIsModalOpen(true);
+    setError(null);
+    setSuccessMessage(null);
   };
 
   const closeModal = () => {
     setError(null);
     setIsModalOpen(false);
-    const latest = readUserFromLocalStorage() ?? {};
+    // restaurar el form desde localUser (descartar cambios)
+    const latest = readUserFromLocalStorage() ?? localUser ?? {};
     setForm({
       firstName: latest?.firstName ?? "",
       lastName: latest?.lastName ?? "",
@@ -276,11 +264,13 @@ const Layout: React.FC = () => {
         ...(res?.data || {}),
       };
 
+      // Aquí SÍ actualizamos localUser y localStorage (porque el usuario ACEPTÓ)
       setUserLocal(updatedUser);
 
       setSaving(false);
       setSuccessMessage("Datos guardados exitosamente.");
 
+      // actualizar el formulario con la respuesta final
       setForm({
         firstName: updatedUser.firstName ?? "",
         lastName: updatedUser.lastName ?? "",
@@ -336,7 +326,7 @@ const Layout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
-              <Link to="/dashboard" className="text-xl font-bold text-gray-900">MarketPlace</Link>
+              <Link to="/dashboard" className="text-xl font-bold text-gray-900">CommerceHub</Link>
 
               <div className="hidden md:flex items-center space-x-4">
                 {filteredNavItems.map((item) => {
@@ -384,7 +374,7 @@ const Layout: React.FC = () => {
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8"><Outlet /></main>
 
-      {/* Modal (igual que antes) */}
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
           <div className="fixed inset-0 bg-black/40" onClick={closeModal} aria-hidden />
