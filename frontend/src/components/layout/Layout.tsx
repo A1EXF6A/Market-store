@@ -1,6 +1,5 @@
 import { useAuthStore } from "@/store/authStore";
 import { UserRole } from "@/types";
-import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import {
   DropdownMenu,
@@ -33,13 +32,6 @@ const Layout: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const roleColors = {
-    [UserRole.BUYER]: "bg-blue-100 text-blue-800",
-    [UserRole.SELLER]: "bg-green-100 text-green-800",
-    [UserRole.MODERATOR]: "bg-orange-100 text-orange-800",
-    [UserRole.ADMIN]: "bg-red-100 text-red-800",
   };
 
   const navigationItems = [

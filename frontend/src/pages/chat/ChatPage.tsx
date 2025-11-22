@@ -2,7 +2,7 @@ import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import { Input } from "@components/ui/input";
 import { useAuthStore } from "@/store/authStore";
-import type { Chat, Message } from "@/types";
+import type { Chat, Message, User } from "@/types";
 import { chatService } from "@services/chat";
 import { socketService } from "@services/websocket";
 import { format } from "date-fns";
@@ -23,7 +23,7 @@ const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, getToken } = useAuthStore();
-  const [otherUser, setOtherUser] = useState(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -129,7 +129,7 @@ const ChatPage: React.FC = () => {
       //set other user
       const otherUser =
         user?.userId === chat.buyerId ? chat.seller : chat.buyer;
-      setOtherUser(otherUser);
+      setOtherUser(otherUser || null);
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
     } catch (error: any) {

@@ -1,14 +1,10 @@
-process.loadEnvFile(__dirname + "/../../.env");
+try {
+  process.loadEnvFile(__dirname + "/../../.env");
+} catch (error) {}
 
 interface Config {
   port: number;
-  database: {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    name: string;
-  };
+  databaseUrl: string;
   email: {
     host: string;
     port: number;
@@ -24,13 +20,9 @@ interface Config {
 
 const env: Config = {
   port: process.env.PORT ? parseInt(process.env.PORT) : 3001,
-  database: {
-    host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-    user: process.env.DB_USERNAME || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
-    name: process.env.DB_NAME || "postgres",
-  },
+  databaseUrl:
+    process.env.DATABASE_URL ||
+    "postgresql://postgres:postgres@localhost:5432/postgres",
   email: {
     host: process.env.EMAIL_HOST || "smtp.gmail.com",
     port: process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT) : 587,

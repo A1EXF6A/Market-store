@@ -54,8 +54,7 @@ const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const isManager =
-    currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MODERATOR;
+
 
   useEffect(() => {
     loadUsers();
@@ -173,11 +172,7 @@ const UsersPage: React.FC = () => {
     );
   };
 
-  const statuses = [
-    { key: "all", label: "Todos" },
-    { key: "active", label: "Activos" },
-    { key: "suspended", label: "Suspendidos" },
-  ];
+
 
   const canManageUser = (user: User) => {
     if (currentUser?.role === UserRole.ADMIN) return true;

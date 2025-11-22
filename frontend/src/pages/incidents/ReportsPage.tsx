@@ -1,6 +1,6 @@
 import type { Incident, Report } from "@/types";
 import { ItemStatus, ReportType } from "@/types";
-import { Badge } from "@components/ui/badge";
+
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import {
@@ -36,7 +36,6 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  EyeOff,
   FileText,
   Filter,
   Flag,
@@ -150,10 +149,10 @@ const ReportsPage: React.FC = () => {
     const IconComponent = typeInfo.icon;
 
     return (
-      <Badge className={typeInfo.class}>
+      <span className={`inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1 ${typeInfo.class}`}>
         <IconComponent className="h-3 w-3 mr-1" />
         {typeInfo.text}
-      </Badge>
+      </span>
     );
   };
 
@@ -189,13 +188,12 @@ const ReportsPage: React.FC = () => {
       },
     };
     const statusInfo = statusMap[status];
-    const IconComponent = statusInfo.icon;
 
     return (
-      <Badge className={statusInfo.class}>
-        <IconComponent className="h-3 w-3 mr-1" />
+      <span className={`inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1 ${statusInfo.class}`}>
+
         {statusInfo.text}
-      </Badge>
+      </span>
     );
   };
 

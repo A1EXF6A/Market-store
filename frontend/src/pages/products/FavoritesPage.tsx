@@ -22,7 +22,7 @@ import { toast } from "sonner";
 const FavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const {} = useAuthStore();
 
   useEffect(() => {
     loadFavorites();
@@ -33,7 +33,7 @@ const FavoritesPage: React.FC = () => {
       setLoading(true);
       console.log(Cookies.get("access_token"));
 
-      const data = await productsService.getFavorites(Number(user?.userId));
+      const data = await productsService.getFavorites();
 
       setFavorites(data);
     } catch (error: any) {

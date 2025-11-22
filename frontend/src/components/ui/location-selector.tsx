@@ -1,7 +1,7 @@
 import env from "@/config/env";
-import { cn } from "@/lib/utils";
 import { MapPin, X } from "lucide-react";
 import * as React from "react";
+import "@googlemaps/js-api-loader";
 import { Button } from "./button";
 import {
   Dialog,
@@ -37,27 +37,26 @@ export function LocationSelector({
     lng: 0,
   }); // Coordenadas 0,0 (punto neutral)
   const [googleMapsLoaded, setGoogleMapsLoaded] = React.useState(false);
-  const [userLocationDetected, setUserLocationDetected] = React.useState(false);
   const mapRef = React.useRef<HTMLDivElement>(null);
-  const mapInstanceRef = React.useRef<google.maps.Map | null>(null);
-  const markerRef = React.useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const mapInstanceRef = React.useRef<any>(null);
+  const markerRef = React.useRef<any>(null);
 
-  const GOOGLE_MAPS_API_KEY = env.googleMapsApiKey;
+  const GOOGLE_MAPS_API_KEY = env.GOOGLE_MAPS_API_KEY;
 
   // Load Google Maps API
   React.useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY) return;
-    
+
     const loadGoogleMaps = async () => {
       try {
         // Check if Google Maps is already loaded
-        if (window.google?.maps) {
+        if (window.google && window.google.maps) {
           setGoogleMapsLoaded(true);
           return;
         }
 
         // Load Google Maps using script tag
-        const script = document.createElement('script');
+        const script = document.createElement("script");
         script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&libraries=maps,marker&v=beta`;
         script.async = true;
         script.defer = true;
@@ -78,20 +77,21 @@ export function LocationSelector({
 
   // Initialize map when loaded and dialog opens
   React.useEffect(() => {
-    if (!googleMapsLoaded || !isOpen || !mapRef.current || !GOOGLE_MAPS_API_KEY) return;
+    if (!googleMapsLoaded || !isOpen || !mapRef.current || !GOOGLE_MAPS_API_KEY)
+      return;
 
     try {
       // Initialize map
-      const map = new google.maps.Map(mapRef.current, {
+      const map = new window.google.maps.Map(mapRef.current, {
         center: mapCenter,
         zoom: 2, // Zoom más amplio para vista mundial
-        mapId: 'location-selector-map',
+        mapId: "location-selector-map",
       });
 
       mapInstanceRef.current = map;
 
       // Add click listener
-      map.addListener('click', (event: google.maps.MapMouseEvent) => {
+      map.addListener("click", (event: any) => {
         if (event.latLng) {
           const latitude = event.latLng.lat();
           const longitude = event.latLng.lng();
@@ -100,24 +100,27 @@ export function LocationSelector({
           if (markerRef.current) {
             markerRef.current.position = event.latLng;
           } else {
-            markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-              map,
-              position: event.latLng,
-            });
+            markerRef.current =
+              new window.google.maps.marker.AdvancedMarkerElement({
+                map,
+                position: event.latLng,
+              });
           }
 
           // Reverse geocoding
-          const geocoder = new google.maps.Geocoder();
+          const geocoder = new window.google.maps.Geocoder();
           geocoder.geocode(
             { location: event.latLng },
-            (results, status) => {
-              if (status === 'OK' && results?.[0]) {
+            (results: any, status: any) => {
+              if (status === "OK" && results?.[0]) {
                 const address = results[0].formatted_address;
                 setSelectedLocation({ latitude, longitude, address });
                 setAddressInput(address);
               } else {
                 setSelectedLocation({ latitude, longitude });
-                setAddressInput(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+                setAddressInput(
+                  `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                );
               }
             },
           );
@@ -126,11 +129,16 @@ export function LocationSelector({
 
       // Add existing location marker if any
       if (selectedLocation) {
-        const position = { lat: selectedLocation.latitude, lng: selectedLocation.longitude };
-        markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-          map,
-          position,
-        });
+        const position = {
+          lat: selectedLocation.latitude,
+          lng: selectedLocation.longitude,
+        };
+        markerRef.current = new window.google.maps.marker.AdvancedMarkerElement(
+          {
+            map,
+            position,
+          },
+        );
         map.setCenter(position);
       }
     } catch (error) {
@@ -141,16 +149,16 @@ export function LocationSelector({
   const handleMapClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (GOOGLE_MAPS_API_KEY && googleMapsLoaded) return; // Google Maps handles this
-      
+
       // Fallback for simple map
       const rect = event.currentTarget.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      
+
       // Convert to approximate coordinates (this is a simple approximation)
       const latitude = -1.2491 + (y - rect.height / 2) * 0.001;
       const longitude = -78.6167 + (x - rect.width / 2) * 0.001;
-      
+
       setSelectedLocation({ latitude, longitude });
       setAddressInput(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
     },
@@ -172,47 +180,58 @@ export function LocationSelector({
   const handleAddressSearch = async () => {
     if (!addressInput.trim()) return;
 
-    if (GOOGLE_MAPS_API_KEY && googleMapsLoaded && window.google?.maps?.Geocoder) {
+    if (
+      GOOGLE_MAPS_API_KEY &&
+      googleMapsLoaded &&
+      window.google?.maps?.Geocoder
+    ) {
       // Use Google Maps Geocoding
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: addressInput }, (results, status) => {
-        if (status === 'OK' && results?.[0]) {
-          const location = results[0].geometry.location;
-          const latitude = location.lat();
-          const longitude = location.lng();
-          const address = results[0].formatted_address;
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode(
+        { address: addressInput },
+        (results: any, status: any) => {
+          if (status === "OK" && results?.[0]) {
+            const location = results[0].geometry.location;
+            const latitude = location.lat();
+            const longitude = location.lng();
+            const address = results[0].formatted_address;
 
-          setSelectedLocation({ latitude, longitude, address });
-          setMapCenter({ lat: latitude, lng: longitude });
-          
-          // Update map and marker if available
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.setCenter({ lat: latitude, lng: longitude });
-            
-            if (markerRef.current) {
-              markerRef.current.position = { lat: latitude, lng: longitude };
-            } else {
-              markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-                map: mapInstanceRef.current,
-                position: { lat: latitude, lng: longitude },
+            setSelectedLocation({ latitude, longitude, address });
+            setMapCenter({ lat: latitude, lng: longitude });
+
+            // Update map and marker if available
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setCenter({
+                lat: latitude,
+                lng: longitude,
               });
+
+              if (markerRef.current) {
+                markerRef.current.position = { lat: latitude, lng: longitude };
+              } else {
+                markerRef.current =
+                  new window.google.maps.marker.AdvancedMarkerElement({
+                    map: mapInstanceRef.current,
+                    position: { lat: latitude, lng: longitude },
+                  });
+              }
             }
           }
-        }
-      });
+        },
+      );
     } else {
       // Fallback: Simple coordinate parsing
-      const coords = addressInput.split(',').map(c => parseFloat(c.trim()));
+      const coords = addressInput.split(",").map((c) => parseFloat(c.trim()));
       if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
         const [latitude, longitude] = coords;
         setSelectedLocation({ latitude, longitude, address: addressInput });
         setMapCenter({ lat: latitude, lng: longitude });
       } else {
         // Just use the text as address
-        setSelectedLocation({ 
-          latitude: mapCenter.lat, 
-          longitude: mapCenter.lng, 
-          address: addressInput 
+        setSelectedLocation({
+          latitude: mapCenter.lat,
+          longitude: mapCenter.lng,
+          address: addressInput,
         });
       }
     }
@@ -237,7 +256,7 @@ export function LocationSelector({
             <DialogHeader>
               <DialogTitle>Ingresar Ubicación</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Dirección</label>
@@ -247,10 +266,11 @@ export function LocationSelector({
                   onChange={(e) => setAddressInput(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Puedes ingresar una dirección o coordenadas en formato: latitud, longitud
+                  Puedes ingresar una dirección o coordenadas en formato:
+                  latitud, longitud
                 </p>
               </div>
-              
+
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={handleClear}>
                   <X className="mr-2 h-4 w-4" />
@@ -260,11 +280,25 @@ export function LocationSelector({
                   type="button"
                   onClick={() => {
                     if (addressInput.trim()) {
-                      const coords = addressInput.split(',').map(c => parseFloat(c.trim()));
-                      if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-                        onChange?.({ latitude: coords[0], longitude: coords[1], address: addressInput });
+                      const coords = addressInput
+                        .split(",")
+                        .map((c) => parseFloat(c.trim()));
+                      if (
+                        coords.length === 2 &&
+                        !isNaN(coords[0]) &&
+                        !isNaN(coords[1])
+                      ) {
+                        onChange?.({
+                          latitude: coords[0],
+                          longitude: coords[1],
+                          address: addressInput,
+                        });
                       } else {
-                        onChange?.({ latitude: -1.2491, longitude: -78.6167, address: addressInput });
+                        onChange?.({
+                          latitude: -1.2491,
+                          longitude: -78.6167,
+                          address: addressInput,
+                        });
                       }
                       setIsOpen(false);
                     }
@@ -309,10 +343,7 @@ export function LocationSelector({
                 onChange={(e) => setAddressInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddressSearch()}
               />
-              <Button 
-                type="button" 
-                onClick={handleAddressSearch}
-              >
+              <Button type="button" onClick={handleAddressSearch}>
                 Buscar
               </Button>
             </div>
@@ -325,29 +356,33 @@ export function LocationSelector({
                 <div className="flex items-center justify-center h-full bg-gray-100">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                    <p className="mt-2 text-sm text-gray-600">Cargando Google Maps...</p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      Cargando Google Maps...
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div 
+                <div
                   className="w-full h-full bg-gray-100 flex items-center justify-center cursor-crosshair relative"
                   onClick={handleMapClick}
                 >
                   <div className="text-center">
                     <MapPin className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600">Haz clic para seleccionar ubicación</p>
+                    <p className="text-sm text-gray-600">
+                      Haz clic para seleccionar ubicación
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
                       Selector de ubicación simplificado
                     </p>
                   </div>
-                  
+
                   {selectedLocation && (
-                    <div 
+                    <div
                       className="absolute bg-red-500 w-3 h-3 rounded-full border-2 border-white shadow-lg"
                       style={{
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)'
+                        left: "50%",
+                        top: "50%",
+                        transform: "translate(-50%, -50%)",
                       }}
                     />
                   )}

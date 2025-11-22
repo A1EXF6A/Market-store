@@ -23,7 +23,6 @@ import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { GetUser } from "../common/decorators/get-user.decorator";
 import { User, UserRole } from "../entities/user.entity";
-import { composeLog } from "testcontainers/build/common";
 
 @Controller("products")
 export class ProductsController {

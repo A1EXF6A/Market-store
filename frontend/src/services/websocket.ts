@@ -30,8 +30,8 @@ class WebSocketService {
       (data: { userId: number; isTyping: boolean }) =>
         this._typingCallback?.(data),
     );
-    this.socket.on("joined-chat", (chatId: string) => {});
-    this.socket.on("left-chat", (chatId: string) => {});
+    this.socket.on("joined-chat", (_chatId: string) => {});
+    this.socket.on("left-chat", (_chatId: string) => {});
   }
 
   disconnect(): void {

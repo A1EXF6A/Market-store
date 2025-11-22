@@ -15,11 +15,7 @@ import { Rating } from "./entities/rating.entity";
 
 const AppDataSource = new DataSource({
   type: "postgres",
-  host: env.database.host || "localhost",
-  port: env.database.port || 5432,
-  username: env.database.user || "postgres",
-  password: env.database.password || "password",
-  database: env.database.name || "ventas_multiempresa",
+  url: env.databaseUrl,
   synchronize: false,
   logging: true,
   entities: [User, Item, ItemPhoto, Service, Favorite, Report, Appeal, Incident, Chat, Message, Rating],

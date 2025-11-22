@@ -165,7 +165,7 @@ export default function MyIncidentsPage() {
                   <TableRow key={incident.incidentId}>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        {getStatusIcon(incident.item?.status)}
+                        {getStatusIcon(incident.item?.status || 'active')}
                         <div>
                           <p className="font-medium">{incident.item?.name}</p>
                           <p className="text-sm text-gray-500">
@@ -175,7 +175,7 @@ export default function MyIncidentsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(incident.item?.status)}
+                      {getStatusBadge(incident.item?.status || 'active')}
                     </TableCell>
                     <TableCell>
                       <p
@@ -187,7 +187,7 @@ export default function MyIncidentsPage() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">
-                        {new Date(incident.createdAt).toLocaleDateString(
+                        {new Date(incident.reportedAt).toLocaleDateString(
                           "es-ES",
                           {
                             year: "numeric",

@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { dashboardService, BuyerStats, SellerStats, AdminStats } from "@/services/dashboard";
+import { dashboardService } from "@/services/dashboard";
+import type { BuyerStats, SellerStats, AdminStats } from "@/services/dashboard";
 import { toast } from "sonner";
 
 const DashboardPage: React.FC = () => {
