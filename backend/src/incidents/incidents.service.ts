@@ -152,6 +152,7 @@ export class IncidentsService {
     return this.appealRepository.save(appeal);
   }
 
+<<<<<<< HEAD
   /* ===================== LISTADO DE INCIDENCIAS (moderador/admin) ===================== */
 
   async getIncidents(filters?: IncidentFilters): Promise<Incident[]> {
@@ -204,6 +205,59 @@ export class IncidentsService {
   }
 
   /* ===================== LISTADO DE REPORTES (moderador/admin) ===================== */
+=======
+ async getIncidents(filters?: IncidentFilters): Promise<Incident[]> {
+  const queryBuilder = this.incidentRepository
+    .createQueryBuilder("incident")
+    .leftJoinAndSelect("incident.item", "item")
+    .leftJoinAndSelect("incident.seller", "seller")
+    .leftJoinAndSelect("incident.moderator", "moderator")
+    // 👇 NUEVO: traer también las apelaciones
+    .leftJoinAndSelect("incident.appeals", "appeals");
+
+  if (filters?.startDate && filters?.endDate) {
+    queryBuilder.andWhere(
+      "incident.reportedAt BETWEEN :startDate AND :endDate",
+      {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      },
+    );
+  }
+
+  if (filters?.status) {
+    queryBuilder.andWhere("incident.status = :status", {
+      status: filters.status,
+    });
+  }
+
+  if (filters?.moderatorId) {
+    queryBuilder.andWhere("incident.moderatorId = :moderatorId", {
+      moderatorId: +filters.moderatorId,
+    });
+  }
+
+  if (filters?.sellerId) {
+    queryBuilder.andWhere("incident.sellerId = :sellerId", {
+      sellerId: +filters.sellerId,
+    });
+  }
+
+  if (filters?.search) {
+    queryBuilder.andWhere(
+      "(incident.description ILIKE :search " +
+        "OR item.name ILIKE :search " +
+        "OR item.code ILIKE :search " +
+        "OR seller.firstName ILIKE :search " +
+        "OR seller.lastName ILIKE :search)",
+      { search: `%${filters.search}%` },
+    );
+  }
+
+  return queryBuilder.orderBy("incident.reportedAt", "DESC").getMany();
+}
+
+>>>>>>> 0cda334 (Cambios antes de pasar a rama cambios)
 
   async getReports(filters?: ReportFilters): Promise<Report[]> {
     const queryBuilder = this.reportRepository
@@ -260,6 +314,7 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
+<<<<<<< HEAD
   /* ===================== RESOLVER INCIDENTE ===================== */
 
   /**
@@ -294,6 +349,47 @@ export class IncidentsService {
   }
 
   /* ===================== INCIDENCIAS DEL VENDEDOR ===================== */
+=======
+ async resolveIncident(
+  incidentId: number,
+  incidentStatus: ItemStatus, // ← corregido
+  moderatorId: number,
+  itemStatus?: ItemStatus,
+): Promise<Incident> {
+  const incident = await this.incidentRepository.findOne({
+    where: { incidentId },
+    relations: ["item", "appeals"], 
+  });
+
+  if (!incident) {
+    throw new NotFoundException("Incident not found");
+  }
+
+  // Estado final de la incidencia
+  incident.status = incidentStatus;
+  incident.moderatorId = moderatorId;
+
+  // Si tienes este campo agregado, usa esto:
+  // incident.resolvedAt = new Date();
+
+  // Cambiar estado del producto (si aplica)
+  if (itemStatus !== undefined) {
+    await this.itemRepository.update(incident.itemId, {
+      status: itemStatus,
+    });
+  }
+
+  // Marcar apelaciones como revisadas
+  if (incident.appeals?.length) {
+    await this.appealRepository.update(
+      { incidentId: incident.incidentId },
+      { reviewed: true },
+    );
+  }
+
+  return this.incidentRepository.save(incident);
+}
+>>>>>>> 0cda334 (Cambios antes de pasar a rama cambios)
 
   async getSellerIncidents(sellerId: number): Promise<Incident[]> {
     return this.incidentRepository.find({

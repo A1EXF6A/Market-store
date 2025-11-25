@@ -125,8 +125,47 @@ const Layout: React.FC = () => {
                       <span className="pointer-events-none absolute inset-x-2 -bottom-[2px] h-[2px] rounded bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600" />
                     )}
                   </Link>
+<<<<<<< HEAD
                 );
               })}
+=======
+                </Button>
+              )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center space-x-2"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="hidden md:block">{user?.firstName}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+  <Settings className="mr-2 h-4 w-4" />
+  Configuración
+</DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-600"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+>>>>>>> 0cda334 (Cambios antes de pasar a rama cambios)
             </div>
           </div>
 

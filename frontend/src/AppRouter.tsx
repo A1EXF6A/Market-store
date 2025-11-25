@@ -31,6 +31,7 @@ import ModeratorDashboardPage from "./pages/moderator/ModeratorDashboardPage";
 
 import { useAuthStore } from "./store/authStore";
 import { UserRole } from "./types";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function AppRouter() {
   const { initializeAuth } = useAuthStore();
@@ -197,11 +198,16 @@ function AppRouter() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:id" element={<ChatPage />} />
         </Route>
+<<<<<<< HEAD
 
         {/* Si no coincide ninguna ruta */}
         <Route path="*" element={<Navigate to="/login" replace />} />
+=======
+        <Route path="settings" element={<SettingsPage />} />
+>>>>>>> 0cda334 (Cambios antes de pasar a rama cambios)
       </Routes>
     </BrowserRouter>
+
   );
 }
 
