@@ -1,4 +1,14 @@
-import { Controller, Get, Param, Patch, Body, UseGuards, Put, Delete, Query } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Body,
+  UseGuards,
+  Put,
+  Delete,
+  Query,
+} from "@nestjs/common";
 import { UsersService, UserFilters } from "./users.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -13,6 +23,9 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  // =========================
+  // ADMIN/MOD: LISTAR USUARIOS
+  // =========================
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MODERATOR)
@@ -20,23 +33,41 @@ export class UsersController {
     const filters: UserFilters = {
       role: query.role,
       status: query.status,
-      search: query.search
+      search: query.search,
     };
     return this.usersService.findAll(filters);
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.usersService.findById(+id);
+  // =========================
+  // PERFIL PROPIO (EDITAR)
+  // =========================
+  @Put("profile")
+  updateProfile(@GetUser() user: User, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateUser(user.userId, dto);
   }
 
-  @Patch(":id/status")
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
-  updateStatus(@Param("id") id: string, @Body("status") status: UserStatus) {
-    return this.usersService.updateUserStatus(+id, status);
+  // =========================
+  // CAMBIAR CONTRASEÑA PROPIA
+  // =========================
+  @Patch("change-password")
+  changePassword(@GetUser() user: User, @Body() dto: ChangePasswordDto) {
+    return this.usersService.changePassword(user.userId, dto);
   }
 
+  // =========================
+  // ✅ NUEVO: CAMBIAR ROL PROPIO BUYER/SELLER
+  // =========================
+  @Patch("me/role")
+  switchMyRole(
+    @GetUser() user: User,
+    @Body("role") role: UserRole,
+  ) {
+    return this.usersService.switchMyRole(user.userId, role);
+  }
+
+  // =========================
+  // ADMIN: VERIFY
+  // =========================
   @Patch(":id/verify")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -44,24 +75,22 @@ export class UsersController {
     return this.usersService.verifyUser(+id);
   }
 
-  @Put("profile")
-  updateProfile(@GetUser() user: User, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateUser(user.userId, updateUserDto);
-  }
-
-  @Patch("change-password")
-  async changePassword(@GetUser() user: User, @Body() changePasswordDto: ChangePasswordDto) {
-    await this.usersService.changePassword(user.userId, changePasswordDto);
-    return { message: "Password changed successfully" };
-  }
-
-  @Patch(":id")
+  // =========================
+  // ADMIN: SUSPENDER/ACTIVAR
+  // =========================
+  @Patch(":id/status")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  updateUser(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateUser(+id, updateUserDto);
+  updateStatus(
+    @Param("id") id: string,
+    @Body("status") status: UserStatus,
+  ) {
+    return this.usersService.updateUserStatus(+id, status);
   }
 
+  // =========================
+  // ADMIN: CAMBIAR ROL A OTRO USUARIO
+  // =========================
   @Patch(":id/role")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -69,11 +98,24 @@ export class UsersController {
     return this.usersService.updateUserRole(+id, role);
   }
 
+  // =========================
+  // ADMIN: ELIMINAR
+  // =========================
   @Delete(":id")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   async deleteUser(@Param("id") id: string) {
     await this.usersService.deleteUser(+id);
     return { message: "User deleted successfully" };
+  }
+
+  // =========================
+  // GET USER BY ID (ADMIN/MOD)
+  // =========================
+  @Get(":id")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
+  findById(@Param("id") id: string) {
+    return this.usersService.findById(+id);
   }
 }

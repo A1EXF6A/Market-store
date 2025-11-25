@@ -29,13 +29,16 @@ export class Appeal {
   @Column({ type: "boolean", default: false })
   reviewed: boolean;
 
+  // ✅ Relación inversa con incident.appeals
   @ManyToOne(() => Incident, (incident) => incident.appeals, {
     onDelete: "CASCADE",
   })
   @JoinColumn({ name: "incident_id" })
   incident: Incident;
 
-  @ManyToOne(() => User, (user) => user.appeals, { onDelete: "CASCADE" })
+  @ManyToOne(() => User, (user) => user.appeals, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "seller_id" })
   seller: User;
 }

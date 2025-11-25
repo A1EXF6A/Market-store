@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/authStore";
-import type { Incident } from "@/types";
+import type { Incident, Appeal } from "@/types";
 import { ItemStatus, UserRole } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -48,20 +48,39 @@ import {
   Search,
   User,
   UserCheck,
+  UserCheck as UserCheckIcon,
   X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+/* ============================================================
+   ✅ Tipo extendido para permitir appeals sin cambiar types globales
+   ============================================================ */
+type IncidentWithAppeals = Incident & {
+  appeals?: Appeal[];
+};
+
+/* ============================================================
+   COMPONENTE
+   ============================================================ */
 const IncidentsPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+
+  const [incidents, setIncidents] = useState<IncidentWithAppeals[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<IncidentFilters>({});
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
-    null,
-  );
+  const [selectedIncident, setSelectedIncident] =
+    useState<IncidentWithAppeals | null>(null);
+
+  /** Modal resolve */
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+
+  /** Modal appeal */
+  const [isAppealDialogOpen, setIsAppealDialogOpen] = useState(false);
+  const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
+
+  /** Estado de resolución */
   const [resolution, setResolution] = useState<{
     status: ItemStatus;
     description: string;
@@ -69,8 +88,12 @@ const IncidentsPage: React.FC = () => {
     status: ItemStatus.ACTIVE,
     description: "",
   });
+
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
+  /* ============================================================
+     Cargar incidencias
+     ============================================================ */
   useEffect(() => {
     loadIncidents();
   }, []);
@@ -78,9 +101,12 @@ const IncidentsPage: React.FC = () => {
   const loadIncidents = async (customFilters?: IncidentFilters) => {
     try {
       setLoading(true);
-      const currentFilters = customFilters !== undefined ? customFilters : filters;
+      const currentFilters =
+        customFilters !== undefined ? customFilters : filters;
+
       const data = await incidentsService.getIncidents(currentFilters);
-      setIncidents(data);
+
+      setIncidents(data as IncidentWithAppeals[]);
     } catch (error: any) {
       toast.error("Error al cargar incidencias");
     } finally {
@@ -93,6 +119,9 @@ const IncidentsPage: React.FC = () => {
     await loadIncidents({});
   };
 
+  /* ============================================================
+     Asignar incidencia
+     ============================================================ */
   const handleAssignIncident = async (incidentId: number) => {
     if (!currentUser) return;
 
@@ -108,6 +137,9 @@ const IncidentsPage: React.FC = () => {
     }
   };
 
+  /* ============================================================
+     Resolver incidencia
+     ============================================================ */
   const handleResolveIncident = async () => {
     if (!selectedIncident) return;
 
@@ -125,6 +157,9 @@ const IncidentsPage: React.FC = () => {
     }
   };
 
+  /* ============================================================
+     Badges
+     ============================================================ */
   const getStatusBadge = (status: ItemStatus) => {
     const statusMap = {
       [ItemStatus.ACTIVE]: {
@@ -148,133 +183,76 @@ const IncidentsPage: React.FC = () => {
         class: "bg-red-100 text-red-800",
       },
     };
+
     const statusInfo = statusMap[status];
     return <Badge className={statusInfo.class}>{statusInfo.text}</Badge>;
   };
 
+  const renderAppealBadge = (incident: IncidentWithAppeals) => {
+    const appeals = incident.appeals ?? [];
+    const hasPending = appeals.some((a) => !a.reviewed);
+
+    if (hasPending)
+      return (
+        <Badge variant="outline" className="text-blue-700 border-blue-700">
+          Apelación pendiente
+        </Badge>
+      );
+
+    if (appeals.length > 0)
+      return <span className="text-xs text-gray-500">Revisada</span>;
+
+    return <span className="text-xs text-gray-400">Sin apelaciones</span>;
+  };
+
+  /* ============================================================
+     Modal para ver apelación
+     ============================================================ */
+  const openAppealDialog = (incident: IncidentWithAppeals) => {
+    const appeals = incident.appeals ?? [];
+    if (!appeals.length) return;
+
+    const lastAppeal = [...appeals].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+
+    setSelectedAppeal(lastAppeal);
+    setIsAppealDialogOpen(true);
+  };
+
+  /* ============================================================
+     Loader
+     ============================================================ */
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando incidencias...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
+  /* ============================================================
+     MAIN RENDER
+     ============================================================ */
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <AlertTriangle className="h-8 w-8 text-orange-600" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Gestión de Incidencias
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Administra incidencias y reports de la plataforma
-          </p>
+          <h1 className="text-3xl font-bold">Gestión de Incidencias</h1>
+          <p className="text-gray-600">Administra incidencias y apelaciones</p>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Producto, vendedor..."
-                  className="pl-10"
-                  value={filters.search || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select
-                value={filters.status || "all"}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    status: value === "all" ? undefined : (value as ItemStatus),
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value={ItemStatus.PENDING}>Pendientes</SelectItem>
-                  <SelectItem value={ItemStatus.SUSPENDED}>
-                    Suspendidos
-                  </SelectItem>
-                  <SelectItem value={ItemStatus.BANNED}>Prohibidos</SelectItem>
-                  <SelectItem value={ItemStatus.ACTIVE}>Activos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Fecha Inicio</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, startDate: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">Fecha Fin</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate || ""}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, endDate: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              onClick={clearFilters}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => loadIncidents(filters)}
-              className="flex items-center gap-2"
-            >
-              <Search className="h-4 w-4" />
-              Buscar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Incidents Table */}
+      {/* ============================================================
+         TABLA
+         ============================================================ */}
       <Card>
         <CardHeader>
           <CardTitle>Incidencias ({incidents.length})</CardTitle>
         </CardHeader>
+
         <CardContent>
           <Table>
             <TableHeader>
@@ -284,67 +262,68 @@ const IncidentsPage: React.FC = () => {
                 <TableHead>Estado</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Moderador</TableHead>
+                <TableHead>Apelación</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {incidents.map((incident) => (
                 <TableRow key={incident.incidentId}>
                   <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="font-medium">{incident.item?.name}</p>
-                        <p className="text-sm text-gray-600">
+                        <div className="font-medium">
+                          {incident.item?.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
                           ID: {incident.itemId}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
+
                   <TableCell>
-                    {incident.seller && (
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-gray-400" />
-                        <span>
-                          {incident.seller.firstName} {incident.seller.lastName}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      {incident.seller?.firstName}{" "}
+                      {incident.seller?.lastName}
+                    </div>
                   </TableCell>
+
                   <TableCell>{getStatusBadge(incident.status)}</TableCell>
+
                   <TableCell>
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(incident.reportedAt).toLocaleDateString()}
-                    </div>
+                    {new Date(incident.reportedAt).toLocaleDateString()}
                   </TableCell>
+
                   <TableCell>
                     {incident.moderator ? (
-                      <div className="flex items-center space-x-2">
-                        <UserCheck className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">
-                          {incident.moderator.firstName}
-                        </span>
-                      </div>
+                      <span className="text-sm">
+                        {incident.moderator.firstName}
+                      </span>
                     ) : (
                       <Badge variant="outline" className="text-orange-600">
-                        <Clock className="h-3 w-3 mr-1" />
                         Sin asignar
                       </Badge>
                     )}
                   </TableCell>
+
+                  {/* ===================== Apelación ===================== */}
+                  <TableCell>{renderAppealBadge(incident)}</TableCell>
+
+                  {/* ===================== Acciones ===================== */}
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={actionLoading === incident.incidentId}
-                        >
+                        <Button variant="ghost" size="sm">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
+
                       <DropdownMenuContent align="end">
+                        {/* Asignar */}
                         {!incident.moderatorId && (
                           <DropdownMenuItem
                             onClick={() =>
@@ -355,11 +334,30 @@ const IncidentsPage: React.FC = () => {
                             Asignar a mí
                           </DropdownMenuItem>
                         )}
+
+                        {/* Ver apelación */}
+                        {((incident as IncidentWithAppeals).appeals?.length ??
+                          0) > 0 && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              openAppealDialog(
+                                incident as IncidentWithAppeals,
+                              )
+                            }
+                          >
+                            <AlertTriangle className="h-4 w-4 mr-2" />
+                            Ver Apelación
+                          </DropdownMenuItem>
+                        )}
+
+                        {/* Resolver */}
                         {(incident.moderatorId === currentUser?.userId ||
                           currentUser?.role === UserRole.ADMIN) && (
                           <DropdownMenuItem
                             onClick={() => {
-                              setSelectedIncident(incident);
+                              setSelectedIncident(
+                                incident as IncidentWithAppeals,
+                              );
                               setIsResolveDialogOpen(true);
                             }}
                           >
@@ -374,35 +372,54 @@ const IncidentsPage: React.FC = () => {
               ))}
             </TableBody>
           </Table>
-
-          {incidents.length === 0 && (
-            <div className="text-center py-12">
-              <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No se encontraron incidencias
-              </h3>
-              <p className="text-gray-600">
-                No hay incidencias que coincidan con los filtros seleccionados
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Resolve Incident Dialog */}
+      {/* ============================================================
+         Modal Ver Apelación
+         ============================================================ */}
+      <Dialog open={isAppealDialogOpen} onOpenChange={setIsAppealDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apelación del vendedor</DialogTitle>
+            <DialogDescription>
+              Mensaje enviado para reconsiderar la sanción.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAppeal && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-100 rounded text-sm whitespace-pre-wrap">
+                {selectedAppeal.reason}
+              </div>
+              <div className="text-xs text-gray-500">
+                Fecha:{" "}
+                {new Date(selectedAppeal.createdAt).toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setIsAppealDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================
+         Modal Resolver Incidencia
+         ============================================================ */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Resolver Incidencia</DialogTitle>
-            <DialogDescription>
-              Define el estado final y la resolución para esta incidencia.
-            </DialogDescription>
           </DialogHeader>
 
           {selectedIncident && (
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-medium">{selectedIncident.item?.name}</h4>
+              <div className="p-4 bg-gray-50 rounded">
+                <strong>{selectedIncident.item?.name}</strong>
                 <p className="text-sm text-gray-600">
                   Vendedor: {selectedIncident.seller?.firstName}{" "}
                   {selectedIncident.seller?.lastName}
@@ -430,16 +447,20 @@ const IncidentsPage: React.FC = () => {
                     <SelectItem value={ItemStatus.SUSPENDED}>
                       Suspender
                     </SelectItem>
-                    <SelectItem value={ItemStatus.BANNED}>Prohibir</SelectItem>
-                    <SelectItem value={ItemStatus.HIDDEN}>Ocultar</SelectItem>
+                    <SelectItem value={ItemStatus.BANNED}>
+                      Prohibir
+                    </SelectItem>
+                    <SelectItem value={ItemStatus.HIDDEN}>
+                      Ocultar
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Descripción de la Resolución</Label>
+                <Label>Descripción</Label>
                 <Textarea
-                  placeholder="Explica las razones de esta decisión..."
+                  rows={3}
                   value={resolution.description}
                   onChange={(e) =>
                     setResolution((prev) => ({
@@ -447,7 +468,6 @@ const IncidentsPage: React.FC = () => {
                       description: e.target.value,
                     }))
                   }
-                  rows={3}
                 />
               </div>
             </div>
@@ -460,7 +480,9 @@ const IncidentsPage: React.FC = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleResolveIncident}>Resolver Incidencia</Button>
+            <Button onClick={handleResolveIncident}>
+              Resolver Incidencia
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -469,4 +491,3 @@ const IncidentsPage: React.FC = () => {
 };
 
 export default IncidentsPage;
-

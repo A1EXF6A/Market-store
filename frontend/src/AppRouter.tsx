@@ -22,6 +22,7 @@ import ProductsPage from "./pages/products/ProductsPage";
 import UsersPage from "./pages/users/UsersPage";
 import { useAuthStore } from "./store/authStore";
 import { UserRole } from "./types";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function AppRouter() {
   const { initializeAuth } = useAuthStore();
@@ -164,8 +165,10 @@ function AppRouter() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:id" element={<ChatPage />} />
         </Route>
+        <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
+
   );
 }
 

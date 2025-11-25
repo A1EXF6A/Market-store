@@ -17,6 +17,10 @@ export interface UserFilters {
 }
 
 export const usersService = {
+  // =============================
+  // LISTAR Y ADMINISTRAR USUARIOS
+  // =============================
+
   getAll: async (filters?: UserFilters): Promise<User[]> => {
     const params = new URLSearchParams();
     if (filters?.role) params.append("role", filters.role);
@@ -53,5 +57,29 @@ export const usersService = {
     const response = await api.patch(`/users/${id}/role`, { role });
     return response.data;
   },
-};
 
+  // =============================
+  // PERFIL DEL USUARIO AUTENTICADO
+  // =============================
+
+  // 🔹 Editar perfil propio
+  updateProfile: async (data: any): Promise<User> => {
+    const response = await api.put("/users/profile", data);
+    return response.data;
+  },
+
+  // 🔹 Cambiar rol propio (Vendedor <-> Comprador)
+  switchMyRole: async (role: "buyer" | "seller"): Promise<User> => {
+    const response = await api.patch("/users/me/role", { role });
+    return response.data;
+  },
+
+  // 🔹 Cambiar contraseña propia (FALTABA)
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<User> => {
+    const response = await api.patch("/users/change-password", data);
+    return response.data;
+  },
+};

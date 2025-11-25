@@ -15,6 +15,10 @@ import AppDataSource from "./data-source";
   imports: [
     TypeOrmModule.forRoot({
       ...AppDataSource.options,
+      autoLoadEntities: true,
+
+      // ✅ SOLO DEV: actualiza BD con resolved_at y relaciones
+      synchronize: true,
     }),
     PassportModule,
     AuthModule,
