@@ -141,7 +141,8 @@ export class IncidentsService {
       .createQueryBuilder("incident")
       .leftJoinAndSelect("incident.item", "item")
       .leftJoinAndSelect("incident.seller", "seller")
-      .leftJoinAndSelect("incident.moderator", "moderator");
+      .leftJoinAndSelect("incident.moderator", "moderator")
+      .leftJoinAndSelect("incident.appeals", "appeals");
 
     if (filters?.startDate && filters?.endDate) {
       queryBuilder.andWhere(
