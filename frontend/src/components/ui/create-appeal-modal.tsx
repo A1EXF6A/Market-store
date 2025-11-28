@@ -1,4 +1,5 @@
 import type { Incident } from "@/types";
+import { ItemStatus } from "@/types";
 import { Button } from "@components/ui/button";
 import {
   Dialog,

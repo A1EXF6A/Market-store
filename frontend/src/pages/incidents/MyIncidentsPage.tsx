@@ -52,7 +52,7 @@ export default function MyIncidentsPage() {
     }
   };
 
-  const getStatusBadge = (status: ItemStatus) => {
+  const getStatusBadge = (status?: ItemStatus) => {
     const variants = {
       [ItemStatus.ACTIVE]: { variant: "default" as const, label: "Activo" },
       [ItemStatus.SUSPENDED]: {
@@ -67,14 +67,14 @@ export default function MyIncidentsPage() {
       },
     };
 
-    const config = variants[status] || {
+    const config = (status ? variants[status] : undefined) || {
       variant: "secondary" as const,
-      label: status,
+      label: status ?? "Desconocido",
     };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getStatusIcon = (status: ItemStatus) => {
+  const getStatusIcon = (status?: ItemStatus) => {
     switch (status) {
       case ItemStatus.ACTIVE:
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -184,7 +184,7 @@ export default function MyIncidentsPage() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">
-                        {new Date(incident.createdAt).toLocaleDateString(
+                        {new Date(incident.reportedAt).toLocaleDateString(
                           "es-ES",
                           {
                             year: "numeric",

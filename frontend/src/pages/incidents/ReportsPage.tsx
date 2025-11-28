@@ -186,7 +186,7 @@ const ReportsPage: React.FC = () => {
   };
 
   const getReportTypeBadge = (type: ReportType) => {
-    const typeMap = {
+    const typeMap: Record<ReportType, { text: string; class: string; icon: React.ComponentType<any> }> = {
       [ReportType.SPAM]: {
         text: "Spam",
         class: "bg-orange-100 text-orange-800",
@@ -219,10 +219,19 @@ const ReportsPage: React.FC = () => {
     );
   };
 
-  const getStatusBadge = (status: ItemStatus) => {
+  const getStatusBadge = (status?: ItemStatus) => {
+    if (!status) {
+      return (
+        <Badge className="bg-gray-100 text-gray-800">
+          <Clock className="h-3 w-3 mr-1" />
+          Desconocido
+        </Badge>
+      );
+    }
+
     const statusMap: Record<
       ItemStatus,
-      { text: string; class: string; icon: React.ComponentType }
+      { text: string; class: string; icon: React.ComponentType<any> }
     > = {
       [ItemStatus.PENDING]: {
         text: "Pendiente",
