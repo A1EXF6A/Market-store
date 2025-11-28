@@ -105,8 +105,15 @@ async create(
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.seller", "seller")
       .leftJoinAndSelect("item.photos", "photos")
-      .leftJoinAndSelect("item.service", "service")
-      .where("item.status = :status", { status: ItemStatus.ACTIVE });
+      .leftJoinAndSelect("item.service", "service");
+
+    // Por defecto mostrar solo productos 'active', pero si se pasa un filtro
+    // `status` lo respetamos.
+    if (filters?.status) {
+      queryBuilder.where("item.status = :status", { status: filters.status });
+    } else {
+      queryBuilder.where("item.status = :status", { status: ItemStatus.ACTIVE });
+    }
 
     if (!filters) {
       return queryBuilder.getMany();

@@ -27,6 +27,7 @@ export const productsService = {
     if (filters?.maxPrice !== undefined)
       params.append("maxPrice", filters.maxPrice.toString());
     if (filters?.location) params.append("location", filters.location);
+    if (filters?.status) params.append("status", filters.status);
     if (filters?.search) params.append("search", filters.search);
 
     const queryString = params.toString();
