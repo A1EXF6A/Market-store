@@ -83,8 +83,12 @@ export class IncidentsController {
   @Patch(":id/assign")
   @UseGuards(RolesGuard)
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
-  assignModerator(@Param("id") id: string, @GetUser() user: User) {
-    return this.incidentsService.assignModerator(+id, user.userId);
+  assignModerator(
+    @Param("id") id: string,
+    @Body("moderatorId") moderatorId: number,
+    @GetUser() user: User,
+  ) {
+    return this.incidentsService.assignModerator(+id, user.userId, moderatorId);
   }
 
   @Patch(":id/resolve")

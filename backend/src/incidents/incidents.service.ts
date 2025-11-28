@@ -9,7 +9,7 @@ import { Incident } from "../entities/incident.entity";
 import { Report } from "../entities/report.entity";
 import { Appeal } from "../entities/appeal.entity";
 import { Item, ItemStatus } from "../entities/item.entity";
-import { User } from "../entities/user.entity";
+import { User, UserRole } from "../entities/user.entity";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 
@@ -40,6 +40,8 @@ export class IncidentsService {
     private appealRepository: Repository<Appeal>,
     @InjectRepository(Item)
     private itemRepository: Repository<Item>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   async createReport(
@@ -216,7 +218,8 @@ export class IncidentsService {
 
   async assignModerator(
     incidentId: number,
-    moderatorId: number,
+    actorId: number,
+    targetModeratorId?: number,
   ): Promise<Incident> {
     const incident = await this.incidentRepository.findOne({
       where: { incidentId },
@@ -225,7 +228,33 @@ export class IncidentsService {
       throw new NotFoundException("Incident not found");
     }
 
-    incident.moderatorId = moderatorId;
+    const assignTo = targetModeratorId ?? actorId;
+
+    // If assigning to someone else, only admins are allowed
+    if (targetModeratorId && targetModeratorId !== actorId) {
+      const actor = await this.userRepository.findOne({ where: { userId: actorId } });
+      if (!actor) throw new NotFoundException("Actor user not found");
+      if (actor.role !== UserRole.ADMIN) {
+        throw new ForbiddenException("Only admins can assign incidents to other moderators");
+      }
+
+      const target = await this.userRepository.findOne({ where: { userId: targetModeratorId } });
+      if (!target) throw new NotFoundException("Target moderator not found");
+      if (target.role !== UserRole.MODERATOR) {
+        throw new ForbiddenException("Target user is not a moderator");
+      }
+    }
+
+    // Ensure the assignee is a moderator
+    const targetUser = await this.userRepository.findOne({ where: { userId: assignTo } });
+    if (!targetUser) {
+      throw new NotFoundException("User to assign not found");
+    }
+    if (targetUser.role !== UserRole.MODERATOR) {
+      throw new ForbiddenException("Assigned user must be a moderator");
+    }
+
+    incident.moderatorId = assignTo;
     return this.incidentRepository.save(incident);
   }
 
