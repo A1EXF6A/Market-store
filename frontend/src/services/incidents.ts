@@ -47,8 +47,9 @@ export const incidentsService = {
     return response.data;
   },
 
-  assignIncident: async (id: number): Promise<Incident> => {
-    const response = await api.patch(`/incidents/${id}/assign`);
+  assignIncident: async (id: number, moderatorId?: number): Promise<Incident> => {
+    const payload = moderatorId ? { moderatorId } : {};
+    const response = await api.patch(`/incidents/${id}/assign`, payload);
     return response.data;
   },
 
