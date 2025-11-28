@@ -1,4 +1,4 @@
-import type { Incident, Report } from "@/types";
+import type { Incident, Report, Appeal } from "@/types";
 import { ItemStatus, ReportType } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
   DialogTrigger,
 } from "@components/ui/dialog";
 import { Input } from "@components/ui/input";
@@ -58,6 +59,7 @@ import { toast } from "sonner";
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReportFilters & IncidentFilters>({});
@@ -80,9 +82,12 @@ const ReportsPage: React.FC = () => {
       if (activeTab === "reports") {
         const data = await incidentsService.getReports(currentFilters);
         setReports(data);
-      } else {
+      } else if (activeTab === "incidents") {
         const data = await incidentsService.getIncidents(currentFilters);
         setIncidents(data);
+      } else if (activeTab === "appeals") {
+        const data = await incidentsService.getAppeals();
+        setAppeals(data);
       }
     } catch (error: any) {
       toast.error("Error al cargar datos");
@@ -151,6 +156,9 @@ const ReportsPage: React.FC = () => {
       </Dialog>
     );
   };
+
+  const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
+  const [isAppealViewOpen, setIsAppealViewOpen] = useState(false);
 
   const handleAssignModerator = async (incidentId: number) => {
     try {
@@ -294,7 +302,7 @@ const ReportsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
             Reportes
@@ -302,6 +310,10 @@ const ReportsPage: React.FC = () => {
           <TabsTrigger value="incidents" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Incidentes y Apelaciones
+          </TabsTrigger>
+          <TabsTrigger value="appeals" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Apelaciones
           </TabsTrigger>
         </TabsList>
 
@@ -874,6 +886,110 @@ const ReportsPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="appeals" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Apelaciones ({appeals.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Apelación ID</TableHead>
+                    <TableHead>Incidencia</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {appeals.map((appeal) => (
+                    <TableRow key={appeal.appealId}>
+                      <TableCell>
+                        <div className="font-medium">{appeal.appealId}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-600">{appeal.incidentId}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-600">{appeal.sellerId}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <p className="text-sm text-gray-600 line-clamp-2">{appeal.reason}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-gray-600">
+                          {new Date(appeal.createdAt).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {appeal.reviewed ? (
+                          <Badge className="bg-green-100 text-green-800">Revisada</Badge>
+                        ) : (
+                          <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedAppeal(appeal);
+                              setIsAppealViewOpen(true);
+                            }}
+                          >
+                            Ver
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {appeals.length === 0 && (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay apelaciones</h3>
+                  <p className="text-gray-600">No se encontraron apelaciones en el sistema.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog open={isAppealViewOpen} onOpenChange={setIsAppealViewOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Detalle de Apelación</DialogTitle>
+              </DialogHeader>
+              {selectedAppeal ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-md">
+                    <p className="font-medium">Apelación #{selectedAppeal.appealId}</p>
+                    <p className="text-sm text-gray-600">Incidencia: {selectedAppeal.incidentId}</p>
+                    <p className="text-sm text-gray-600">Vendedor: {selectedAppeal.sellerId}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Motivo</h4>
+                    <p className="text-sm text-gray-700">{selectedAppeal.reason}</p>
+                    <p className="text-xs text-gray-500 mt-2">{new Date(selectedAppeal.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+              ) : (
+                <p>No se ha seleccionado ninguna apelación.</p>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAppealViewOpen(false)}>Cerrar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

@@ -44,6 +44,7 @@ import {
   Clock,
   Filter,
   MoreHorizontal,
+  FileText,
   Package,
   Search,
   User,
@@ -62,6 +63,7 @@ const IncidentsPage: React.FC = () => {
     null,
   );
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const [isAppealDialogOpen, setIsAppealDialogOpen] = useState(false);
   const [resolution, setResolution] = useState<{
     status: ItemStatus;
     description: string;
@@ -367,6 +369,17 @@ const IncidentsPage: React.FC = () => {
                             Resolver
                           </DropdownMenuItem>
                         )}
+                        {incident.appeals && incident.appeals.length > 0 && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedIncident(incident);
+                              setIsAppealDialogOpen(true);
+                            }}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Ver Apelaciones
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -464,6 +477,49 @@ const IncidentsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        {/* Appeals Dialog */}
+        <Dialog open={isAppealDialogOpen} onOpenChange={setIsAppealDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Apelaciones</DialogTitle>
+              <DialogDescription>
+                Revisa las apelaciones asociadas a esta incidencia.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedIncident ? (
+              <div className="space-y-4">
+                {selectedIncident.appeals &&
+                selectedIncident.appeals.length > 0 ? (
+                  selectedIncident.appeals.map((appeal) => (
+                    <div key={appeal.appealId} className="p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm">{appeal.reason}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-gray-500">
+                          {new Date(appeal.createdAt).toLocaleString()}
+                        </p>
+                        <Badge className={appeal.reviewed ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                          {appeal.reviewed ? "Revisada" : "Pendiente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p>No hay apelaciones para esta incidencia.</p>
+                )}
+              </div>
+            ) : (
+              <p>No se ha seleccionado ninguna incidencia.</p>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAppealDialogOpen(false)}>
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 };
