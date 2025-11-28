@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogTrigger,
 } from "@components/ui/dialog";
 import { Input } from "@components/ui/input";
@@ -37,7 +36,6 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  EyeOff,
   FileText,
   Filter,
   Flag,
@@ -157,8 +155,7 @@ const ReportsPage: React.FC = () => {
     );
   };
 
-  const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
-  const [isAppealViewOpen, setIsAppealViewOpen] = useState(false);
+  
 
   const handleAssignModerator = async (incidentId: number) => {
     try {
@@ -868,6 +865,7 @@ const ReportsPage: React.FC = () => {
                                 </Dialog>
                               </>
                             )}
+                          {/* Apelaciones disponibles (botón eliminado en esta vista) */}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -937,16 +935,7 @@ const ReportsPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedAppeal(appeal);
-                              setIsAppealViewOpen(true);
-                            }}
-                          >
-                            Ver
-                          </Button>
+                          {/* Detalles eliminados en esta vista */}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -964,32 +953,7 @@ const ReportsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Dialog open={isAppealViewOpen} onOpenChange={setIsAppealViewOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Detalle de Apelación</DialogTitle>
-              </DialogHeader>
-              {selectedAppeal ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-md">
-                    <p className="font-medium">Apelación #{selectedAppeal.appealId}</p>
-                    <p className="text-sm text-gray-600">Incidencia: {selectedAppeal.incidentId}</p>
-                    <p className="text-sm text-gray-600">Vendedor: {selectedAppeal.sellerId}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Motivo</h4>
-                    <p className="text-sm text-gray-700">{selectedAppeal.reason}</p>
-                    <p className="text-xs text-gray-500 mt-2">{new Date(selectedAppeal.createdAt).toLocaleString()}</p>
-                  </div>
-                </div>
-              ) : (
-                <p>No se ha seleccionado ninguna apelación.</p>
-              )}
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAppealViewOpen(false)}>Cerrar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Detalles de apelaciones eliminados de esta vista. Usar la página de Incidentes para gestionar/ver apelaciones. */}
         </TabsContent>
       </Tabs>
     </div>
