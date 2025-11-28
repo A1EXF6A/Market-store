@@ -219,11 +219,30 @@ export default function MyIncidentsPage() {
                           Apelar
                         </Button>
                       ) : (
-                        <span className="text-sm text-gray-500">
-                          {incident.appeals?.some((appeal) => !appeal.reviewed)
-                            ? "Apelación pendiente"
-                            : "No se puede apelar"}
-                        </span>
+                        // Show reason via native tooltip (title) and small helper text
+                        <div>
+                          <span
+                            className="text-sm text-gray-500"
+                            title={
+                              incident.appeals?.some((appeal) => !appeal.reviewed)
+                                ? "Tienes una apelación pendiente: espera la revisión del moderador."
+                                : incident.status === ItemStatus.PENDING
+                                ? "No se puede apelar: ya existe una apelación en revisión o la política lo impide."
+                                : "Solo puedes crear apelaciones cuando la incidencia está en estado 'Pendiente'."
+                            }
+                          >
+                            {incident.appeals?.some((appeal) => !appeal.reviewed)
+                              ? "Apelación pendiente"
+                              : "No se puede apelar"}
+                          </span>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {incident.appeals?.some((appeal) => !appeal.reviewed)
+                              ? "Motivo: ya existe una apelación sin resolver."
+                              : incident.status === ItemStatus.PENDING
+                              ? "Motivo: revisa tus apelaciones previas o contacta al soporte."
+                              : "Motivo: la incidencia no está en estado 'Pendiente'."}
+                          </div>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
