@@ -29,9 +29,6 @@ import {
 } from "@components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
 import { incidentsService, type ReportFilters, type IncidentFilters } from "@services/incidents";
-import { usersService } from "@services/users";
-import { useAuthStore } from "@/store/authStore";
-import { UserRole } from "@/types";
 import {
   AlertTriangle,
   Ban,
@@ -64,11 +61,7 @@ const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [filters, setFilters] = useState<ReportFilters & IncidentFilters>({});
-  const { user: currentUser } = useAuthStore();
-  const [moderators, setModerators] = useState<any[]>([]);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assignIncidentId, setAssignIncidentId] = useState<number | null>(null);
-  const [selectedModeratorId, setSelectedModeratorId] = useState<number | undefined>(undefined);
+  
   const [activeTab, setActiveTab] = useState("reports");
 
   useEffect(() => {
@@ -81,45 +74,7 @@ const ReportsPage: React.FC = () => {
     await loadData(emptyFilters);
   };
 
-  const AssignModeratorDialog: React.FC = () => {
-    return (
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar Moderador</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Seleccionar moderador</Label>
-              <Select
-                value={selectedModeratorId?.toString()}
-                onValueChange={(val) => setSelectedModeratorId(Number(val))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un moderador" />
-                </SelectTrigger>
-                <SelectContent>
-                  {moderators.map((m) => (
-                    <SelectItem key={m.userId} value={m.userId.toString()}>
-                      {m.firstName} {m.lastName} (ID: {m.userId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button onClick={handleAdminAssign} disabled={!selectedModeratorId}>
-                Asignar
-              </Button>
-              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
+  
 
   const loadData = async (customFilters?: ReportFilters & IncidentFilters) => {
     try {
@@ -203,34 +158,7 @@ const ReportsPage: React.FC = () => {
     );
   };
 
-  const openAssignDialog = async (incidentId: number) => {
-    try {
-      setAssignIncidentId(incidentId);
-      // fetch moderators
-      const mods = await usersService.getAll({ role: UserRole.MODERATOR });
-      setModerators(mods || []);
-      setSelectedModeratorId(mods?.[0]?.userId);
-      setAssignDialogOpen(true);
-    } catch (error: any) {
-      toast.error("Error al obtener moderadores");
-    }
-  };
-
-  const handleAdminAssign = async () => {
-    if (!assignIncidentId || !selectedModeratorId) return;
-    try {
-      setProcessing(`assign-${assignIncidentId}`);
-      await incidentsService.assignIncident(assignIncidentId, selectedModeratorId);
-      toast.success("Incidencia asignada");
-      setAssignDialogOpen(false);
-      setAssignIncidentId(null);
-      loadData();
-    } catch (error: any) {
-      toast.error("Error al asignar incidencia");
-    } finally {
-      setProcessing(null);
-    }
-  };
+  
 
   
 
@@ -365,7 +293,6 @@ const ReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <AssignModeratorDialog />
       <div className="flex items-center gap-4">
         <Shield className="h-8 w-8 text-blue-600" />
         <div>
@@ -844,30 +771,19 @@ const ReportsPage: React.FC = () => {
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           {!incident.moderatorId && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleAssignModerator(incident.incidentId)
-                                }
-                                disabled={
-                                  processing === `assign-${incident.incidentId}`
-                                }
-                              >
-                                <Shield className="h-4 w-4 mr-1" />
-                                Asignarme
-                              </Button>
-                              {currentUser?.role === UserRole.ADMIN && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openAssignDialog(incident.incidentId)}
-                                >
-                                  Asignar...
-                                </Button>
-                              )}
-                            </>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleAssignModerator(incident.incidentId)
+                              }
+                              disabled={
+                                processing === `assign-${incident.incidentId}`
+                              }
+                            >
+                              <Shield className="h-4 w-4 mr-1" />
+                              Asignarme
+                            </Button>
                           )}
 
                           {incident.moderatorId &&

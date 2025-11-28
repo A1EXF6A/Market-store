@@ -37,6 +37,7 @@ import {
 } from "@components/ui/table";
 import { Textarea } from "@components/ui/textarea";
 import { incidentsService, type IncidentFilters } from "@services/incidents";
+import { usersService } from "@services/users";
 import {
   AlertTriangle,
   Calendar,
@@ -64,6 +65,10 @@ const IncidentsPage: React.FC = () => {
   );
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const [isAppealDialogOpen, setIsAppealDialogOpen] = useState(false);
+  const [moderators, setModerators] = useState<any[]>([]);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [assignIncidentId, setAssignIncidentId] = useState<number | null>(null);
+  const [selectedModeratorId, setSelectedModeratorId] = useState<number | undefined>(undefined);
   const [resolution, setResolution] = useState<{
     status: ItemStatus;
     description: string;
@@ -102,6 +107,34 @@ const IncidentsPage: React.FC = () => {
       setActionLoading(incidentId);
       await incidentsService.assignIncident(incidentId);
       toast.success("Incidencia asignada");
+      loadIncidents();
+    } catch (error: any) {
+      toast.error("Error al asignar incidencia");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openAssignDialog = async (incidentId: number) => {
+    try {
+      setAssignIncidentId(incidentId);
+      const mods = await usersService.getAll({ role: UserRole.MODERATOR });
+      setModerators(mods || []);
+      setSelectedModeratorId(mods?.[0]?.userId);
+      setIsAssignDialogOpen(true);
+    } catch (error: any) {
+      toast.error("Error al obtener moderadores");
+    }
+  };
+
+  const handleAdminAssign = async () => {
+    if (!assignIncidentId || !selectedModeratorId) return;
+    try {
+      setActionLoading(assignIncidentId);
+      await incidentsService.assignIncident(assignIncidentId, selectedModeratorId);
+      toast.success("Incidencia asignada");
+      setIsAssignDialogOpen(false);
+      setAssignIncidentId(null);
       loadIncidents();
     } catch (error: any) {
       toast.error("Error al asignar incidencia");
@@ -167,6 +200,42 @@ const IncidentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Assign dialog for admins */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar Moderador</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Seleccionar moderador</Label>
+              <Select
+                value={selectedModeratorId?.toString()}
+                onValueChange={(val) => setSelectedModeratorId(Number(val))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un moderador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {moderators.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId.toString()}>
+                      {m.firstName} {m.lastName} (ID: {m.userId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleAdminAssign} disabled={!selectedModeratorId}>
+                Asignar
+              </Button>
+              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center gap-4">
         <AlertTriangle className="h-8 w-8 text-orange-600" />
         <div>
@@ -348,14 +417,24 @@ const IncidentsPage: React.FC = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {!incident.moderatorId && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleAssignIncident(incident.incidentId)
-                            }
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Asignar a mí
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleAssignIncident(incident.incidentId)
+                              }
+                            >
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Asignar a mí
+                            </DropdownMenuItem>
+                            {currentUser?.role === UserRole.ADMIN && (
+                              <DropdownMenuItem
+                                onClick={() => openAssignDialog(incident.incidentId)}
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                Asignar a...
+                              </DropdownMenuItem>
+                            )}
+                          </>
                         )}
                         {(incident.moderatorId === currentUser?.userId ||
                           currentUser?.role === UserRole.ADMIN) && (
