@@ -89,13 +89,10 @@ export default function MyIncidentsPage() {
   };
 
   const canAppeal = (incident: Incident) => {
-    const hasActiveAppeal = incident.appeals?.some(
-      (appeal) => !appeal.reviewed,
-    );
-    const isSuspendedOrBanned =
-      incident.item?.status === ItemStatus.SUSPENDED ||
-      incident.item?.status === ItemStatus.BANNED;
-    return isSuspendedOrBanned && !hasActiveAppeal;
+    // Allow creating an appeal only when the INCIDENT status is PENDING
+    const hasActiveAppeal = incident.appeals?.some((appeal) => !appeal.reviewed);
+    const isPending = incident.status === ItemStatus.PENDING;
+    return isPending && !hasActiveAppeal;
   };
 
   const handleCreateAppeal = (incident: Incident) => {
