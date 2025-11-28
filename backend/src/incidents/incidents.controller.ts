@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { IncidentsService, IncidentFilters } from "./incidents.service";
 import { CreateReportDto } from "./dto/create-report.dto";
+import { CreateIncidentFromReportDto } from "./dto/create-incident-from-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -55,6 +56,21 @@ export class IncidentsController {
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
   getReports(@Query() filters: any) {
     return this.incidentsService.getReports(filters);
+  }
+
+  @Post("reports/:id/create-incident")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  createIncidentFromReport(
+    @Param("id") id: string,
+    @Body() body: CreateIncidentFromReportDto,
+    @GetUser() user: User,
+  ) {
+    return this.incidentsService.createIncidentFromReport(
+      +id,
+      body.description || "",
+      user.userId,
+    );
   }
 
   @Get("my-incidents")

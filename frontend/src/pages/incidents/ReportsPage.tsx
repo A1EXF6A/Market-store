@@ -51,6 +51,7 @@ import {
   XCircle,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { Textarea } from "@components/ui/textarea";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -88,6 +89,67 @@ const ReportsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const CreateIncidentDialog: React.FC<{
+    report: Report;
+    onCreated: () => void;
+  }> = ({ report, onCreated }) => {
+    const [open, setOpen] = useState(false);
+    const [description, setDescription] = useState("");
+    const [loadingCreate, setLoadingCreate] = useState(false);
+
+    const handleCreate = async () => {
+      try {
+        setLoadingCreate(true);
+        await incidentsService.createIncidentFromReport(report.reportId, {
+          description,
+        });
+        toast.success("Incidencia creada");
+        setOpen(false);
+        onCreated();
+      } catch (error: any) {
+        toast.error("Error al crear incidencia");
+      } finally {
+        setLoadingCreate(false);
+      }
+    };
+
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Shield className="h-4 w-4 mr-1" />
+            Crear Incidencia
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Producto ID: {report.itemId}
+            </p>
+            <div>
+              <Label>Descripción (opcional)</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleCreate} disabled={loadingCreate}>
+                Crear
+              </Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   const handleAssignModerator = async (incidentId: number) => {
@@ -410,12 +472,18 @@ const ReportsPage: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/products/${report.itemId}`}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Revisar
-                          </Link>
-                        </Button>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={`/products/${report.itemId}`}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Revisar
+                            </Link>
+                          </Button>
+                          <CreateIncidentDialog
+                            report={report}
+                            onCreated={() => loadData()}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

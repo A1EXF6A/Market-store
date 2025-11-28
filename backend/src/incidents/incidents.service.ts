@@ -85,6 +85,19 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
+  async createIncidentFromReport(
+    reportId: number,
+    description: string,
+    moderatorId?: number,
+  ): Promise<Incident> {
+    const report = await this.reportRepository.findOne({ where: { reportId } });
+    if (!report) {
+      throw new NotFoundException("Report not found");
+    }
+
+    return this.createIncident(report.itemId, description, moderatorId);
+  }
+
   async createAppeal(
     createAppealDto: CreateAppealDto,
     sellerId: number,
