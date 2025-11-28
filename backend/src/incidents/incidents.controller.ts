@@ -26,7 +26,7 @@ export class IncidentsController {
 
   @Post("reports")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.BUYER, UserRole.ADMIN)
+  @Roles(UserRole.BUYER, UserRole.ADMIN, UserRole.MODERATOR)
   createReport(
     @Body() createReportDto: CreateReportDto,
     @GetUser() user: User,
