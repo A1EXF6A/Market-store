@@ -86,6 +86,17 @@ export const incidentsService = {
     return response.data;
   },
 
+  createIncidentFromReport: async (
+    reportId: number,
+    data: { description?: string },
+  ): Promise<any> => {
+    const response = await api.post(
+      `/incidents/reports/${reportId}/create-incident`,
+      data,
+    );
+    return response.data;
+  },
+
   getMyIncidents: async (): Promise<Incident[]> => {
     const response = await api.get("/incidents/my-incidents");
     return response.data;
