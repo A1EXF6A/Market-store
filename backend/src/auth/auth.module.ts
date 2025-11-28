@@ -58,6 +58,6 @@ import { EmailService } from '../common/services/email.service';
   ],
   providers: [AuthService, JwtStrategy, EmailService],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule { }

@@ -12,6 +12,7 @@ import {
   Req,
   UseInterceptors,
   UploadedFiles,
+  ForbiddenException,
 } from "@nestjs/common";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ProductsService } from "./products.service";
@@ -19,6 +20,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { UpdateProductStatusDto } from "./dto/update-product-status.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { JwtService } from "@nestjs/jwt";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { GetUser } from "../common/decorators/get-user.decorator";
@@ -29,6 +31,7 @@ import { composeLog } from "testcontainers/build/common";
 export class ProductsController {
   constructor(
     @Inject(ProductsService) private readonly productsService: ProductsService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
   ) {}
 
   @Post()
@@ -44,7 +47,33 @@ export class ProductsController {
   }
 
   @Get()
-  findAll(@Query() filters: any) {
+  findAll(@Query() filters: any, @Req() req) {
+    // Si se solicita filtrar por 'status', validar que el request tenga
+    // un JWT válido y que el usuario sea ADMIN o MODERATOR
+    if (filters?.status) {
+      const authHeader = req.headers?.authorization;
+      if (!authHeader) {
+        throw new ForbiddenException(
+          'Only admins and moderators can filter by status',
+        );
+      }
+
+      const token = authHeader.split(" ")[1];
+      try {
+        const payload: any = this.jwtService.verify(token, {
+          secret: process.env.JWT_SECRET,
+        });
+
+        if (payload.role !== UserRole.ADMIN && payload.role !== UserRole.MODERATOR) {
+          throw new ForbiddenException(
+            'Only admins and moderators can filter by status',
+          );
+        }
+      } catch (err) {
+        throw new ForbiddenException('Invalid token or insufficient permissions');
+      }
+    }
+
     return this.productsService.findAll(filters);
   }
 

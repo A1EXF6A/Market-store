@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/store/authStore";
 import type { Product, ProductFilters } from "@/types";
-import { ItemType, UserRole } from "@/types";
+import { ItemType, UserRole, ItemStatus } from "@/types";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import {
@@ -206,6 +206,32 @@ const ProductsPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select
+                  value={filters.status || "all"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      status: value === "all" ? undefined : (value as ItemStatus),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los estados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
+                    <SelectItem value={ItemStatus.SUSPENDED}>Suspendido</SelectItem>
+                    <SelectItem value={ItemStatus.HIDDEN}>Oculto</SelectItem>
+                    <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                    <SelectItem value={ItemStatus.BANNED}>Baneado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
               <Input
