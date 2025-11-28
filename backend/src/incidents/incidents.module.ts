@@ -2,6 +2,7 @@ import { Module, forwardRef } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { IncidentsService } from "./incidents.service";
 import { IncidentsController } from "./incidents.controller";
+import { AppealsController } from "./appeals.controller";
 import { Incident } from "../entities/incident.entity";
 import { Report } from "../entities/report.entity";
 import { Appeal } from "../entities/appeal.entity";
@@ -13,7 +14,7 @@ import { ProductsModule } from "../products/products.module";
     TypeOrmModule.forFeature([Incident, Report, Appeal, Item]),
     forwardRef(() => ProductsModule)
   ],
-  controllers: [IncidentsController],
+  controllers: [IncidentsController, AppealsController],
   providers: [IncidentsService],
   exports: [IncidentsService],
 })

@@ -257,4 +257,36 @@ export class IncidentsService {
       order: { reportedAt: "DESC" },
     });
   }
+
+  async getAppeals(): Promise<Appeal[]> {
+    return this.appealRepository.find({
+      relations: ["incident", "seller"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async reviewAppeal(id: number, approved: boolean, moderatorId: number): Promise<Appeal> {
+    const appeal = await this.appealRepository.findOne({ where: { appealId: id }, relations: ["incident"] });
+    if (!appeal) {
+      throw new NotFoundException("Appeal not found");
+    }
+
+    // mark as reviewed
+    appeal.reviewed = true;
+
+    // update incident status based on decision
+    const incident = await this.incidentRepository.findOne({ where: { incidentId: appeal.incidentId }, relations: ["item"] });
+    if (incident) {
+      if (approved) {
+        incident.status = ItemStatus.ACTIVE;
+      } else {
+        incident.status = ItemStatus.SUSPENDED;
+      }
+      incident.moderatorId = moderatorId;
+      await this.itemRepository.update(incident.itemId, { status: incident.status });
+      await this.incidentRepository.save(incident);
+    }
+
+    return this.appealRepository.save(appeal);
+  }
 }
