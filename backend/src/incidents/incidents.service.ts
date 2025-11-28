@@ -117,6 +117,13 @@ export class IncidentsService {
       throw new ForbiddenException("You can only appeal your own incidents");
     }
 
+    // Only allow creating an appeal when the incident is in PENDING state
+    if (incident.status !== ItemStatus.PENDING) {
+      throw new ForbiddenException(
+        "Appeals can only be created for incidents in pending state",
+      );
+    }
+
     const appeal = this.appealRepository.create({
       incidentId,
       sellerId,
