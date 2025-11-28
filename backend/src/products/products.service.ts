@@ -11,7 +11,7 @@ import { Favorite } from "src/entities/favorite.entity";
 import { ItemPhoto } from "src/entities/item-photo.entity";
 import { ItemStatus, ItemType } from "../entities/enums";
 import { Service } from "src/entities/service.entity";
-import { User } from "src/entities/user.entity";
+import { User, UserRole } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
@@ -233,6 +233,14 @@ async create(
       throw new ForbiddenException("You can only delete your own products");
     }
 
+    // Sellers are not allowed to delete products that are not ACTIVE
+    if (user.role === UserRole.SELLER && item.status !== ItemStatus.ACTIVE) {
+      throw new ForbiddenException(
+        "You cannot delete a product that is not in active state",
+      );
+    }
+
+    // Keep explicit ban check for clarity
     if (item.status === ItemStatus.BANNED) {
       throw new ForbiddenException("Banned products cannot be deleted");
     }

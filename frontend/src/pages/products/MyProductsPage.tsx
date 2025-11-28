@@ -336,9 +336,13 @@ const MyProductsPage: React.FC = () => {
                                 Editar
                               </Link>
                             </DropdownMenuItem>
+                            {
+                              // Disable delete for products that are not 'active'
+                            }
                             <DropdownMenuItem
-                              onClick={() => handleDeleteProduct(product.itemId)}
-                              className="text-rose-600"
+                              onClick={() => product.status === 'active' && handleDeleteProduct(product.itemId)}
+                              disabled={product.status !== 'active'}
+                              className={product.status !== 'active' ? 'text-neutral-400' : 'text-rose-600'}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Eliminar
