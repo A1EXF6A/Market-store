@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, Patch, Body, UseGuards, Put, Delete, Query,   BadRequestException} from "@nestjs/common";
+import { Controller, Get, Param, Req, Patch, Body, UseGuards, Put, Delete, Query,   BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UsersService, UserFilters } from "./users.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -93,10 +93,16 @@ export class UsersController {
   }
 
   @Delete(":id")
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  async deleteUser(@Param("id") id: string) {
-    await this.usersService.deleteUser(+id);
+  async deleteUser(@Param("id") id: string, @GetUser() actor?: User) {
+    const targetId = +id;
+    // allow admin or the user themself
+    if (!actor) throw new ForbiddenException("Not authorized");
+    if (actor.role !== UserRole.ADMIN && actor.userId !== targetId) {
+      throw new ForbiddenException("Insufficient permissions to delete this user");
+    }
+
+    await this.usersService.deleteUser(targetId);
+    // if the actor deleted their own account, return a message client can act on
     return { message: "User deleted successfully" };
   }
 }

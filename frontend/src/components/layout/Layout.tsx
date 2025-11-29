@@ -366,6 +366,18 @@ const Layout: React.FC = () => {
                   <DropdownMenuItem onClick={handleSettings}><Settings className="h-4 w-4 mr-2" />Configuración</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>
+                  <DropdownMenuItem onClick={async () => {
+                    if (!localUser) return;
+                    if (!confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción desactivará tu cuenta y podrás reutilizar tu correo para registrarte de nuevo.')) return;
+                    try {
+                      await usersService.deleteAccount(localUser.userId);
+                      // after deletion, logout locally
+                      logoutLocal();
+                    } catch (err) {
+                      console.error(err);
+                      alert('Error al eliminar la cuenta');
+                    }
+                  }} className="text-red-600">Eliminar cuenta</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

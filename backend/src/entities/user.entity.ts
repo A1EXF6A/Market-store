@@ -69,6 +69,9 @@ export class User {
   @Column({ name: "suspended_until", type: "timestamp", nullable: true })
   suspendedUntil?: Date;
 
+  @Column({ name: "deleted", type: "boolean", default: false })
+  deleted: boolean;
+
   @Column({ name: "password_hash", type: "text" })
   passwordHash: string;
 
