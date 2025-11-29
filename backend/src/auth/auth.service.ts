@@ -30,7 +30,7 @@ export class AuthService {
       throw new ConflictException("All fields are required");
     }
 
-    const emailExists = await this.userRepository.findOne({ where: { email } });
+    const emailExists = await this.userRepository.findOne({ where: { email, deleted: false } });
     if (emailExists) throw new ConflictException("User already exists with this email");
 
     const nationalIdExists = await this.userRepository.findOne({ where: { nationalId } });
@@ -76,6 +76,11 @@ export class AuthService {
     }
 
     const user = await this.userRepository.findOne({ where: { email } });
+
+    // If the account was soft-deleted, behave as if the user was not found
+    if (user && (user as any).deleted) {
+      throw new UnauthorizedException("USER_NOT_FOUND");
+    }
 
     const ok = await bcrypt.compare(password, user?.passwordHash ?? "");
 

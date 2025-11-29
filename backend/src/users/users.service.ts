@@ -28,7 +28,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    return this.userRepository.findOne({ where: { email } });
+    return this.userRepository.findOne({ where: { email, deleted: false } });
   }
 
   async findAll(filters?: UserFilters): Promise<User[]> {
@@ -117,6 +117,10 @@ export class UsersService {
 
   async deleteUser(userId: number): Promise<void> {
     const user = await this.findById(userId);
-    await this.userRepository.remove(user);
+    // soft-delete: mark as deleted so email can be reused
+    user.deleted = true;
+    // optionally clear sensitive flags
+    user.status = user.status ?? user.status;
+    await this.userRepository.save(user);
   }
 }

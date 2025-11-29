@@ -59,6 +59,10 @@ export const usersService = {
     await api.delete(`/users/${id}`);
   },
 
+  deleteAccount: async (id: number): Promise<void> => {
+    await api.delete(`/users/${id}`);
+  },
+
   changeRole: async (id: number, role: UserRole): Promise<User> => {
     const response = await api.patch(`/users/${id}/role`, { role });
     return response.data;
