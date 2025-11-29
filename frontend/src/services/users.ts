@@ -13,6 +13,7 @@ export interface UpdateUserData {
 export interface UserFilters {
   role?: UserRole;
   status?: UserStatus;
+  showDeleted?: boolean;
   search?: string;
 }
 
@@ -21,6 +22,7 @@ export const usersService = {
     const params = new URLSearchParams();
     if (filters?.role) params.append("role", filters.role);
     if (filters?.status) params.append("status", filters.status);
+    if (filters?.showDeleted) params.append("showDeleted", String(filters.showDeleted));
     if (filters?.search) params.append("search", filters.search);
 
     const response = await api.get(`/users?${params.toString()}`);

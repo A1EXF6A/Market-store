@@ -359,6 +359,26 @@ const UsersPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+              <div className="space-y-2">
+                <Label>Mostrar</Label>
+                <Select
+                  value={filters.showDeleted ? "deleted" : "active"}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      showDeleted: value === "deleted",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mostrar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Activos</SelectItem>
+                    <SelectItem value="deleted">Eliminados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             <div className="space-y-2">
               <Label>Estado</Label>
               <Select

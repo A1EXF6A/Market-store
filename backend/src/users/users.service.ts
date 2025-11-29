@@ -9,6 +9,7 @@ import * as bcrypt from "bcryptjs";
 export interface UserFilters {
   role?: UserRole;
   status?: UserStatus;
+  showDeleted?: boolean;
   search?: string;
 }
 
@@ -40,6 +41,13 @@ export class UsersService {
 
     if (filters?.status) {
       queryBuilder.andWhere('user.status = :status', { status: filters.status });
+    }
+
+    // By default show non-deleted users. If showDeleted === true, show only deleted.
+    if (filters?.showDeleted) {
+      queryBuilder.andWhere('user.deleted = true');
+    } else {
+      queryBuilder.andWhere('user.deleted = false');
     }
 
     if (filters?.search) {
