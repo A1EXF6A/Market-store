@@ -5,6 +5,12 @@ import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -54,6 +60,13 @@ const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilters>({});
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [suspendTargetUser, setSuspendTargetUser] = useState<number | null>(null);
+  const [suspendType, setSuspendType] = useState<"permanent" | "temporary">(
+    "permanent",
+  );
+  const [suspendDate, setSuspendDate] = useState<string>("");
+  const [suspendDays, setSuspendDays] = useState<string>("");
 
   useEffect(() => {
     loadUsers();
@@ -77,19 +90,56 @@ const UsersPage: React.FC = () => {
     await loadUsers({});
   };
 
+  const openSuspendModal = (userId: number) => {
+    setSuspendTargetUser(userId);
+    setSuspendType("permanent");
+    setSuspendDate("");
+    setSuspendDays("");
+    setSuspendModalOpen(true);
+  };
+
   const handleSuspendUser = async (userId: number, suspend: boolean) => {
     try {
       setActionLoading(userId);
       if (suspend) {
-        await usersService.suspend(userId);
-        toast.success("Usuario suspendido");
+        openSuspendModal(userId);
       } else {
         await usersService.unsuspend(userId);
         toast.success("Suspensión removida");
+        loadUsers();
       }
-      loadUsers();
     } catch (error: any) {
       toast.error("Error al actualizar usuario");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const confirmSuspend = async () => {
+    if (!suspendTargetUser) return;
+    try {
+      setActionLoading(suspendTargetUser);
+      let suspendedUntil: string | null = null;
+      if (suspendType === "temporary") {
+        if (suspendDate) {
+          const d = new Date(suspendDate);
+          if (!isNaN(d.getTime())) suspendedUntil = d.toISOString();
+        } else if (suspendDays) {
+          const days = parseInt(suspendDays, 10);
+          if (!isNaN(days) && days > 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            suspendedUntil = d.toISOString();
+          }
+        }
+      }
+
+      await usersService.suspend(suspendTargetUser, suspendedUntil);
+      toast.success("Usuario suspendido");
+      setSuspendModalOpen(false);
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Error al suspender usuario");
     } finally {
       setActionLoading(null);
     }
@@ -204,6 +254,72 @@ const UsersPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Suspend modal */}
+          <Dialog open={suspendModalOpen} onOpenChange={setSuspendModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Suspender Usuario</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Seleccione si la suspensión será permanente o temporal.
+                </p>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="suspendType"
+                      checked={suspendType === "permanent"}
+                      onChange={() => setSuspendType("permanent")}
+                    />
+                    Permanente
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="suspendType"
+                      checked={suspendType === "temporary"}
+                      onChange={() => setSuspendType("temporary")}
+                    />
+                    Temporal
+                  </label>
+                </div>
+
+                {suspendType === "temporary" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Fecha fin (YYYY-MM-DD)</Label>
+                      <Input
+                        type="date"
+                        value={suspendDate}
+                        onChange={(e) => setSuspendDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Días de suspensión</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Número de días"
+                        value={suspendDays}
+                        onChange={(e) => setSuspendDays(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSuspendModalOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={confirmSuspend}>Confirmar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Buscar Usuario</Label>
@@ -348,7 +464,7 @@ const UsersPage: React.FC = () => {
                             {user.status === "suspended" ? (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  handleSuspendUser(user.userId, false)
+                                    handleSuspendUser(user.userId, false)
                                 }
                                 className="text-green-600"
                               >
@@ -357,9 +473,9 @@ const UsersPage: React.FC = () => {
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
-                                onClick={() =>
-                                  handleSuspendUser(user.userId, true)
-                                }
+                                  onClick={() =>
+                                    handleSuspendUser(user.userId, true)
+                                  }
                                 className="text-orange-600"
                               >
                                 <UserX className="h-4 w-4 mr-2" />

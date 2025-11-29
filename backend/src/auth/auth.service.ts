@@ -10,7 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from "bcryptjs";
 import { Repository } from "typeorm";
 
-import { User, UserRole } from "../entities/user.entity";
+import { User, UserRole, UserStatus } from "../entities/user.entity";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { EmailService } from "../email/email.service";
@@ -88,9 +88,29 @@ export class AuthService {
       throw new UnauthorizedException("EMAIL_NOT_VERIFIED");
     }
 
-    // NUEVA VERIFICACIÓN: Usuario suspendido
-    if (user.status === "suspended") {
-      throw new UnauthorizedException("USER_SUSPENDED");
+    // NUEVA VERIFICACIÓN: Usuario suspendido (soporta suspensión temporal)
+    if (user.status === UserStatus.SUSPENDED) {
+      const now = new Date();
+      // If suspendedUntil is null => permanent suspension
+      if (!user.suspendedUntil) {
+        throw new UnauthorizedException("USER_SUSPENDED");
+      }
+
+      // If suspendedUntil is in the future => still suspended
+      const suspendedUntilDate = new Date(user.suspendedUntil);
+      if (suspendedUntilDate > now) {
+        throw new UnauthorizedException("USER_SUSPENDED");
+      }
+
+      // Suspension expired: reactivate user automatically
+      user.status = UserStatus.ACTIVE;
+      user.suspendedUntil = null as any;
+      try {
+        await this.userRepository.save(user);
+      } catch (err) {
+        // If saving fails, still deny login to be safe
+        throw new UnauthorizedException("USER_SUSPENDED");
+      }
     }
 
     const payload: Record<string, any> = {

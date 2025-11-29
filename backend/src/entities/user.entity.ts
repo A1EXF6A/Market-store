@@ -66,6 +66,9 @@ export class User {
   @Column({ type: "enum", enum: UserStatus, default: UserStatus.ACTIVE })
   status: UserStatus;
 
+  @Column({ name: "suspended_until", type: "timestamp", nullable: true })
+  suspendedUntil?: Date;
+
   @Column({ name: "password_hash", type: "text" })
   passwordHash: string;
 
