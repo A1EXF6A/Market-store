@@ -68,6 +68,28 @@ const productSchema = z
 
 type ProductFormData = z.infer<typeof productSchema>;
 
+// Lista de categorías fijas (puedes ajustarla o cargarla desde el backend)
+const CATEGORIES = [
+  "Electrónicos",
+  "Ropa",
+  "Hogar",
+  "Belleza",
+  "Deportes",
+  "Servicios",
+  "Vehículos",
+  "Juguetes",
+  "Libros",
+  "Alimentos",
+  "Salud",
+  "Herramientas",
+  "Inmobiliaria",
+  "Arte y Coleccionables",
+  "Instrumentos Musicales",
+  "Computación",
+  "Telefonía",
+  "Accesorios",
+];
+
 const LS_KEY = "animatedBg:enabled";
 
 const CreateProductPage: React.FC = () => {
@@ -302,16 +324,26 @@ const CreateProductPage: React.FC = () => {
 
                 <div className="space-y-2 mt-5">
                   <Label htmlFor="category">Categoría</Label>
-                  <Input
-                    id="category"
-                    placeholder="Ej: Electrónicos, Ropa, Servicios..."
-                    className="hover:border-violet-500/60 focus:ring-violet-500/30"
-                    {...register("category")}
+                  <Controller
+                    control={control}
+                    name="category"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="hover:border-violet-500/60 focus:ring-violet-500/30">
+                          <SelectValue placeholder="Selecciona una categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {errors.category && (
-                    <p className="text-sm text-red-600">
-                      {errors.category.message}
-                    </p>
+                    <p className="text-sm text-red-600">{errors.category.message}</p>
                   )}
                 </div>
               </div>

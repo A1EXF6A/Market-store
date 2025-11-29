@@ -331,52 +331,92 @@ async create(
   }
 
   private detectProhibitedContent(name: string, description?: string): boolean {
-    const prohibitedWords = [
-      // Weapons/Armas
-      "arma", "weapon", "pistola", "rifle", "gun", "firearm", "ammunition", "munición",
-      "cuchillo", "knife", "blade", "sword", "espada", "dagger", "machete",
-      
-      // Drugs/Drogas
-      "droga", "drug", "narcótico", "narcotic", "cocaína", "cocaine", "heroína", "heroin",
-      "marihuana", "marijuana", "cannabis", "lsd", "éxtasis", "ecstasy", "metanfetamina",
-      
-      // Explosives/Explosivos
-      "explosivo", "explosive", "bomba", "bomb", "dinamita", "dynamite", "granada", "grenade",
-      "pólvora", "gunpowder", "nitrato", "nitrate",
-      
-      // Illegal/Ilegal
-      "ilegal", "illegal", "prohibido", "forbidden", "banned", "contrabando", "contraband",
-      "falsificado", "fake", "counterfeit", "robado", "stolen", "pirata", "pirated",
-      
-      // Adult/Pornographic content
-      "pornografía", "pornography", "xxx", "adulto", "sexual", "erótico", "erotic",
-      
-      // Human/Animal related prohibited
-      "órgano", "organ", "humano", "human", "esclavo", "slave", "tráfico", "trafficking",
-      "animal protegido", "endangered", "marfil", "ivory", "cuerno", "horn",
-      
-      // Chemical/Venenos
-      "veneno", "poison", "tóxico", "toxic", "químico peligroso", "dangerous chemical",
-      "ácido", "acid", "mercurio", "mercury", "asbesto", "asbestos",
-      
-      // Prescription drugs
-      "medicamento controlado", "prescription", "receta médica", "controlled substance",
-      
-      // Identity/Documents
-      "documento falso", "fake document", "identidad falsa", "fake id", "pasaporte falso",
-      "cedula falsa", "licencia falsa"
-    ];
+    // Categorized prohibited terms and phrases. Each category contains explicit
+    // phrases and keywords that constitute prohibited content. The check is
+    // case-insensitive and matches both single words and multi-word phrases.
+    const prohibitedByCategory: Record<string, string[]> = {
+      "weapons": [
+        "arma", "armas", "weapon", "weapons", "pistola", "pistolas", "pistol", "rifle", "rifles",
+        "gun", "guns", "firearm", "firearms", "ammunition", "munición", "municiones",
+        "silenciador", "silencer", "automatico", "automatic", "ak-47", "ar-15",
+        "detonador", "detonator", "bala", "bullet", "cargador", "magazine"
+      ],
+      "explosives": [
+        "bomba", "bomb", "explosivo", "explosive", "dinamita", "dynamite", "granada", "grenade",
+        "pólvora", "gunpowder", "detonador", "detonator", "tnt", "C4", "c-4"
+      ],
+      "drugs": [
+        "droga", "drogas", "drug", "drugs", "narcótico", "narcotic", "cocaína", "cocaine", "heroína", "heroin",
+        "marihuana", "marijuana", "cannabis", "lsd", "éxtasis", "ecstasy", "metanfetamina", "meth",
+        "psicotrópico", "opioide", "fentanyl", "cough syrup for misuse", "supply drugs"
+      ],
+      "illicit_services": [
+        "servicio ilícito", "servicios ilícitos", "illegal service", "hacking service", "hackear",
+        "ransomware", "ddos", "ddos attack", "fraud service", "deepfake service", "venta de datos personales",
+        "venta de correos", "phishing service", "falsificación de documentos", "fake diploma service"
+      ],
+      "fraud_and_scams": [
+        "fraude", "fraud", "scam", "estafa", "phishing", "ponzi", "pyramid scheme", "fake offer",
+        "venta de cuentas robadas", "stolen accounts", "sell hacked accounts", "fake tickets", "counterfeit tickets",
+        "chargeback guarantee", "safe payment guarantee"
+      ],
+      "counterfeit_goods": [
+        "falsificado", "falsificados", "counterfeit", "knockoff", "replica", "réplica", "fake brand",
+        "imitación marca", "reloj replica", "bolso falso", "fake handbag", "counterfeit currency"
+      ],
+      "deceptive_services": [
+        "servicio falso", "servicios falsos", "fake service", "false advertising", "misleading service",
+        "garantía falsa", "fake warranty", "unauthorized repair service"
+      ],
+      "high_risk_items": [
+        "material radioactivo", "radioactive material", "biological sample", "pathogen", "virus sample",
+        "hazardous chemical", "toxic chemical", "mercury", "asbestos", "hazardous waste"
+      ],
+      "regulated_without_license": [
+        "venta de medicamentos sin receta", "prescription drugs without prescription", "medical device without certification",
+        "venta de pesticidas no autorizados", "licensed required", "sin licencia", "without license"
+      ],
+      "offensive_and_hate": [
+        "pornografía", "pornography", "sex trafficking", "sexual exploitation", "hate speech", "discurso de odio",
+        "contenido ofensivo", "offensive content", "racial slur", "insulto racial"
+      ],
+      "intellectual_property": [
+        "infracción de derechos", "copyright infringement", "pirateado", "warez", "unauthorized distribution",
+        "venta de obras protegidas", "sell copyrighted materials"
+      ],
+      "identity_and_documents": [
+        "documento falso", "fake document", "fake id", "pasaporte falso", "cedula falsa", "fake passport",
+        "forged diploma", "licencia falsa"
+      ],
+      "human_trafficking_and_exploitation": [
+        "tráfico de personas", "human trafficking", "servicio sexual pago", "sexual slavery", "esclavo humano"
+      ],
+      "personal_data_and_privacy": [
+        "venta de datos personales", "personal data sale", "doxing service", "do-xing", "leaked database"
+      ]
+    };
 
     const content = `${name} ${description || ""}`.toLowerCase();
-    
-    // Check for exact word matches (not just substring contains)
-    const words = content.split(/\s+/);
-    const contentText = words.join(" ");
-    
-    return prohibitedWords.some((prohibitedWord) => {
-      // Check for both exact matches and phrase matches
-      return contentText.includes(prohibitedWord.toLowerCase()) ||
-             words.some(word => word === prohibitedWord.toLowerCase());
-    });
+
+    // Build a flat list of phrases and also keep category mapping for logging
+    const flatList: { phrase: string; category: string }[] = [];
+    for (const [category, phrases] of Object.entries(prohibitedByCategory)) {
+      for (const p of phrases) {
+        flatList.push({ phrase: p.toLowerCase(), category });
+      }
+    }
+
+    // Normalize: collapse multiple whitespace and compare
+    const normalized = content.replace(/\s+/g, " ").trim();
+
+    const matches = flatList.filter((entry) => normalized.includes(entry.phrase));
+    if (matches.length > 0) {
+      // Optional: log which categories matched for easier moderation/debugging
+      const categories = Array.from(new Set(matches.map((m) => m.category)));
+      console.warn(`Prohibited content detected for categories: ${categories.join(", ")}`);
+      return true;
+    }
+
+    return false;
   }
 }
