@@ -75,12 +75,22 @@ export class AuthService {
       throw new ConflictException("All fields are required");
     }
 
-    // always prefer non-deleted users for login
+    // Prefer an active (non-deleted) user for login
     const user = await this.userRepository.findOne({ where: { email, deleted: false } });
 
-    const ok = await bcrypt.compare(password, user?.passwordHash ?? "");
+    // If there's no active user, but there is a deleted account with this email,
+    // report USER_DELETED so the frontend can show an appropriate message.
+    if (!user) {
+      const deletedUser = await this.userRepository.findOne({ where: { email, deleted: true } });
+      if (deletedUser) {
+        throw new UnauthorizedException("USER_DELETED");
+      }
+      // no user at all
+      throw new UnauthorizedException("INVALID_CREDENTIALS");
+    }
 
-    if (!user || !ok) {
+    const ok = await bcrypt.compare(password, user.passwordHash ?? "");
+    if (!ok) {
       throw new UnauthorizedException("INVALID_CREDENTIALS");
     }
 

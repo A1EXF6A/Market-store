@@ -3,11 +3,13 @@ const MESSAGES = {
     INVALID_CREDENTIALS: "Credenciales inválidas",
     USER_NOT_FOUND: "Usuario no encontrado",
     USER_SUSPENDED: "El usuario está suspendido",
+    USER_DELETED: "La cuenta ha sido eliminada",
   },
   en: {
     INVALID_CREDENTIALS: "Invalid credentials",
     USER_NOT_FOUND: "User not found",
     USER_SUSPENDED: "User is suspended",
+    USER_DELETED: "Account has been deleted",
   },
 } as const;
 
