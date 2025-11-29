@@ -20,7 +20,8 @@ export class UsersController {
     const filters: UserFilters = {
       role: query.role,
       status: query.status,
-      search: query.search
+      search: query.search,
+      showDeleted: query.showDeleted === "true",
     };
     return this.usersService.findAll(filters);
   }
