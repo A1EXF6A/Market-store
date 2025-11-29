@@ -72,7 +72,7 @@ const RegisterPage: React.FC = () => {
       const { confirmPassword, ...registerData } = data;
       await registerUser(registerData);
       toast.success("Registro exitoso");
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Error al registrarse");
     }

@@ -43,7 +43,7 @@ export class AuthService {
       email,
       nationalId,
       passwordHash,
-      role: (userData as any).role ?? UserRole.BUYER,
+      role: (role as any) ?? UserRole.BUYER,
       verified: false,
     });
 
@@ -75,12 +75,8 @@ export class AuthService {
       throw new ConflictException("All fields are required");
     }
 
-    const user = await this.userRepository.findOne({ where: { email } });
-
-    // If the account was soft-deleted, behave as if the user was not found
-    if (user && (user as any).deleted) {
-      throw new UnauthorizedException("USER_NOT_FOUND");
-    }
+    // always prefer non-deleted users for login
+    const user = await this.userRepository.findOne({ where: { email, deleted: false } });
 
     const ok = await bcrypt.compare(password, user?.passwordHash ?? "");
 
@@ -147,7 +143,8 @@ export class AuthService {
   }
 
   async validateUser(userId: number): Promise<User> {
-    return this.userRepository.findOne({ where: { userId } });
+    // When validating from token, ensure the account is not deleted
+    return this.userRepository.findOne({ where: { userId, deleted: false } });
   }
 
   async forgotPassword(email: string) {
