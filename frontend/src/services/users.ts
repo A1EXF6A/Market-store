@@ -45,8 +45,10 @@ export const usersService = {
   },
 
 
-  suspend: async (id: number): Promise<void> => {
-    await api.patch(`/users/${id}/status`, { status: "suspended" });
+  suspend: async (id: number, suspendedUntil?: string | null): Promise<void> => {
+    const payload: any = { status: "suspended" };
+    if (suspendedUntil) payload.suspendedUntil = suspendedUntil;
+    await api.patch(`/users/${id}/status`, payload);
   },
 
   unsuspend: async (id: number): Promise<void> => {

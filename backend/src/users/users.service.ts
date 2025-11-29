@@ -54,9 +54,15 @@ export class UsersService {
     return queryBuilder.getMany();
   }
 
-  async updateUserStatus(userId: number, status: UserStatus): Promise<User> {
+  async updateUserStatus(userId: number, status: UserStatus, suspendedUntil?: Date | null): Promise<User> {
     const user = await this.findById(userId);
     user.status = status;
+    // Allow storing suspendedUntil only when status is SUSPENDED, otherwise clear it
+    if (status === UserStatus.SUSPENDED) {
+      user.suspendedUntil = suspendedUntil ?? null;
+    } else {
+      user.suspendedUntil = null;
+    }
     return this.userRepository.save(user);
   }
 
