@@ -245,13 +245,13 @@ export class IncidentsService {
       }
     }
 
-    // Ensure the assignee is a moderator
+    // Ensure the assignee is a moderator or an admin (admins can self-assign)
     const targetUser = await this.userRepository.findOne({ where: { userId: assignTo } });
     if (!targetUser) {
       throw new NotFoundException("User to assign not found");
     }
-    if (targetUser.role !== UserRole.MODERATOR) {
-      throw new ForbiddenException("Assigned user must be a moderator");
+    if (targetUser.role !== UserRole.MODERATOR && targetUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException("Assigned user must be a moderator or an admin");
     }
 
     incident.moderatorId = assignTo;
@@ -265,7 +265,7 @@ export class IncidentsService {
   ): Promise<Incident> {
     const incident = await this.incidentRepository.findOne({
       where: { incidentId },
-      relations: ["item"],
+      relations: ["item", "appeals"],
     });
 
     if (!incident) {
@@ -275,7 +275,17 @@ export class IncidentsService {
     incident.status = status;
     incident.moderatorId = moderatorId;
 
+    // update item status
     await this.itemRepository.update(incident.itemId, { status });
+
+    // If the incident has appeals and the resolved status is not PENDING,
+    // mark all associated appeals as reviewed (true)
+    if (incident.appeals && incident.appeals.length > 0 && status !== ItemStatus.PENDING) {
+      for (const appeal of incident.appeals) {
+        appeal.reviewed = true;
+        await this.appealRepository.save(appeal);
+      }
+    }
 
     return this.incidentRepository.save(incident);
   }
