@@ -26,6 +26,12 @@ import {
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { usersService } from "@/services/users";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog";
 import { authService } from "@/services/auth"; // optional remote logout
 
 type FormState = {
@@ -111,6 +117,8 @@ const Layout: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Cuando cambie localUser (por ejemplo después de handleSave o por storage event), sincronizamos el form
   useEffect(() => {
@@ -366,18 +374,7 @@ const Layout: React.FC = () => {
                   <DropdownMenuItem onClick={handleSettings}><Settings className="h-4 w-4 mr-2" />Configuración</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => {
-                    if (!localUser) return;
-                    if (!confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción desactivará tu cuenta y podrás reutilizar tu correo para registrarte de nuevo.')) return;
-                    try {
-                      await usersService.deleteAccount(localUser.userId);
-                      // after deletion, logout locally
-                      logoutLocal();
-                    } catch (err) {
-                      console.error(err);
-                      alert('Error al eliminar la cuenta');
-                    }
-                  }} className="text-red-600">Eliminar cuenta</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDeleteModalOpen(true)} className="text-red-600">Eliminar cuenta</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -446,6 +443,47 @@ const Layout: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Delete account modal (Dialog) */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar cuenta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción marcará
+              tu cuenta como eliminada. Podrás volver a registrarte con el mismo correo,
+              pero algunos datos podrían conservarse según la política de la plataforma.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deletingAccount}>
+                Cancelar
+              </Button>
+              <Button
+                className="bg-red-600"
+                onClick={async () => {
+                  if (!localUser) return;
+                  try {
+                    setDeletingAccount(true);
+                    await usersService.deleteAccount(localUser.userId);
+                    // logout locally after deletion
+                    await logoutLocal();
+                  } catch (err) {
+                    console.error(err);
+                    alert("Error al eliminar la cuenta");
+                  } finally {
+                    setDeletingAccount(false);
+                    setDeleteModalOpen(false);
+                  }
+                }}
+                disabled={deletingAccount}
+              >
+                {deletingAccount ? "Eliminando..." : "Eliminar cuenta"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
