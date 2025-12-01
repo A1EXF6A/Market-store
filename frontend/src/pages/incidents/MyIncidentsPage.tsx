@@ -27,13 +27,22 @@ import {
   MessageSquare,
   MoreHorizontal,
 } from "lucide-react";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@components/ui/dropdown-menu";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 
 export default function MyIncidentsPage() {
@@ -45,10 +54,40 @@ export default function MyIncidentsPage() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [incidentsPage, setIncidentsPage] = useState<number>(0);
   const [incidentsPerPage] = useState<number>(5);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [appliedStatus, setAppliedStatus] = useState<string>("all");
+  const [appliedStartDate, setAppliedStartDate] = useState<string>("");
+  const [appliedEndDate, setAppliedEndDate] = useState<string>("");
 
   useEffect(() => {
     loadMyIncidents();
   }, []);
+
+  // Reset page when applied filters change
+  useEffect(() => {
+    setIncidentsPage(0);
+  }, [appliedStatus, appliedStartDate, appliedEndDate]);
+
+  const filteredIncidents = useMemo<Incident[]>(() => {
+    return incidents.filter((inc) => {
+      if (appliedStatus !== "all" && inc.status !== appliedStatus) return false;
+      if (appliedStartDate) {
+        const s = new Date(appliedStartDate);
+        const reported = new Date(inc.reportedAt);
+        if (reported < s) return false;
+      }
+      if (appliedEndDate) {
+        const e = new Date(appliedEndDate);
+        const reported = new Date(inc.reportedAt);
+        // include the whole day for endDate
+        e.setHours(23, 59, 59, 999);
+        if (reported > e) return false;
+      }
+      return true;
+    });
+  }, [incidents, appliedStatus, appliedStartDate, appliedEndDate]);
 
   const loadMyIncidents = async () => {
     try {
@@ -135,7 +174,7 @@ export default function MyIncidentsPage() {
         </p>
       </div>
 
-      {incidents.length === 0 ? (
+      {filteredIncidents.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -148,14 +187,60 @@ export default function MyIncidentsPage() {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
+            <CardHeader>
             <CardTitle>Incidencias de mis productos</CardTitle>
             <CardDescription>
-              {incidents.length} incidencia{incidents.length !== 1 ? "s" : ""}{" "}
-              encontrada{incidents.length !== 1 ? "s" : ""}
+              {filteredIncidents.length} incidencia{filteredIncidents.length !== 1 ? "s" : ""} {" "}
+              encontrada{filteredIncidents.length !== 1 ? "s" : ""}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-start gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Label>Estado</Label>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                    <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
+                    <SelectItem value={ItemStatus.SUSPENDED}>Suspendido</SelectItem>
+                    <SelectItem value={ItemStatus.HIDDEN}>Oculto</SelectItem>
+                    <SelectItem value={ItemStatus.BANNED}>Prohibido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label>Fecha Inicio</Label>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label>Fecha Fin</Label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => {
+                    setAppliedStatus(statusFilter);
+                    setAppliedStartDate(startDate);
+                    setAppliedEndDate(endDate);
+                  }}
+                >Buscar</Button>
+                <Button variant="outline" onClick={() => {
+                  setStatusFilter("all");
+                  setStartDate("");
+                  setEndDate("");
+                  setAppliedStatus("all");
+                  setAppliedStartDate("");
+                  setAppliedEndDate("");
+                }}>Limpiar</Button>
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -168,7 +253,7 @@ export default function MyIncidentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.slice(incidentsPage * incidentsPerPage, (incidentsPage + 1) * incidentsPerPage).map((incident) => (
+                {filteredIncidents.slice(incidentsPage * incidentsPerPage, (incidentsPage + 1) * incidentsPerPage).map((incident) => (
                   <TableRow key={incident.incidentId}>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -249,8 +334,8 @@ export default function MyIncidentsPage() {
               </TableBody>
             </Table>
             <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-gray-600">
-                Mostrando {incidentsPage * incidentsPerPage + 1} - {Math.min((incidentsPage + 1) * incidentsPerPage, incidents.length)} de {incidents.length}
+                <div className="text-sm text-gray-600">
+                Mostrando {incidentsPage * incidentsPerPage + 1} - {Math.min((incidentsPage + 1) * incidentsPerPage, filteredIncidents.length)} de {filteredIncidents.length}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -264,8 +349,8 @@ export default function MyIncidentsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIncidentsPage((p) => Math.min(p + 1, Math.floor((incidents.length - 1) / incidentsPerPage)))}
-                  disabled={(incidentsPage + 1) * incidentsPerPage >= incidents.length}
+                  onClick={() => setIncidentsPage((p) => Math.min(p + 1, Math.floor((filteredIncidents.length - 1) / incidentsPerPage)))}
+                  disabled={(incidentsPage + 1) * incidentsPerPage >= filteredIncidents.length}
                 >
                   Siguiente
                 </Button>
