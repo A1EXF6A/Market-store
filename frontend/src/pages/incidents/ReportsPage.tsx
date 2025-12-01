@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@components/ui/dialog";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
@@ -44,31 +43,39 @@ import {
   Trash,
   User,
   X,
+  MoreHorizontal,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Textarea } from "@components/ui/textarea";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@components/ui/dropdown-menu";
 
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ReportFilters>({});
-  
   const [activeTab, setActiveTab] = useState("reports");
+
+  // State to control the create-incident modal triggered from actions menu
+  const [createDialogOpenFor, setCreateDialogOpenFor] = useState<number | null>(null);
+  const [createDescription, setCreateDescription] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [activeTab]);
 
   const clearFilters = async () => {
-    const emptyFilters = {};
-    setFilters(emptyFilters);
-    await loadData(emptyFilters);
+    setFilters({});
+    await loadData({});
   };
-
-  
 
   const loadData = async (customFilters?: ReportFilters) => {
     try {
@@ -88,102 +95,23 @@ const ReportsPage: React.FC = () => {
     }
   };
 
-  const CreateIncidentDialog: React.FC<{
-    report: Report;
-    onCreated: () => void;
-  }> = ({ report, onCreated }) => {
-    const [open, setOpen] = useState(false);
-    const [description, setDescription] = useState("");
-    const [loadingCreate, setLoadingCreate] = useState(false);
+  const selectedReport = createDialogOpenFor !== null ? reports.find(r => r.reportId === createDialogOpenFor) : null;
 
-    const handleCreate = async () => {
-      try {
-        setLoadingCreate(true);
-        await incidentsService.createIncidentFromReport(report.reportId, {
-          description,
-        });
-        toast.success("Incidencia creada");
-        setOpen(false);
-        onCreated();
-      } catch (error: any) {
-        toast.error("Error al crear incidencia");
-      } finally {
-        setLoadingCreate(false);
-      }
-    };
-
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Shield className="h-4 w-4 mr-1" />
-            Crear Incidencia
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <div className="flex items-start gap-3">
-              <Shield className="h-6 w-6 text-blue-600 mt-1" />
-              <div>
-                <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">Revisa la información del reporte y añade una descripción adicional si lo deseas.</p>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-4 mt-2">
-            <div className="bg-gray-50 border border-gray-100 p-3 rounded-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Producto ID: <span className="font-medium text-gray-900">{report.itemId}</span></p>
-                  <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{report.buyerId}</span></p>
-                </div>
-                <div className="text-sm text-gray-500">{new Date(report.reportedAt).toLocaleDateString()}</div>
-              </div>
-
-              {report.comment && (
-                <div className="mt-3 px-1">
-                  <h4 className="text-xs font-semibold text-gray-700">Comentario del reportante</h4>
-                  <p className="text-sm text-gray-600 mt-1">{report.comment}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Label>Descripción (opcional)</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Añade contexto adicional para la incidencia (p. ej. pasos para reproducir, evidencias, etc.)"
-                className="min-h-[120px]"
-                maxLength={1000}
-              />
-              <div className="flex justify-between items-center mt-1">
-                <p className="text-xs text-gray-500">Máx. 1000 caracteres</p>
-                <p className="text-xs text-gray-500">{description.length}/1000</p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreate} disabled={loadingCreate}>
-                {loadingCreate ? "Creando..." : "Crear Incidencia"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+  const handleCreateIncident = async () => {
+    if (!selectedReport) return;
+    try {
+      setCreateLoading(true);
+      await incidentsService.createIncidentFromReport(selectedReport.reportId, { description: createDescription });
+      toast.success("Incidencia creada");
+      setCreateDialogOpenFor(null);
+      setCreateDescription("");
+      loadData();
+    } catch (error: any) {
+      toast.error("Error al crear incidencia");
+    } finally {
+      setCreateLoading(false);
+    }
   };
-
-  
-
-  
-
-
-
   const getReportTypeBadge = (type: ReportType) => {
     const typeMap: Record<ReportType, { text: string; class: string; icon: React.ComponentType<any> }> = {
       [ReportType.SPAM]: {
@@ -430,16 +358,25 @@ const ReportsPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/products/${report.itemId}`}>
-                              <Eye className="h-4 w-4 mr-1" />
-                              Revisar
-                            </Link>
-                          </Button>
-                          <CreateIncidentDialog
-                            report={report}
-                            onCreated={() => loadData()}
-                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/products/${report.itemId}`} className="flex items-center">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Revisar
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCreateDialogOpenFor(report.reportId)} className="flex items-center">
+                                <Shield className="h-4 w-4 mr-2" />
+                                Crear Incidencia
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -586,6 +523,68 @@ const ReportsPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Create Incident Modal (controlled by actions menu) */}
+      <Dialog open={createDialogOpenFor !== null} onOpenChange={(open) => { if (!open) { setCreateDialogOpenFor(null); setCreateDescription(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <Shield className="h-6 w-6 text-blue-600 mt-1" />
+              <div>
+                <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">Revisa la información del reporte y añade una descripción adicional si lo deseas.</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {selectedReport ? (
+              <>
+                <div className="bg-gray-50 border border-gray-100 p-3 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Producto ID: <span className="font-medium text-gray-900">{selectedReport.itemId}</span></p>
+                      <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{selectedReport.buyerId}</span></p>
+                    </div>
+                    <div className="text-sm text-gray-500">{new Date(selectedReport.reportedAt).toLocaleDateString()}</div>
+                  </div>
+
+                  {selectedReport.comment && (
+                    <div className="mt-3 px-1">
+                      <h4 className="text-xs font-semibold text-gray-700">Comentario del reportante</h4>
+                      <p className="text-sm text-gray-600 mt-1">{selectedReport.comment}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Descripción (opcional)</Label>
+                  <Textarea
+                    value={createDescription}
+                    onChange={(e) => setCreateDescription(e.target.value)}
+                    placeholder="Añade contexto adicional para la incidencia (p. ej. pasos para reproducir, evidencias, etc.)"
+                    className="min-h-[120px]"
+                    maxLength={1000}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">Máx. 1000 caracteres</p>
+                    <p className="text-xs text-gray-500">{createDescription.length}/1000</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setCreateDialogOpenFor(null); setCreateDescription(""); }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleCreateIncident} disabled={createLoading}>
+                    {createLoading ? "Creando..." : "Crear Incidencia"}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
