@@ -64,6 +64,8 @@ const ReportsPage: React.FC = () => {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [appealsPage, setAppealsPage] = useState<number>(0);
   const [appealsPerPage, setAppealsPerPage] = useState<number>(5);
+  const [reportsPage, setReportsPage] = useState<number>(0);
+  const [reportsPerPage, setReportsPerPage] = useState<number>(10);
   const [appealActionLoading, setAppealActionLoading] = useState<number | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
@@ -96,6 +98,7 @@ const ReportsPage: React.FC = () => {
       if (activeTab === "reports") {
         const data = await incidentsService.getReports(currentFilters);
         setReports(data);
+        setReportsPage(0);
       } else if (activeTab === "appeals") {
         const data = await incidentsService.getAppeals();
         setAppeals(data);
@@ -338,7 +341,7 @@ const ReportsPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((report) => (
+                  {reports.slice(reportsPage * reportsPerPage, (reportsPage + 1) * reportsPerPage).map((report) => (
                     <TableRow key={report.reportId}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -427,6 +430,32 @@ const ReportsPage: React.FC = () => {
                   <p className="text-gray-600">
                     No hay reportes que coincidan con los filtros seleccionados
                   </p>
+                </div>
+              )}
+
+              {reports.length > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                    Mostrando {reportsPage * reportsPerPage + 1} - {Math.min((reportsPage + 1) * reportsPerPage, reports.length)} de {reports.length}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReportsPage((p) => Math.max(0, p - 1))}
+                      disabled={reportsPage === 0}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReportsPage((p) => Math.min(p + 1, Math.floor((reports.length - 1) / reportsPerPage)))}
+                      disabled={(reportsPage + 1) * reportsPerPage >= reports.length}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

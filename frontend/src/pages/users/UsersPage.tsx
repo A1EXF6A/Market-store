@@ -67,6 +67,8 @@ const UsersPage: React.FC = () => {
   );
   const [suspendDate, setSuspendDate] = useState<string>("");
   const [suspendDays, setSuspendDays] = useState<string>("");
+  const [usersPage, setUsersPage] = useState<number>(0);
+  const [usersPerPage] = useState<number>(10);
 
   useEffect(() => {
     loadUsers();
@@ -78,6 +80,7 @@ const UsersPage: React.FC = () => {
       const currentFilters = customFilters !== undefined ? customFilters : filters;
       const data = await usersService.getAll(currentFilters);
       setUsers(data);
+      setUsersPage(0);
     } catch (error: any) {
       toast.error("Error al cargar usuarios");
     } finally {
@@ -438,7 +441,7 @@ const UsersPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {users.slice(usersPage * usersPerPage, (usersPage + 1) * usersPerPage).map((user) => (
                 <TableRow key={user.userId}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -551,6 +554,32 @@ const UsersPage: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+
+          {users.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {usersPage * usersPerPage + 1} - {Math.min((usersPage + 1) * usersPerPage, users.length)} de {users.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage((p) => Math.max(0, p - 1))}
+                  disabled={usersPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage((p) => Math.min(p + 1, Math.floor((users.length - 1) / usersPerPage)))}
+                  disabled={(usersPage + 1) * usersPerPage >= users.length}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
 
           {users.length === 0 && (
             <div className="text-center py-12">
