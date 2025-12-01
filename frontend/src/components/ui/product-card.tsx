@@ -110,14 +110,45 @@ export function ProductCard({
           )}
         </div>
 
-        {/* Location and Date */}
+        {/* Location (map) and Date */}
         <div className="space-y-2 mb-4">
           {product.location && (
-            <div className="flex items-center text-sm text-gray-600">
-              <MapPin className="h-4 w-4 mr-2" />
-              {product.location}
+            <div>
+              <div className="text-sm text-gray-600 flex items-center mb-2">
+                <MapPin className="h-4 w-4 mr-2" />
+                <span className="font-medium">Ubicación</span>
+              </div>
+
+              <div className="w-full h-40 rounded-md overflow-hidden border border-gray-100">
+                <iframe
+                  title={`map-${product.itemId}`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    product.location,
+                  )}&output=embed`}
+                  className="w-full h-full"
+                  loading="lazy"
+                />
+              </div>
+
+              <div className="text-sm text-gray-500 mt-2 flex items-center justify-between">
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{product.location}</span>
+                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    product.location,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 underline"
+                >
+                  Abrir en Maps
+                </a>
+              </div>
             </div>
           )}
+
           <div className="flex items-center text-sm text-gray-500">
             <Calendar className="h-4 w-4 mr-2" />
             {new Date(product.publishedAt).toLocaleDateString()}
