@@ -1,5 +1,5 @@
 // src/pages/Layout.tsx
-import { useAuthStore } from "@/store/authStore"; // <-- solo para logout
+import { useAuthStore } from "@/store/authStore";
 import { UserRole } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -20,9 +20,11 @@ import {
   Plus,
   Settings,
   ShoppingBag,
-  User,
   Users,
   Trash,
+  Menu,
+  X,
+  Sparkles,
 } from "lucide-react";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -33,12 +35,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@components/ui/dialog";
-import { authService } from "@/services/auth"; // optional remote logout
+import PageBackground from "@/components/PageBackground";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type FormState = {
   firstName: string;
   lastName: string;
-  email: string; // readonly in UI
+  email: string;
   phone?: string;
   address?: string;
   gender: "male" | "female" | "other";
@@ -84,15 +87,13 @@ const removeUserFromLocalStorage = () => {
 };
 
 const Layout: React.FC = () => {
-  // reintroducimos solo logout de la store para que haga lo que hacía antes
   const { logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Estado local que representa el usuario (lee de localStorage al montar)
   const [localUser, setLocalUser] = useState<any>(() => readUserFromLocalStorage());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Debounce para escritura en localStorage (usado solo cuando guardamos/cerramos sesión)
   const writeTimer = useRef<number | null>(null);
   const debouncedWriteUser = useCallback((u: any) => {
     if (writeTimer.current) {
@@ -121,7 +122,6 @@ const Layout: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  // Cuando cambie localUser (por ejemplo después de handleSave o por storage event), sincronizamos el form
   useEffect(() => {
     if (localUser) {
       setForm({
@@ -144,7 +144,6 @@ const Layout: React.FC = () => {
     }
   }, [localUser]);
 
-  // Escuchar cambios en localStorage desde otras pestañas y sincronizar
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "user") {
@@ -156,40 +155,23 @@ const Layout: React.FC = () => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // setter local que también escribe en localStorage debounced
   const setUserLocal = useCallback((u: any | null) => {
     setLocalUser(u);
     debouncedWriteUser(u);
   }, [debouncedWriteUser]);
 
-  // ---------- << IMPORTANTE >> ----------
-  // updateField ahora SOLO actualiza el form (no toca localUser ni localStorage)
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
-  // --------------------------------------
 
-  // Logout que *usa* el logout que te funcionó antes y además limpia localStorage
   const logoutLocal = async () => {
     try {
-      if (logout && typeof logout === "function") {
-        try {
-          await logout();
-        } catch (e) {
-          console.warn("store logout failed (continuando):", e);
-        }
-      } else if (authService && typeof authService.logout === "function") {
-        try {
-          await authService.logout();
-        } catch (e) {
-          console.warn("authService.logout failed (continuando):", e);
-        }
-      }
-    } catch {
-      // ignore
+      // Use logout from authStore instead of authService
+      logout();
+    } catch (e) {
+      console.warn("logout failed:", e);
     }
 
-    // limpiar estado y localStorage
     setUserLocal(null);
     removeUserFromLocalStorage();
     try {
@@ -204,9 +186,7 @@ const Layout: React.FC = () => {
   };
 
   const handleSettings = () => {
-    // abrir modal; el form ya contiene los datos actuales de localUser (por useEffect)
     setIsModalOpen(true);
-     console.log("User update response:", localUser);
     setError(null);
     setSuccessMessage(null);
   };
@@ -214,7 +194,6 @@ const Layout: React.FC = () => {
   const closeModal = () => {
     setError(null);
     setIsModalOpen(false);
-    // restaurar el form desde localUser (descartar cambios)
     const latest = readUserFromLocalStorage() ?? localUser ?? {};
     setForm({
       firstName: latest?.firstName ?? "",
@@ -266,21 +245,19 @@ const Layout: React.FC = () => {
      
       const updatedUser = {
         ...(localUser ?? {}),
+        ...(res || {}),
         firstName: payload.firstName ?? (localUser as any).firstName,
         lastName: payload.lastName ?? (localUser as any).lastName,
-        phoneNumber: payload.phoneNumber ?? (localUser as any).phone,
+        phone: payload.phoneNumber ?? (localUser as any).phone,
         address: payload.address ?? (localUser as any).address,
         gender: payload.gender ?? (localUser as any).gender,
-        ...(res?.data || {}),
       };
 
-      // Aquí SÍ actualizamos localUser y localStorage (porque el usuario ACEPTÓ)
       setUserLocal(updatedUser);
 
       setSaving(false);
       setSuccessMessage("Datos guardados exitosamente.");
 
-      // actualizar el formulario con la respuesta final
       setForm({
         firstName: updatedUser.firstName ?? "",
         lastName: updatedUser.lastName ?? "",
@@ -303,11 +280,11 @@ const Layout: React.FC = () => {
     }
   };
 
-  const roleColors = {
-    [UserRole.BUYER]: "bg-blue-100 text-blue-800",
-    [UserRole.SELLER]: "bg-green-100 text-green-800",
-    [UserRole.MODERATOR]: "bg-orange-100 text-orange-800",
-    [UserRole.ADMIN]: "bg-red-100 text-red-800",
+  const roleColors: { [key: string]: string } = {
+    [UserRole.BUYER]: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+    [UserRole.SELLER]: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
+    [UserRole.MODERATOR]: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+    [UserRole.ADMIN]: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200",
   };
 
   const navigationItems = [
@@ -330,20 +307,50 @@ const Layout: React.FC = () => {
 
   const displayedUser = localUser;
 
+  const getRoleLabel = (role: UserRole) => {
+    switch (role) {
+      case UserRole.BUYER: return "Comprador";
+      case UserRole.SELLER: return "Vendedor";
+      case UserRole.MODERATOR: return "Moderador";
+      case UserRole.ADMIN: return "Administrador";
+      default: return "Usuario";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen relative bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-blue-950 dark:to-purple-950">
+      <PageBackground />
+      
+      {/* Enhanced navigation with improved animations */}
+      <nav className="relative z-20 glass-effect backdrop-blur-md border-b border-border/50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
-              <Link to="/dashboard" className="text-xl font-bold text-gray-900">CommerceHub</Link>
+              <Link 
+                to="/dashboard" 
+                className="text-xl font-bold text-gradient-cyan hover:scale-105 transition-all duration-300 flex items-center gap-2"
+              >
+                <Sparkles className="h-6 w-6 animate-pulse-glow" />
+                MarketPlace
+              </Link>
 
-              <div className="hidden md:flex items-center space-x-4">
-                {filteredNavItems.map((item) => {
+              <div className="hidden lg:flex items-center space-x-1">
+                {filteredNavItems.map((item, index) => {
                   const Icon = item.icon;
                   const isActive = isActivePath(item.path);
                   return (
-                    <Link key={item.path} to={item.path} className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? "bg-gray-900 text-white" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"}`}>
+                    <Link 
+                      key={item.path} 
+                      to={item.path} 
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-glow ${
+                        isActive 
+                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-glow scale-105" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
+                      }`}
+                      style={{
+                        animationDelay: `${index * 0.1}s`
+                      }}
+                    >
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </Link>
@@ -352,106 +359,214 @@ const Layout: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <div className="animate-fadeInScale" style={{ animationDelay: "0.3s" }}>
+                <ThemeToggle />
+              </div>
+              
               {displayedUser?.role === UserRole.SELLER && (
-                <Button asChild size="sm">
-                  <Link to="/products/create"><Plus className="h-4 w-4 mr-1" />Crear Producto</Link>
+                <Button asChild size="sm" className="hidden md:flex bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-glow text-white hover:scale-105 transition-all duration-200 animate-fadeInScale" style={{ animationDelay: "0.4s" }}>
+                  <Link to="/products/create">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Crear Producto
+                  </Link>
                 </Button>
               )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <User className="h-4 w-4" />
-                    <span className="hidden md:block">{displayedUser?.firstName}</span>
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-accent/50 animate-fadeInScale" style={{ animationDelay: "0.5s" }}>
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-glow">
+                      {displayedUser?.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <span className="hidden md:block font-medium">{displayedUser?.firstName}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{displayedUser?.firstName} {displayedUser?.lastName}</p>
-                    <p className="text-xs text-gray-500">{displayedUser?.email}</p>
+                <DropdownMenuContent align="end" className="w-64 glass-effect animate-fadeInScale">
+                  <div className="px-2 py-2">
+                    <p className="text-sm font-semibold">{displayedUser?.firstName} {displayedUser?.lastName}</p>
+                    <p className="text-xs text-muted-foreground mb-2">{displayedUser?.email}</p>
+                    <Badge className={roleColors[displayedUser?.role] || "bg-gray-100 text-gray-800"}>
+                      {getRoleLabel(displayedUser?.role)}
+                    </Badge>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSettings}><Settings className="h-4 w-4 mr-2" />Configuración</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSettings} className="cursor-pointer hover:bg-accent/50">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configuración
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setDeleteModalOpen(true)} className="text-red-600"><Trash className="h-4 w-4 mr-2" />Eliminar cuenta</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDeleteModalOpen(true)} className="text-red-600 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20">
+                    <Trash className="h-4 w-4 mr-2" />
+                    Eliminar cuenta
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden animate-fadeInScale"
+                style={{ animationDelay: "0.6s" }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
             </div>
           </div>
+          
+          {/* Enhanced mobile menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden border-t border-border/50 py-4 animate-slideInFromTop">
+              <div className="flex flex-col space-y-2">
+                {filteredNavItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const isActive = isActivePath(item.path);
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isActive 
+                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-glow" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                      }`}
+                      style={{
+                        animationDelay: `${index * 0.05}s`
+                      }}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+                
+                {displayedUser?.role === UserRole.SELLER && (
+                  <Link
+                    to="/products/create"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white mt-2 shadow-glow"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Crear Producto</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8"><Outlet /></main>
+      <main className="relative z-10 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 animate-fadeInUp" style={{ animationDelay: "0.2s" }}>
+        <Outlet />
+      </main>
 
-      {/* Modal */}
+      {/* Settings Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
-          <div className="fixed inset-0 bg-black/40" onClick={closeModal} aria-hidden />
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 z-10">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-medium">Editar Perfil</h3>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700" aria-label="Cerrar">✕</button>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} aria-hidden />
+          <div className="relative glass-effect rounded-xl shadow-2xl w-full max-w-lg mx-4 z-10 animate-fadeInScale">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Editar Perfil</h3>
+              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Cerrar">✕</button>
             </div>
 
             <div className="px-6 py-4">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input type="text" value={form.firstName} onChange={(e) => updateField("firstName", e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                  <label className="block text-sm font-medium text-foreground">Nombre</label>
+                  <input 
+                    type="text" 
+                    value={form.firstName} 
+                    onChange={(e) => updateField("firstName", e.target.value)} 
+                    className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Apellido</label>
-                  <input type="text" value={form.lastName} onChange={(e) => updateField("lastName", e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                  <label className="block text-sm font-medium text-foreground">Apellido</label>
+                  <input 
+                    type="text" 
+                    value={form.lastName} 
+                    onChange={(e) => updateField("lastName", e.target.value)} 
+                    className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Correo</label>
-                  <input type="email" value={form.email} disabled className="mt-1 block w-full rounded-md border-gray-200 bg-gray-50 text-gray-600 shadow-sm" />
-                  <p className="text-xs text-gray-400 mt-1">El correo no puede ser modificado desde aquí.</p>
+                  <label className="block text-sm font-medium text-foreground">Correo</label>
+                  <input 
+                    type="email" 
+                    value={form.email} 
+                    disabled 
+                    className="mt-1 block w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground" 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">El correo no puede ser modificado desde aquí.</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                  <input type="text" value={form.phone ?? ""} onChange={(e) => updateField("phone", e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                  <label className="block text-sm font-medium text-foreground">Teléfono</label>
+                  <input 
+                    type="text" 
+                    value={form.phone ?? ""} 
+                    onChange={(e) => updateField("phone", e.target.value)} 
+                    className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Dirección</label>
-                  <input type="text" value={form.address ?? ""} onChange={(e) => updateField("address", e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                  <label className="block text-sm font-medium text-foreground">Dirección</label>
+                  <input 
+                    type="text" 
+                    value={form.address ?? ""} 
+                    onChange={(e) => updateField("address", e.target.value)} 
+                    className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Género</label>
-                  <select value={form.gender} onChange={(e) => updateField("gender", e.target.value as FormState["gender"])} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                  <label className="block text-sm font-medium text-foreground">Género</label>
+                  <select 
+                    value={form.gender} 
+                    onChange={(e) => updateField("gender", e.target.value as FormState["gender"])} 
+                    className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                  >
                     <option value="male">Hombre</option>
                     <option value="female">Mujer</option>
                     <option value="other">Otro</option>
                   </select>
                 </div>
 
-                {error && <div className="text-sm text-red-600">{error}</div>}
-                {successMessage && <div className="text-sm text-green-600">{successMessage}</div>}
+                {error && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-md">{error}</div>}
+                {successMessage && <div className="text-sm text-green-600 bg-green-50 dark:bg-green-950/20 px-3 py-2 rounded-md">{successMessage}</div>}
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t flex justify-end gap-3">
-              <button onClick={closeModal} className="px-4 py-2 rounded-md border hover:bg-gray-50" disabled={saving}>Cancelar</button>
-              <button onClick={handleSave} className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60" disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
+            <div className="px-6 py-4 border-t border-border/50 flex justify-end gap-3">
+              <Button variant="outline" onClick={closeModal} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                {saving ? "Guardando..." : "Guardar cambios"}
+              </Button>
             </div>
           </div>
         </div>
       )}
-      {/* Delete account modal (Dialog) */}
+
+      {/* Delete account modal */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent>
+        <DialogContent className="glass-effect">
           <DialogHeader>
             <DialogTitle>Eliminar cuenta</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción marcará
               tu cuenta como eliminada. Podrás volver a registrarte con el mismo correo,
               pero algunos datos podrían conservarse según la política de la plataforma.
@@ -461,13 +576,12 @@ const Layout: React.FC = () => {
                 Cancelar
               </Button>
               <Button
-                className="bg-red-600"
+                className="bg-red-600 text-white hover:bg-red-700"
                 onClick={async () => {
                   if (!localUser) return;
                   try {
                     setDeletingAccount(true);
                     await usersService.deleteAccount(localUser.userId);
-                    // logout locally after deletion
                     await logoutLocal();
                   } catch (err) {
                     console.error(err);

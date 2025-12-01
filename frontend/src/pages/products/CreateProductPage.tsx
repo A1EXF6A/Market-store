@@ -137,7 +137,7 @@ const CreateProductPage: React.FC = () => {
     const filtered = CATEGORIES.filter((c) => c.toLowerCase().includes(q.toLowerCase()));
     return (
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="hover:border-violet-500/60 focus:ring-violet-500/30">
+        <SelectTrigger className="hover:border-blue-500/60 focus:ring-blue-500/30">
           <SelectValue placeholder="Selecciona una categoría" />
         </SelectTrigger>
         <SelectContent>
@@ -208,14 +208,14 @@ const CreateProductPage: React.FC = () => {
       {/* ====== CAPAS DE FONDO ANIMADAS (condicionales) ====== */}
       {bgOn && (
         <>
-          {/* Gradiente animado principal */}
+          {          /* Gradiente animado principal */}
           <div
             className="pointer-events-none absolute inset-0 -z-20 animate-[bgshift_16s_ease-in-out_infinite] opacity-95"
             style={{
               background:
-                "radial-gradient(1200px 1200px at 10% -10%, rgba(147, 51, 234, .35), transparent 50%)," +
-                "radial-gradient(1100px 1000px at 110% 10%, rgba(79, 70, 229, .35), transparent 55%)," +
-                "radial-gradient(800px 900px at 50% 110%, rgba(236, 72, 153, .28), transparent 60%)",
+                "radial-gradient(1200px 1200px at 10% -10%, rgba(59, 130, 246, .35), transparent 50%)," +
+                "radial-gradient(1100px 1000px at 110% 10%, rgba(59, 130, 246, .30), transparent 55%)," +
+                "radial-gradient(800px 900px at 50% 110%, rgba(59, 130, 246, .25), transparent 60%)",
             }}
           />
 
@@ -240,13 +240,13 @@ const CreateProductPage: React.FC = () => {
           />
 
           {/* Blobs flotantes */}
-          <div className="pointer-events-none absolute -top-20 -left-20 h-[380px] w-[380px] -z-10 rounded-full blur-3xl opacity-50 animate-[blob_22s_ease-in-out_infinite] bg-fuchsia-400/35"></div>
-          <div className="pointer-events-none absolute -bottom-24 -right-24 h-[420px] w-[420px] -z-10 rounded-full blur-3xl opacity-50 animate-[blob_18s_ease-in-out_infinite_alternate] bg-indigo-400/35"></div>
+          <div className="pointer-events-none absolute -top-20 -left-20 h-[380px] w-[380px] -z-10 rounded-full blur-3xl opacity-50 animate-[blob_22s_ease-in-out_infinite] bg-blue-400/35"></div>
+          <div className="pointer-events-none absolute -bottom-24 -right-24 h-[420px] w-[420px] -z-10 rounded-full blur-3xl opacity-50 animate-[blob_18s_ease-in-out_infinite_alternate] bg-blue-400/30"></div>
         </>
       )}
 
       {/* ====== HEADER/HERO ====== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-blue-600 shadow-lg">
         <div
           className="absolute inset-0 opacity-25 pointer-events-none"
           style={{
@@ -328,7 +328,7 @@ const CreateProductPage: React.FC = () => {
                           value={field.value}
                           onValueChange={field.onChange}
                         >
-                          <SelectTrigger className="hover:border-indigo-500/60 focus:ring-indigo-500/30">
+                          <SelectTrigger className="hover:border-blue-500/60 focus:ring-blue-500/30">
                             <SelectValue placeholder="Selecciona el tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -352,7 +352,7 @@ const CreateProductPage: React.FC = () => {
                     id="description"
                     placeholder="Describe tu producto o servicio..."
                     rows={4}
-                    className="resize-none hover:border-fuchsia-500/60 focus:ring-fuchsia-500/30"
+                    className="resize-none hover:border-slate-500/60 focus:ring-slate-500/30"
                     {...register("description")}
                   />
                   {errors.description && (
@@ -380,8 +380,8 @@ const CreateProductPage: React.FC = () => {
               {/* Imágenes */}
               <div className="rounded-xl border p-4 md:p-6 bg-white/70 dark:bg-neutral-950/60">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="rounded-md bg-indigo-600/10 p-2">
-                    <ImageIcon className="h-4 w-4 text-indigo-600" />
+                  <div className="rounded-md bg-blue-600/10 p-2">
+                    <ImageIcon className="h-4 w-4 text-blue-600" />
                   </div>
                   <h3 className="font-medium">Imágenes</h3>
                 </div>
@@ -406,7 +406,7 @@ const CreateProductPage: React.FC = () => {
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        className="pl-10 hover:border-emerald-500/60 focus:ring-emerald-500/30"
+                        className="pl-10 hover:border-blue-500/60 focus:ring-blue-500/30"
                         {...register("price")}
                       />
                       <Coins className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -424,7 +424,7 @@ const CreateProductPage: React.FC = () => {
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="location"
-                        className="pl-9 hover:border-sky-500/60 focus:ring-sky-500/30"
+                        className="pl-9 hover:border-slate-500/60 focus:ring-slate-500/30"
                         placeholder="Selecciona en el mapa o escribe una dirección"
                         {...register("location")}
                       />
@@ -464,7 +464,7 @@ const CreateProductPage: React.FC = () => {
                     <Input
                       id="workingHours"
                       placeholder="Ej: Lunes a Viernes 09:00 - 18:00"
-                      className="hover:border-rose-500/60 focus:ring-rose-500/30"
+                      className="hover:border-slate-500/60 focus:ring-slate-500/30"
                       {...register("workingHours")}
                     />
                     {errors.workingHours && (
@@ -508,13 +508,13 @@ const CreateProductPage: React.FC = () => {
         </Card>
 
         {/* Preview lateral */}
-        <Card className="border-0 shadow-xl bg-gradient-to-b from-fuchsia-50/80 to-white/80 dark:from-neutral-900/70 dark:to-neutral-950/70 sticky top-4 h-max backdrop-blur">
+        <Card className="border-0 shadow-xl bg-gradient-to-b from-slate-50/80 to-white/80 dark:from-neutral-900/70 dark:to-neutral-950/70 sticky top-4 h-max backdrop-blur">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Vista previa</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Imagen cover */}
-            <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-indigo-100 via-violet-100 to-fuchsia-100 dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-900 flex items-center justify-center">
+            <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-neutral-800 dark:to-neutral-900 flex items-center justify-center">
               {images?.length ? (
                 <img
                   src={URL.createObjectURL(images[0])}
@@ -535,12 +535,12 @@ const CreateProductPage: React.FC = () => {
               <div className="text-sm text-muted-foreground truncate">
                 {watch("category") || "Categoría"}
               </div>
-              <div className="text-sm text-emerald-600 font-medium">
+              <div className="text-sm text-blue-600 font-medium">
                 {watch("price")
                   ? `USD ${Number(watch("price")).toLocaleString()}`
                   : "—"}
               </div>
-              <div className="text-sm text-sky-600 flex items-center gap-1">
+              <div className="text-sm text-slate-600 flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
                 <span className="truncate">
                   {watch("location") || "Ubicación"}

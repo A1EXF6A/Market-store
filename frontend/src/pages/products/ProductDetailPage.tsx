@@ -148,7 +148,7 @@ const ProductDetailPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow">
+      <div className="rounded-2xl bg-blue-600 p-[1px] shadow-lg">
         <div className="rounded-2xl bg-white dark:bg-neutral-950 p-4 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
@@ -205,7 +205,7 @@ const ProductDetailPage: React.FC = () => {
                   key={photo.photoId}
                   onClick={() => setCurrentImageIndex(index)}
                   className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition ${
-                    currentImageIndex === index ? "border-indigo-500" : "border-transparent"
+                    currentImageIndex === index ? "border-blue-500" : "border-transparent"
                   }`}
                   title={`Imagen ${index + 1}`}
                 >
@@ -260,7 +260,7 @@ const ProductDetailPage: React.FC = () => {
                 <CardTitle className="text-2xl">{product.name}</CardTitle>
                 {typeof product.price === "number" && (
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-emerald-600 flex items-center justify-end">
+                    <div className="text-3xl font-bold text-blue-600 flex items-center justify-end">
                       <DollarSign className="h-6 w-6" />
                       {currency.format(product.price)}
                     </div>

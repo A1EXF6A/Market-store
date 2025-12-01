@@ -1,4 +1,3 @@
-import { useAuthStore } from "@/store/authStore";
 import type { Product } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -22,7 +21,6 @@ import { toast } from "sonner";
 const FavoritesPage: React.FC = () => {
   const [favorites, setFavorites] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
     loadFavorites();
@@ -33,7 +31,7 @@ const FavoritesPage: React.FC = () => {
       setLoading(true);
       console.log(Cookies.get("access_token"));
 
-      const data = await productsService.getFavorites(Number(user?.userId));
+      const data = await productsService.getFavorites();
 
       setFavorites(data);
     } catch (error: any) {
@@ -70,7 +68,7 @@ const FavoritesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Heart className="h-8 w-8 text-red-500" />
+        <Heart className="h-8 w-8 text-blue-600" />
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mis Favoritos</h1>
           <p className="text-gray-600 mt-2">
@@ -123,7 +121,7 @@ const FavoritesPage: React.FC = () => {
                     className="absolute top-2 right-2 bg-white/80 hover:bg-white"
                     onClick={() => handleToggleFavorite(product.itemId)}
                   >
-                    <HeartOff className="h-4 w-4 text-red-500" />
+                    <HeartOff className="h-4 w-4 text-blue-600" />
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -145,7 +143,7 @@ const FavoritesPage: React.FC = () => {
               <CardContent className="pt-0">
                 <div className="space-y-3">
                   {product.price && (
-                    <div className="flex items-center text-green-600 font-semibold text-lg">
+                    <div className="flex items-center text-blue-600 font-semibold text-lg">
                       <DollarSign className="h-5 w-5" />
                       {product.price.toLocaleString()}
                     </div>

@@ -3,11 +3,12 @@ process.loadEnvFile(__dirname + "/../../.env");
 interface Config {
   port: number;
   database: {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    name: string;
+    url: string;
+    host?: string;
+    port?: number;
+    user?: string;
+    password?: string;
+    name?: string;
   };
   email: {
     host: string;
@@ -25,6 +26,8 @@ interface Config {
 const env: Config = {
   port: process.env.PORT ? parseInt(process.env.PORT) : 3001,
   database: {
+    url: process.env.DATABASE_URL || 
+         `postgresql://${process.env.DB_USER || "postgres"}:${process.env.DB_PASSWORD || "12345"}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || "5433"}/${process.env.DB_NAME || "marketstore"}`,
     host: process.env.DB_HOST || "localhost",
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5433,
     user: process.env.DB_USER || "postgres",
