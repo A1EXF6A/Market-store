@@ -88,6 +88,12 @@ const IncidentsPage: React.FC = () => {
     loadIncidents();
   }, []);
 
+  const statusCounts = incidents.reduce<Record<string, number>>((acc, inc) => {
+    const s = inc.status ?? "unknown";
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
   const loadIncidents = async (customFilters?: IncidentFilters) => {
     try {
       setLoading(true);
@@ -254,6 +260,8 @@ const IncidentsPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      
 
       {/* Filters */}
       <Card>
@@ -541,6 +549,27 @@ const IncidentsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {incidents.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            { key: ItemStatus.PENDING, label: "Pendientes", color: "text-yellow-600" },
+            { key: ItemStatus.ACTIVE, label: "Activas", color: "text-green-600" },
+            { key: ItemStatus.SUSPENDED, label: "Suspendidas", color: "text-red-600" },
+            { key: ItemStatus.HIDDEN, label: "Ocultas", color: "text-gray-600" },
+            { key: ItemStatus.BANNED, label: "Prohibidas", color: "text-red-700" },
+          ].map((s) => (
+            <Card key={s.key}>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${s.color}`}>{statusCounts[s.key] ?? 0}</div>
+                  <p className="text-sm text-gray-600">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Resolve Incident Dialog */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>

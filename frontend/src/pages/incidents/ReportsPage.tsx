@@ -705,6 +705,32 @@ const ReportsPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {appeals.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {appeals.filter((a) => !a.reviewed).length}
+                    </div>
+                    <p className="text-sm text-gray-600">Apelaciones Pendientes</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {appeals.filter((a) => a.reviewed).length}
+                    </div>
+                    <p className="text-sm text-gray-600">Apelaciones Resueltas</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
