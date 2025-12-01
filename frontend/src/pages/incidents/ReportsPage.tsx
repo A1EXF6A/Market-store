@@ -464,14 +464,13 @@ const ReportsPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Apelación ID</TableHead>
-                    <TableHead>Incidencia</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
+                      <TableHead>Apelación ID</TableHead>
+                      <TableHead>Incidencia</TableHead>
+                      <TableHead>Vendedor</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Estado</TableHead>
+                    </TableRow>
                 </TableHeader>
                 <TableBody>
                   {appeals.map((appeal) => (
@@ -483,7 +482,13 @@ const ReportsPage: React.FC = () => {
                         <div className="text-sm text-gray-600">{appeal.incidentId}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-gray-600">{appeal.sellerId}</div>
+                        <div className="text-sm text-gray-600">
+                          {(
+                            // prefer seller email if provided by API, fallback to seller object or id
+                            // @ts-ignore
+                            appeal.sellerEmail || (appeal as any).seller?.email || appeal.sellerId
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="max-w-xs">
@@ -502,11 +507,7 @@ const ReportsPage: React.FC = () => {
                           <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {/* Acciones específicas de apelaciones pueden añadirse aquí */}
-                        </div>
-                      </TableCell>
+                    
                     </TableRow>
                   ))}
                 </TableBody>
@@ -543,8 +544,16 @@ const ReportsPage: React.FC = () => {
                 <div className="bg-gray-50 border border-gray-100 p-3 rounded-md">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Producto ID: <span className="font-medium text-gray-900">{selectedReport.itemId}</span></p>
-                      <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{selectedReport.buyerId}</span></p>
+                      <p className="text-sm text-gray-600">Producto: <span className="font-medium text-gray-900">{
+                        // prefer product name if provided by API, fallback to product object name or id
+                        // @ts-ignore
+                        (selectedReport.itemName) || (selectedReport as any).item?.name || `ID ${selectedReport.itemId}`
+                      }</span></p>
+                      <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{
+                        // prefer buyer email if provided by API, fallback to buyer object or id
+                        // @ts-ignore
+                        selectedReport.buyerEmail || (selectedReport as any).buyer?.email || selectedReport.buyerId
+                      }</span></p>
                     </div>
                     <div className="text-sm text-gray-500">{new Date(selectedReport.reportedAt).toLocaleDateString()}</div>
                   </div>
