@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@components/ui/select";
+import { Search } from "lucide-react";
+import React, { useState } from "react";
 import { Textarea } from "@components/ui/textarea";
 import { Switch } from "@components/ui/switch"; // ⬅️ Toggle
 import type { CreateProductData } from "@services/products";
@@ -24,7 +26,6 @@ import {
   Tag,
   Coins,
 } from "lucide-react";
-import React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -129,6 +130,45 @@ const CreateProductPage: React.FC = () => {
   });
 
   const selectedType = watch("type");
+
+  // Small helper select with search for categories
+  const CategorySelect: React.FC<{ value?: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
+    const [q, setQ] = useState("");
+    const filtered = CATEGORIES.filter((c) => c.toLowerCase().includes(q.toLowerCase()));
+    return (
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="hover:border-violet-500/60 focus:ring-violet-500/30">
+          <SelectValue placeholder="Selecciona una categoría" />
+        </SelectTrigger>
+        <SelectContent>
+          <div className="px-3 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar categoría..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="pl-10 mb-2"
+              />
+            </div>
+            <div className="max-h-56 overflow-auto">
+              {filtered.length === 0 ? (
+                <div className="px-2 py-3 text-sm text-gray-500">No se encontraron categorías</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-1">
+                  {filtered.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </SelectContent>
+      </Select>
+    );
+  };
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -324,24 +364,13 @@ const CreateProductPage: React.FC = () => {
 
                 <div className="space-y-2 mt-5">
                   <Label htmlFor="category">Categoría</Label>
-                  <Controller
-                    control={control}
-                    name="category"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="hover:border-violet-500/60 focus:ring-violet-500/30">
-                          <SelectValue placeholder="Selecciona una categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+                    <Controller
+                      control={control}
+                      name="category"
+                      render={({ field }) => (
+                        <CategorySelect value={field.value} onChange={field.onChange} />
+                      )}
+                    />
                   {errors.category && (
                     <p className="text-sm text-red-600">{errors.category.message}</p>
                   )}

@@ -22,6 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -77,6 +85,10 @@ const MyProductsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [appliedSearch, setAppliedSearch] = useState<string>("");
   const [appliedStatus, setAppliedStatus] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState<string>("");
+  const [appliedDateTo, setAppliedDateTo] = useState<string>("");
 
   const countActive = useMemo(
     () => products.filter((p) => p.availability).length,
@@ -107,7 +119,7 @@ const MyProductsPage: React.FC = () => {
   // Reset page when applied filters change
   React.useEffect(() => {
     setProductsPage(0);
-  }, [appliedSearch, appliedStatus]);
+  }, [appliedSearch, appliedStatus, appliedDateFrom, appliedDateTo]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -117,13 +129,24 @@ const MyProductsPage: React.FC = () => {
         const nameMatch = p.name?.toLowerCase().includes(s);
         if (!nameMatch) return false;
       }
+      // Filter by published date range (if applied)
+      if (appliedDateFrom) {
+        const from = new Date(appliedDateFrom);
+        const pd = new Date(p.publishedAt);
+        if (isNaN(from.getTime()) || isNaN(pd.getTime()) || pd < from) return false;
+      }
+      if (appliedDateTo) {
+        // include whole day for the 'to' date
+        const to = new Date(appliedDateTo);
+        to.setHours(23, 59, 59, 999);
+        const pd = new Date(p.publishedAt);
+        if (isNaN(to.getTime()) || isNaN(pd.getTime()) || pd > to) return false;
+      }
       return true;
     });
-  }, [products, appliedSearch, appliedStatus]);
+  }, [products, appliedSearch, appliedStatus, appliedDateFrom, appliedDateTo]);
 
   const handleDeleteProduct = async (productId: number) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return;
-
     try {
       setActionBusyId(productId);
       await productsService.delete(productId);
@@ -134,6 +157,18 @@ const MyProductsPage: React.FC = () => {
     } finally {
       setActionBusyId(null);
     }
+  };
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductWithCoercedPrice | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.itemId;
+    await handleDeleteProduct(id);
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
   };
 
   const toggleProductAvailability = async (productId: number, available: boolean) => {
@@ -286,13 +321,40 @@ const MyProductsPage: React.FC = () => {
                     </Select>
                   </div>
 
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Desde</Label>
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Hasta</Label>
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+
                   <div className="flex items-center gap-2 ml-2">
                     <Button
                       onClick={() => {
                         setAppliedSearch(search);
                         setAppliedStatus(statusFilter);
+                        setAppliedDateFrom(dateFrom);
+                        setAppliedDateTo(dateTo);
                       }}
-                      disabled={appliedSearch === search && appliedStatus === statusFilter}
+                      disabled={
+                        appliedSearch === search &&
+                        appliedStatus === statusFilter &&
+                        appliedDateFrom === dateFrom &&
+                        appliedDateTo === dateTo
+                      }
                     >
                       Buscar
                     </Button>
@@ -301,8 +363,12 @@ const MyProductsPage: React.FC = () => {
                       onClick={() => {
                         setSearch("");
                         setStatusFilter("all");
+                        setDateFrom("");
+                        setDateTo("");
                         setAppliedSearch("");
                         setAppliedStatus("all");
+                        setAppliedDateFrom("");
+                        setAppliedDateTo("");
                       }}
                     >
                       Limpiar
@@ -428,7 +494,11 @@ const MyProductsPage: React.FC = () => {
                               // Disable delete for products that are not 'active'
                             }
                             <DropdownMenuItem
-                              onClick={() => product.status === 'active' && handleDeleteProduct(product.itemId)}
+                              onClick={() => {
+                                if (product.status !== 'active') return;
+                                setDeleteTarget(product);
+                                setDeleteDialogOpen(true);
+                              }}
                               disabled={product.status !== 'active'}
                               className={product.status !== 'active' ? 'text-neutral-400' : 'text-rose-600'}
                             >
@@ -443,6 +513,35 @@ const MyProductsPage: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+            {/* Delete confirmation dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirmar eliminación</DialogTitle>
+                  <DialogDescription>
+                    {deleteTarget ? (
+                      <>
+                        Vas a eliminar <strong>"{deleteTarget.name}"</strong> de forma permanente. Esta acción es irreversible y se eliminarán todas las fotos y datos asociados al anuncio.
+                      </>
+                    ) : (
+                      "Vas a eliminar este producto de forma permanente. Esta acción es irreversible."
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteTarget(null); }}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleConfirmDelete}
+                    disabled={!deleteTarget || actionBusyId === deleteTarget?.itemId}
+                  >
+                    {actionBusyId === deleteTarget?.itemId ? 'Eliminando...' : 'Eliminar producto'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
               <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-gray-600">
                   Mostrando {productsPage * productsPerPage + 1} - {Math.min((productsPage + 1) * productsPerPage, filteredProducts.length)} de {filteredProducts.length}
