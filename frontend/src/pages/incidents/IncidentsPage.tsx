@@ -472,6 +472,12 @@ const IncidentsPage: React.FC = () => {
                               setSelectedIncident(incident);
                               setIsResolveDialogOpen(true);
                             }}
+                            disabled={incident.status !== ItemStatus.PENDING}
+                            title={
+                              incident.status !== ItemStatus.PENDING
+                                ? "Solo se pueden resolver incidencias en estado Pendiente"
+                                : undefined
+                            }
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Resolver
@@ -607,7 +613,12 @@ const IncidentsPage: React.FC = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleResolveIncident}>Resolver Incidencia</Button>
+            <Button
+              onClick={handleResolveIncident}
+              disabled={selectedIncident?.status !== ItemStatus.PENDING}
+            >
+              Resolver Incidencia
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
