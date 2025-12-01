@@ -75,6 +75,12 @@ export const incidentsService = {
     const response = await api.post("/incidents/reports", data);
     return response.data;
   },
+   createIncidentFromReport: async (reportId: number): Promise<Incident> => {
+    const response = await api.post(
+      `/incidents/reports/${reportId}/create-incident`,
+    );
+    return response.data;
+  },
 
   getAppeals: async (): Promise<Appeal[]> => {
     const response = await api.get("/appeals");

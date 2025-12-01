@@ -167,6 +167,15 @@ export class IncidentsService {
   return queryBuilder.orderBy("incident.reportedAt", "DESC").getMany();
 }
 
+async findPendingByItem(itemId: number) {
+  return this.incidentRepository.find({
+    where: {
+      itemId,
+      status: ItemStatus.PENDING,
+    },
+    relations: ["seller", "moderator", "appeals"],
+  });
+}
 
   async getReports(filters?: ReportFilters): Promise<Report[]> {
     const queryBuilder = this.reportRepository
@@ -200,13 +209,14 @@ export class IncidentsService {
     return queryBuilder.orderBy("report.reportedAt", "DESC").getMany();
   }
 
-  async assignModerator(
+    async assignModerator(
     incidentId: number,
     moderatorId: number,
   ): Promise<Incident> {
     const incident = await this.incidentRepository.findOne({
       where: { incidentId },
     });
+
     if (!incident) {
       throw new NotFoundException("Incident not found");
     }
@@ -214,6 +224,7 @@ export class IncidentsService {
     incident.moderatorId = moderatorId;
     return this.incidentRepository.save(incident);
   }
+
 
  async resolveIncident(
   incidentId: number,
@@ -261,5 +272,39 @@ export class IncidentsService {
       relations: ["item", "appeals"],
       order: { reportedAt: "DESC" },
     });
+  }
+    async createIncidentFromReport(
+    reportId: number,
+    moderatorId: number,
+  ): Promise<Incident> {
+    const report = await this.reportRepository.findOne({
+      where: { reportId },
+      relations: ["item"],
+    });
+
+    if (!report) {
+      throw new NotFoundException("Report not found");
+    }
+
+    const item = report.item;
+    if (!item) {
+      throw new NotFoundException("Product not found for this report");
+    }
+
+    // Creamos la incidencia ligada al producto y al vendedor
+    const incident = this.incidentRepository.create({
+      itemId: item.itemId,
+      description: `Incidencia creada a partir del reporte #${report.reportId}. Tipo: ${report.type}. Comentario: ${report.comment ?? "Sin comentario"}`,
+      status: ItemStatus.PENDING,
+      sellerId: item.sellerId,
+      moderatorId,         // moderador que crea la incidencia
+    });
+
+    // Producto pasa a estado PENDING mientras se revisa
+    await this.itemRepository.update(item.itemId, {
+      status: ItemStatus.PENDING,
+    });
+
+    return this.incidentRepository.save(incident);
   }
 }

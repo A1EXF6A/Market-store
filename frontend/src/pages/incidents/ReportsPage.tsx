@@ -1,3 +1,10 @@
+/*****************************************************************************************
+ * REPORTS PAGE — COMPLETAMENTE CORREGIDO
+ * - Corregido el tipo de IconComponent para permitir className
+ * - Incluye botón Crear Incidencia
+ * - Sin errores de TS
+ *****************************************************************************************/
+
 import type { Incident, Report } from "@/types";
 import { ItemStatus, ReportType } from "@/types";
 import { Badge } from "@components/ui/badge";
@@ -28,7 +35,13 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
-import { incidentsService, type ReportFilters, type IncidentFilters } from "@services/incidents";
+
+import {
+  incidentsService,
+  type ReportFilters,
+  type IncidentFilters,
+} from "@services/incidents";
+
 import {
   AlertTriangle,
   Ban,
@@ -36,7 +49,6 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  EyeOff,
   FileText,
   Filter,
   Flag,
@@ -50,6 +62,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -75,7 +88,10 @@ const ReportsPage: React.FC = () => {
   const loadData = async (customFilters?: ReportFilters & IncidentFilters) => {
     try {
       setLoading(true);
-      const currentFilters = customFilters !== undefined ? customFilters : filters;
+
+      const currentFilters =
+        customFilters !== undefined ? customFilters : filters;
+
       if (activeTab === "reports") {
         const data = await incidentsService.getReports(currentFilters);
         setReports(data);
@@ -83,26 +99,32 @@ const ReportsPage: React.FC = () => {
         const data = await incidentsService.getIncidents(currentFilters);
         setIncidents(data);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Error al cargar datos");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ============================================================
+      ASIGNAR MODERADOR
+  ============================================================ */
   const handleAssignModerator = async (incidentId: number) => {
     try {
       setProcessing(`assign-${incidentId}`);
       await incidentsService.assignIncident(incidentId);
       toast.success("Te has asignado como moderador");
       loadData();
-    } catch (error: any) {
+    } catch {
       toast.error("Error al asignarse como moderador");
     } finally {
       setProcessing(null);
     }
   };
 
+  /* ============================================================
+      RESOLVER INCIDENTE
+  ============================================================ */
   const handleResolveIncident = async (
     incidentId: number,
     status: ItemStatus,
@@ -110,21 +132,49 @@ const ReportsPage: React.FC = () => {
     try {
       setProcessing(`resolve-${incidentId}`);
       await incidentsService.resolveIncident(incidentId, status);
+
       toast.success(
         status === ItemStatus.ACTIVE
           ? "Incidente resuelto - Producto reactivado"
           : "Incidente resuelto - Producto suspendido",
       );
+
       loadData();
-    } catch (error: any) {
+    } catch {
       toast.error("Error al resolver incidente");
     } finally {
       setProcessing(null);
     }
   };
 
+  /* ============================================================
+      CREAR INCIDENTE DESDE REPORTE
+  ============================================================ */
+  const handleCreateIncidentFromReport = async (reportId: number) => {
+    try {
+      setProcessing(`create-${reportId}`);
+      await incidentsService.createIncidentFromReport(reportId);
+      toast.success("Incidencia creada correctamente");
+      loadData();
+    } catch {
+      toast.error("Error al crear incidencia");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  /* ============================================================
+      BADGE: TIPOS DE REPORTES (CORREGIDO)
+  ============================================================ */
   const getReportTypeBadge = (type: ReportType) => {
-    const typeMap = {
+    const typeMap: Record<
+      ReportType,
+      {
+        text: string;
+        class: string;
+        icon: React.ComponentType<{ className?: string }>;
+      }
+    > = {
       [ReportType.SPAM]: {
         text: "Spam",
         class: "bg-orange-100 text-orange-800",
@@ -146,6 +196,7 @@ const ReportsPage: React.FC = () => {
         icon: Flag,
       },
     };
+
     const typeInfo = typeMap[type];
     const IconComponent = typeInfo.icon;
 
@@ -157,10 +208,17 @@ const ReportsPage: React.FC = () => {
     );
   };
 
+  /* ============================================================
+      BADGE: ESTADOS DE INCIDENTES (CORREGIDO)
+  ============================================================ */
   const getStatusBadge = (status: ItemStatus) => {
     const statusMap: Record<
       ItemStatus,
-      { text: string; class: string; icon: React.ComponentType }
+      {
+        text: string;
+        class: string;
+        icon: React.ComponentType<{ className?: string }>;
+      }
     > = {
       [ItemStatus.PENDING]: {
         text: "Pendiente",
@@ -188,6 +246,7 @@ const ReportsPage: React.FC = () => {
         icon: XCircle,
       },
     };
+
     const statusInfo = statusMap[status];
     const IconComponent = statusInfo.icon;
 
@@ -199,6 +258,9 @@ const ReportsPage: React.FC = () => {
     );
   };
 
+  /* ============================================================
+      LOADING
+  ============================================================ */
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -210,10 +272,16 @@ const ReportsPage: React.FC = () => {
     );
   }
 
+  /* ============================================================
+      UI COMPLETO (sin cambios de TS)
+  ============================================================ */
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Shield className="h-8 w-8 text-blue-600" />
+
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Moderación</h1>
           <p className="text-gray-600 mt-2">
@@ -223,19 +291,27 @@ const ReportsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* TABS */}
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <Flag className="h-4 w-4" />
             Reportes
           </TabsTrigger>
+
           <TabsTrigger value="incidents" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Incidentes y Apelaciones
           </TabsTrigger>
         </TabsList>
 
+        {/* ======================================================================
+            TAB DE REPORTES
+        ====================================================================== */}
         <TabsContent value="reports" className="space-y-6">
-          {/* Filters */}
+
+          {/* --------------------------------------------------
+            FILTROS  
+          -------------------------------------------------- */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -243,12 +319,15 @@ const ReportsPage: React.FC = () => {
                 Filtros
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                {/* SEARCH */}
                 <div className="space-y-2">
                   <Label htmlFor="search">Buscar</Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="search"
                       placeholder="Producto, comentario..."
@@ -264,6 +343,7 @@ const ReportsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* TIPO */}
                 <div className="space-y-2">
                   <Label>Tipo de Reporte</Label>
                   <Select
@@ -277,7 +357,7 @@ const ReportsPage: React.FC = () => {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Todos los tipos" />
+                      <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
@@ -290,6 +370,8 @@ const ReportsPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* FECHA INICIO */}
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Fecha Inicio</Label>
                   <Input
@@ -304,6 +386,8 @@ const ReportsPage: React.FC = () => {
                     }
                   />
                 </div>
+
+                {/* FECHA FIN */}
                 <div className="space-y-2">
                   <Label htmlFor="endDate">Fecha Fin</Label>
                   <Input
@@ -319,15 +403,17 @@ const ReportsPage: React.FC = () => {
                   />
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 mt-4">
                 <Button
-                  onClick={clearFilters}
                   variant="outline"
+                  onClick={clearFilters}
                   className="flex items-center gap-2"
                 >
                   <X className="h-4 w-4" />
                   Limpiar
                 </Button>
+
                 <Button
                   onClick={() => loadData()}
                   className="flex items-center gap-2"
@@ -339,11 +425,14 @@ const ReportsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Reports Table */}
+          {/* --------------------------------------------------
+            TABLA DE REPORTES
+          -------------------------------------------------- */}
           <Card>
             <CardHeader>
               <CardTitle>Reportes ({reports.length})</CardTitle>
             </CardHeader>
+
             <CardContent>
               <Table>
                 <TableHeader>
@@ -356,21 +445,25 @@ const ReportsPage: React.FC = () => {
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {reports.map((report) => (
                     <TableRow key={report.reportId}>
+                      {/* PRODUCTO */}
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Package className="h-4 w-4 text-gray-400" />
+
                           <div>
                             <p className="font-medium">
                               Producto ID: {report.itemId}
                             </p>
+
                             <Button
                               variant="link"
                               size="sm"
-                              className="p-0 h-auto text-blue-600"
                               asChild
+                              className="p-0 h-auto text-blue-600"
                             >
                               <Link to={`/products/${report.itemId}`}>
                                 <Eye className="h-3 w-3 mr-1" />
@@ -380,13 +473,21 @@ const ReportsPage: React.FC = () => {
                           </div>
                         </div>
                       </TableCell>
+
+                      {/* USUARIO */}
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-gray-400" />
                           <span>Usuario ID: {report.buyerId}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{getReportTypeBadge(report.type)}</TableCell>
+
+                      {/* TIPO DE REPORTE */}
+                      <TableCell>
+                        {getReportTypeBadge(report.type)}
+                      </TableCell>
+
+                      {/* COMENTARIO */}
                       <TableCell>
                         {report.comment ? (
                           <div className="max-w-xs">
@@ -403,25 +504,47 @@ const ReportsPage: React.FC = () => {
                           </span>
                         )}
                       </TableCell>
+
+                      {/* FECHA */}
                       <TableCell>
                         <div className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-1" />
                           {new Date(report.reportedAt).toLocaleDateString()}
                         </div>
                       </TableCell>
+
+                      {/* ACCIONES */}
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/products/${report.itemId}`}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Revisar
-                          </Link>
-                        </Button>
+                        <div className="flex flex-col items-end gap-2">
+
+                          {/* REVISAR */}
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={`/products/${report.itemId}`}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Revisar
+                            </Link>
+                          </Button>
+
+                          {/* CREAR INCIDENCIA */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={processing === `create-${report.reportId}`}
+                            onClick={() =>
+                              handleCreateIncidentFromReport(report.reportId)
+                            }
+                          >
+                            <Shield className="h-4 w-4 mr-1" />
+                            Crear incidencia
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
 
+              {/* NO REPORTES */}
               {reports.length === 0 && (
                 <div className="text-center py-12">
                   <Flag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -436,65 +559,63 @@ const ReportsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Summary Statistics */}
+          {/* --------------------------------------------------
+            SUMMARY
+          -------------------------------------------------- */}
           {reports.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {reports.filter((r) => r.type === ReportType.SPAM).length}
-                    </div>
-                    <p className="text-sm text-gray-600">Spam</p>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {reports.filter((r) => r.type === ReportType.SPAM).length}
                   </div>
+                  <p className="text-sm text-gray-600">Spam</p>
                 </CardContent>
               </Card>
+
               <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">
-                      {
-                        reports.filter(
-                          (r) => r.type === ReportType.INAPPROPRIATE,
-                        ).length
-                      }
-                    </div>
-                    <p className="text-sm text-gray-600">Inapropiado</p>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {
+                      reports.filter(
+                        (r) => r.type === ReportType.INAPPROPRIATE,
+                      ).length
+                    }
                   </div>
+                  <p className="text-sm text-gray-600">Inapropiado</p>
                 </CardContent>
               </Card>
+
               <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">
-                      {
-                        reports.filter((r) => r.type === ReportType.ILLEGAL)
-                          .length
-                      }
-                    </div>
-                    <p className="text-sm text-gray-600">Ilegal</p>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {
+                      reports.filter((r) => r.type === ReportType.ILLEGAL)
+                        .length
+                    }
                   </div>
+                  <p className="text-sm text-gray-600">Ilegal</p>
                 </CardContent>
               </Card>
+
               <Card>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-600">
-                      {
-                        reports.filter((r) => r.type === ReportType.OTHER)
-                          .length
-                      }
-                    </div>
-                    <p className="text-sm text-gray-600">Otros</p>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {reports.filter((r) => r.type === ReportType.OTHER).length}
                   </div>
+                  <p className="text-sm text-gray-600">Otros</p>
                 </CardContent>
               </Card>
             </div>
           )}
         </TabsContent>
 
+        {/* ======================================================================
+            TAB DE INCIDENTES
+        ====================================================================== */}
         <TabsContent value="incidents" className="space-y-6">
-          {/* Filters for Incidents */}
+
+          {/* FILTROS DE INCIDENTES */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -502,12 +623,15 @@ const ReportsPage: React.FC = () => {
                 Filtros
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                {/* SEARCH */}
                 <div className="space-y-2">
                   <Label htmlFor="search-incidents">Buscar</Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="search-incidents"
                       placeholder="Producto, vendedor..."
@@ -522,6 +646,8 @@ const ReportsPage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* STATUS */}
                 <div className="space-y-2">
                   <Label>Estado</Label>
                   <Select
@@ -529,25 +655,34 @@ const ReportsPage: React.FC = () => {
                     onValueChange={(value) =>
                       setFilters((prev) => ({
                         ...prev,
-                        status: value === "all" ? undefined : (value as ItemStatus),
+                        status:
+                          value === "all"
+                            ? undefined
+                            : (value as ItemStatus),
                       }))
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos los estados" />
                     </SelectTrigger>
+
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                      <SelectItem value={ItemStatus.PENDING}>
+                        Pendiente
+                      </SelectItem>
                       <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
-                      <SelectItem value={ItemStatus.SUSPENDED}>Suspendido</SelectItem>
+                      <SelectItem value={ItemStatus.SUSPENDED}>
+                        Suspendido
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* FECHAS */}
                 <div className="space-y-2">
-                  <Label htmlFor="startDate-incidents">Fecha Inicio</Label>
+                  <Label>Fecha Inicio</Label>
                   <Input
-                    id="startDate-incidents"
                     type="date"
                     value={filters.startDate || ""}
                     onChange={(e) =>
@@ -558,10 +693,10 @@ const ReportsPage: React.FC = () => {
                     }
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="endDate-incidents">Fecha Fin</Label>
+                  <Label>Fecha Fin</Label>
                   <Input
-                    id="endDate-incidents"
                     type="date"
                     value={filters.endDate || ""}
                     onChange={(e) =>
@@ -573,15 +708,17 @@ const ReportsPage: React.FC = () => {
                   />
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 mt-4">
                 <Button
-                  onClick={clearFilters}
                   variant="outline"
                   className="flex items-center gap-2"
+                  onClick={clearFilters}
                 >
                   <X className="h-4 w-4" />
                   Limpiar
                 </Button>
+
                 <Button
                   onClick={() => loadData()}
                   className="flex items-center gap-2"
@@ -593,13 +730,14 @@ const ReportsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Incidents Table */}
+          {/* TABLA DE INCIDENTES */}
           <Card>
             <CardHeader>
               <CardTitle>
                 Incidentes y Apelaciones ({incidents.length})
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <Table>
                 <TableHeader>
@@ -613,12 +751,15 @@ const ReportsPage: React.FC = () => {
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {incidents.map((incident) => (
                     <TableRow key={incident.incidentId}>
+                      {/* PRODUCTO */}
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Package className="h-4 w-4 text-gray-400" />
+
                           <div>
                             <p className="font-medium">
                               Producto ID: {incident.itemId}
@@ -637,13 +778,19 @@ const ReportsPage: React.FC = () => {
                           </div>
                         </div>
                       </TableCell>
+
+                      {/* VENDEDOR */}
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-gray-400" />
                           <span>Usuario ID: {incident.sellerId}</span>
                         </div>
                       </TableCell>
+
+                      {/* ESTADO */}
                       <TableCell>{getStatusBadge(incident.status)}</TableCell>
+
+                      {/* MODERADOR */}
                       <TableCell>
                         {incident.moderatorId ? (
                           <div className="flex items-center space-x-2">
@@ -656,6 +803,8 @@ const ReportsPage: React.FC = () => {
                           </span>
                         )}
                       </TableCell>
+
+                      {/* APELACIONES */}
                       <TableCell>
                         {incident.appeals && incident.appeals.length > 0 ? (
                           <div className="flex items-center space-x-2">
@@ -671,14 +820,20 @@ const ReportsPage: React.FC = () => {
                           </span>
                         )}
                       </TableCell>
+
+                      {/* FECHA */}
                       <TableCell>
                         <div className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-1" />
                           {new Date(incident.reportedAt).toLocaleDateString()}
                         </div>
                       </TableCell>
+
+                      {/* ACCIONES */}
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+
+                          {/* ASIGNAR */}
                           {!incident.moderatorId && (
                             <Button
                               variant="outline"
@@ -695,89 +850,96 @@ const ReportsPage: React.FC = () => {
                             </Button>
                           )}
 
+                          {/* RESOLVER */}
                           {incident.moderatorId &&
                             incident.status === ItemStatus.PENDING && (
-                              <>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Resolver
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>
-                                        Resolver Incidente
-                                      </DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <p className="text-sm text-gray-600">
-                                        Descripción: {incident.description}
-                                      </p>
-                                      {incident.appeals &&
-                                        incident.appeals.length > 0 && (
-                                          <div className="space-y-2">
-                                            <h4 className="font-semibold">
-                                              Apelaciones:
-                                            </h4>
-                                            {incident.appeals.map(
-                                              (appeal, index) => (
-                                                <div
-                                                  key={index}
-                                                  className="bg-gray-50 p-3 rounded-md"
-                                                >
-                                                  <p className="text-sm">
-                                                    {appeal.reason}
-                                                  </p>
-                                                  <p className="text-xs text-gray-500 mt-1">
-                                                    {new Date(
-                                                      appeal.createdAt,
-                                                    ).toLocaleDateString()}
-                                                  </p>
-                                                </div>
-                                              ),
-                                            )}
-                                          </div>
-                                        )}
-                                      <div className="flex gap-2">
-                                        <Button
-                                          onClick={() =>
-                                            handleResolveIncident(
-                                              incident.incidentId,
-                                              ItemStatus.ACTIVE,
-                                            )
-                                          }
-                                          disabled={
-                                            processing ===
-                                            `resolve-${incident.incidentId}`
-                                          }
-                                          className="bg-green-600 hover:bg-green-700"
-                                        >
-                                          <CheckCircle className="h-4 w-4 mr-1" />
-                                          Reactivar Producto
-                                        </Button>
-                                        <Button
-                                          onClick={() =>
-                                            handleResolveIncident(
-                                              incident.incidentId,
-                                              ItemStatus.SUSPENDED,
-                                            )
-                                          }
-                                          disabled={
-                                            processing ===
-                                            `resolve-${incident.incidentId}`
-                                          }
-                                          variant="destructive"
-                                        >
-                                          <XCircle className="h-4 w-4 mr-1" />
-                                          Suspender Producto
-                                        </Button>
-                                      </div>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Resolver
+                                  </Button>
+                                </DialogTrigger>
+
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      Resolver Incidente
+                                    </DialogTitle>
+                                  </DialogHeader>
+
+                                  <div className="space-y-4">
+                                    <p className="text-sm text-gray-600">
+                                      Descripción: {incident.description}
+                                    </p>
+
+                                    {/* LISTA DE APELACIONES */}
+                                    {incident.appeals &&
+                                      incident.appeals.length > 0 && (
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold">
+                                            Apelaciones:
+                                          </h4>
+
+                                          {incident.appeals.map(
+                                            (appeal, index) => (
+                                              <div
+                                                key={index}
+                                                className="bg-gray-50 p-3 rounded-md"
+                                              >
+                                                <p className="text-sm">
+                                                  {appeal.reason}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                  {new Date(
+                                                    appeal.createdAt,
+                                                  ).toLocaleDateString()}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      )}
+
+                                    {/* BOTONES RESOLVER */}
+                                    <div className="flex gap-2">
+                                      <Button
+                                        onClick={() =>
+                                          handleResolveIncident(
+                                            incident.incidentId,
+                                            ItemStatus.ACTIVE,
+                                          )
+                                        }
+                                        disabled={
+                                          processing ===
+                                          `resolve-${incident.incidentId}`
+                                        }
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                        Reactivar Producto
+                                      </Button>
+
+                                      <Button
+                                        onClick={() =>
+                                          handleResolveIncident(
+                                            incident.incidentId,
+                                            ItemStatus.SUSPENDED,
+                                          )
+                                        }
+                                        disabled={
+                                          processing ===
+                                          `resolve-${incident.incidentId}`
+                                        }
+                                        variant="destructive"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" />
+                                        Suspender Producto
+                                      </Button>
                                     </div>
-                                  </DialogContent>
-                                </Dialog>
-                              </>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                             )}
                         </div>
                       </TableCell>
@@ -786,13 +948,16 @@ const ReportsPage: React.FC = () => {
                 </TableBody>
               </Table>
 
+              {/* NO INCIDENTES */}
               {incidents.length === 0 && (
                 <div className="text-center py-12">
                   <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No se encontraron incidentes
                   </h3>
-                  <p className="text-gray-600">No hay incidentes registrados</p>
+                  <p className="text-gray-600">
+                    No hay incidentes registrados
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -804,4 +969,3 @@ const ReportsPage: React.FC = () => {
 };
 
 export default ReportsPage;
-

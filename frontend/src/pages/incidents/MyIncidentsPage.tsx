@@ -52,7 +52,7 @@ export default function MyIncidentsPage() {
     }
   };
 
-  const getStatusBadge = (status: ItemStatus) => {
+  const getStatusBadge = (status: ItemStatus | undefined) => {
     const variants = {
       [ItemStatus.ACTIVE]: { variant: "default" as const, label: "Activo" },
       [ItemStatus.SUSPENDED]: {
@@ -60,12 +60,19 @@ export default function MyIncidentsPage() {
         label: "Suspendido",
       },
       [ItemStatus.HIDDEN]: { variant: "secondary" as const, label: "Oculto" },
-      [ItemStatus.PENDING]: { variant: "outline" as const, label: "Pendiente" },
+      [ItemStatus.PENDING]: {
+        variant: "outline" as const,
+        label: "Pendiente",
+      },
       [ItemStatus.BANNED]: {
         variant: "destructive" as const,
         label: "Baneado",
       },
     };
+
+    if (!status) {
+      return <Badge variant="secondary">Desconocido</Badge>;
+    }
 
     const config = variants[status] || {
       variant: "secondary" as const,
@@ -74,7 +81,11 @@ export default function MyIncidentsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getStatusIcon = (status: ItemStatus) => {
+  const getStatusIcon = (status: ItemStatus | undefined) => {
+    if (!status) {
+      return <FileText className="h-4 w-4 text-gray-600" />;
+    }
+
     switch (status) {
       case ItemStatus.ACTIVE:
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -92,9 +103,14 @@ export default function MyIncidentsPage() {
     const hasActiveAppeal = incident.appeals?.some(
       (appeal) => !appeal.reviewed,
     );
+
+    const statusToCheck =
+      incident.item?.status ?? incident.status;
+
     const isSuspendedOrBanned =
-      incident.item?.status === ItemStatus.SUSPENDED ||
-      incident.item?.status === ItemStatus.BANNED;
+      statusToCheck === ItemStatus.SUSPENDED ||
+      statusToCheck === ItemStatus.BANNED;
+
     return isSuspendedOrBanned && !hasActiveAppeal;
   };
 
@@ -134,8 +150,8 @@ export default function MyIncidentsPage() {
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No tienes incidencias</h3>
             <p className="text-gray-600">
-              Cuando haya incidencias relacionadas con tus productos, aparecerán
-              aquí.
+              Cuando haya incidencias relacionadas con tus productos,
+              aparecerán aquí.
             </p>
           </CardContent>
         </Card>
@@ -144,8 +160,9 @@ export default function MyIncidentsPage() {
           <CardHeader>
             <CardTitle>Incidencias de mis productos</CardTitle>
             <CardDescription>
-              {incidents.length} incidencia{incidents.length !== 1 ? "s" : ""}{" "}
-              encontrada{incidents.length !== 1 ? "s" : ""}
+              {incidents.length} incidencia
+              {incidents.length !== 1 ? "s" : ""} encontrada
+              {incidents.length !== 1 ? "s" : ""}.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -161,76 +178,84 @@ export default function MyIncidentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.map((incident) => (
-                  <TableRow key={incident.incidentId}>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(incident.item?.status)}
-                        <div>
-                          <p className="font-medium">{incident.item?.name}</p>
-                          <p className="text-sm text-gray-500">
-                            ID: {incident.item?.itemId}
-                          </p>
+                {incidents.map((incident) => {
+                  const statusToUse =
+                    incident.item?.status ?? incident.status;
+
+                  return (
+                    <TableRow key={incident.incidentId}>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {getStatusIcon(statusToUse)}
+                          <div>
+                            <p className="font-medium">
+                              {incident.item?.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              ID: {incident.item?.itemId}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(incident.item?.status)}
-                    </TableCell>
-                    <TableCell>
-                      <p
-                        className="max-w-xs truncate"
-                        title={incident.description}
-                      >
-                        {incident.description}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">
-                        {new Date(incident.createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(statusToUse)}
+                      </TableCell>
+                      <TableCell>
+                        <p
+                          className="max-w-xs truncate"
+                          title={incident.description}
+                        >
+                          {incident.description}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm">
+                          {new Date(
+                            incident.reportedAt,
+                          ).toLocaleDateString("es-ES", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
-                          },
+                          })}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <MessageSquare className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm">
+                            {incident.appeals?.length || 0}
+                          </span>
+                          {incident.appeals?.some(
+                            (appeal) => !appeal.reviewed,
+                          ) && (
+                            <Badge variant="outline" className="text-xs">
+                              Pendiente
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {canAppeal(incident) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCreateAppeal(incident)}
+                          >
+                            Apelar
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-gray-500">
+                            {incident.appeals?.some(
+                              (appeal) => !appeal.reviewed,
+                            )
+                              ? "Apelación pendiente"
+                              : "No se puede apelar"}
+                          </span>
                         )}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <MessageSquare className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">
-                          {incident.appeals?.length || 0}
-                        </span>
-                        {incident.appeals?.some(
-                          (appeal) => !appeal.reviewed,
-                        ) && (
-                          <Badge variant="outline" className="text-xs">
-                            Pendiente
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {canAppeal(incident) ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateAppeal(incident)}
-                        >
-                          Apelar
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-gray-500">
-                          {incident.appeals?.some((appeal) => !appeal.reviewed)
-                            ? "Apelación pendiente"
-                            : "No se puede apelar"}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -246,4 +271,3 @@ export default function MyIncidentsPage() {
     </div>
   );
 }
-

@@ -25,7 +25,7 @@ export class IncidentsController {
 
   @Post("reports")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.BUYER, UserRole.ADMIN)
+   @Roles(UserRole.BUYER, UserRole.MODERATOR, UserRole.ADMIN)
   createReport(
     @Body() createReportDto: CreateReportDto,
     @GetUser() user: User,
@@ -56,6 +56,15 @@ export class IncidentsController {
   getReports(@Query() filters: any) {
     return this.incidentsService.getReports(filters);
   }
+   @Post("reports/:id/create-incident")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  createIncidentFromReport(
+    @Param("id") id: string,
+    @GetUser() user: User,
+  ) {
+    return this.incidentsService.createIncidentFromReport(+id, user.userId);
+  }
 
   @Get("my-incidents")
   @UseGuards(RolesGuard)
@@ -66,13 +75,20 @@ export class IncidentsController {
 
   @Patch(":id/assign")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
-  assignModerator(@Param("id") id: string, @GetUser() user: User) {
-    return this.incidentsService.assignModerator(+id, user.userId);
+  @Roles(UserRole.ADMIN)
+  assignModerator(
+    @Param("id") id: string,
+    @Body("moderatorId") moderatorId: number,
+    @GetUser() user: User,
+  ) {
+    // Si no se manda moderatorId, se autoasigna al admin
+    const targetId = moderatorId ?? user.userId;
+    return this.incidentsService.assignModerator(+id, targetId);
   }
 
+
   @Patch(":id/resolve")
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
   resolveIncident(
     @Param("id") id: string,

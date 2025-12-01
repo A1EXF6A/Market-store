@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToMany,
 } from "typeorm";
+
 import { Item } from "./item.entity";
 import { Chat } from "./chat.entity";
 import { Message } from "./message.entity";
@@ -72,8 +73,13 @@ export class User {
   @Column({ type: "boolean", default: false })
   verified: boolean;
 
+  @Column({ name: "banned_until", type: "timestamp", nullable: true })
+  bannedUntil?: Date | null;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
+
+  /* ===================== RELACIONES ===================== */
 
   @OneToMany(() => Item, (item) => item.seller)
   items: Item[];

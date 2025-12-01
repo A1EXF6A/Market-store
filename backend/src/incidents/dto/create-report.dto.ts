@@ -1,7 +1,16 @@
-import { IsEnum, IsNotEmpty, IsString, IsOptional } from "class-validator";
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsInt,
+} from "class-validator";
+import { Type } from "class-transformer";
 import { ReportType } from "../../entities/report.entity";
 
 export class CreateReportDto {
+  @Type(() => Number)
+  @IsInt()
   @IsNotEmpty()
   itemId: number;
 

@@ -78,15 +78,21 @@ export class UsersController {
   // =========================
   // ADMIN: SUSPENDER/ACTIVAR
   // =========================
-  @Patch(":id/status")
+   @Patch(":id/status")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   updateStatus(
     @Param("id") id: string,
     @Body("status") status: UserStatus,
+    @Body("bannedUntil") bannedUntil?: string,
   ) {
-    return this.usersService.updateUserStatus(+id, status);
+    return this.usersService.updateUserStatus(
+      +id,
+      status,
+      bannedUntil ? new Date(bannedUntil) : null,
+    );
   }
+
 
   // =========================
   // ADMIN: CAMBIAR ROL A OTRO USUARIO

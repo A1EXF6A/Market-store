@@ -96,6 +96,7 @@ const IncidentsPage: React.FC = () => {
      ============================================================ */
   useEffect(() => {
     loadIncidents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadIncidents = async (customFilters?: IncidentFilters) => {
@@ -246,6 +247,115 @@ const IncidentsPage: React.FC = () => {
       </div>
 
       {/* ============================================================
+         FILTROS
+         ============================================================ */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="search"
+                  placeholder="Producto, vendedor..."
+                  className="pl-10"
+                  value={filters.search || ""}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      search: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: value === "all" ? undefined : (value as ItemStatus),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                  <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
+                  <SelectItem value={ItemStatus.SUSPENDED}>
+                    Suspendido
+                  </SelectItem>
+                  <SelectItem value={ItemStatus.BANNED}>Prohibido</SelectItem>
+                  <SelectItem value={ItemStatus.HIDDEN}>Oculto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Fecha inicio</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={filters.startDate || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    startDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endDate">Fecha fin</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={filters.endDate || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    endDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={clearFilters}
+            >
+              <X className="h-4 w-4" />
+              Limpiar
+            </Button>
+            <Button
+              className="flex items-center gap-2"
+              onClick={() => loadIncidents()}
+            >
+              <Search className="h-4 w-4" />
+              Buscar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ============================================================
          TABLA
          ============================================================ */}
       <Card>
@@ -300,7 +410,8 @@ const IncidentsPage: React.FC = () => {
 
                   <TableCell>
                     {incident.moderator ? (
-                      <span className="text-sm">
+                      <span className="inline-flex items-center gap-1 text-sm text-gray-700">
+                        <UserCheckIcon className="h-4 w-4 text-green-600" />
                         {incident.moderator.firstName}
                       </span>
                     ) : (
@@ -336,13 +447,10 @@ const IncidentsPage: React.FC = () => {
                         )}
 
                         {/* Ver apelación */}
-                        {((incident as IncidentWithAppeals).appeals?.length ??
-                          0) > 0 && (
+                        {(incident.appeals?.length ?? 0) > 0 && (
                           <DropdownMenuItem
                             onClick={() =>
-                              openAppealDialog(
-                                incident as IncidentWithAppeals,
-                              )
+                              openAppealDialog(incident as IncidentWithAppeals)
                             }
                           >
                             <AlertTriangle className="h-4 w-4 mr-2" />

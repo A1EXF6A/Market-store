@@ -84,9 +84,21 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  async updateUserStatus(userId: number, status: UserStatus): Promise<User> {
+    async updateUserStatus(
+    userId: number,
+    status: UserStatus,
+    bannedUntil?: Date | null,
+  ): Promise<User> {
     const user = await this.findById(userId);
+
     user.status = status;
+
+    if (status === UserStatus.BANNED) {
+      user.bannedUntil = bannedUntil ?? null; // null = definitivo
+    } else {
+      user.bannedUntil = null; // al activar o suspender, limpiamos el ban
+    }
+
     return this.userRepository.save(user);
   }
 
