@@ -35,6 +35,7 @@ import {
   Package,
   Search,
   X,
+  ArrowUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -441,6 +442,19 @@ const ProductsPage: React.FC = () => {
         productId={reportModal.productId}
         productName={reportModal.productName}
       />
+
+      {/* Fixed bottom button: Volver al inicio */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="rounded-full p-2 shadow-lg"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Ir al inicio"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 };
