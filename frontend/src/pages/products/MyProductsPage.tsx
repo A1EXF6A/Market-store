@@ -40,6 +40,15 @@ import {
   Trash2,
   ShoppingBag,
 } from "lucide-react";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@components/ui/select";
 
 /* ============ helpers de precio ============ */
 const currency = new Intl.NumberFormat("es-EC", {
@@ -64,6 +73,10 @@ const MyProductsPage: React.FC = () => {
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
   const [productsPage, setProductsPage] = useState<number>(0);
   const [productsPerPage] = useState<number>(6);
+  const [search, setSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [appliedSearch, setAppliedSearch] = useState<string>("");
+  const [appliedStatus, setAppliedStatus] = useState<string>("all");
 
   const countActive = useMemo(
     () => products.filter((p) => p.availability).length,
@@ -90,6 +103,23 @@ const MyProductsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Reset page when applied filters change
+  React.useEffect(() => {
+    setProductsPage(0);
+  }, [appliedSearch, appliedStatus]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (appliedStatus !== "all" && p.status !== appliedStatus) return false;
+      if (appliedSearch.trim()) {
+        const s = appliedSearch.trim().toLowerCase();
+        const nameMatch = p.name?.toLowerCase().includes(s);
+        if (!nameMatch) return false;
+      }
+      return true;
+    });
+  }, [products, appliedSearch, appliedStatus]);
 
   const handleDeleteProduct = async (productId: number) => {
     if (!confirm("¿Estás seguro de eliminar este producto?")) return;
@@ -225,7 +255,61 @@ const MyProductsPage: React.FC = () => {
       ) : (
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle>Lista de Productos ({products.length})</CardTitle>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <CardTitle>Lista de Productos ({filteredProducts.length})</CardTitle>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Nombre</Label>
+                    <Input
+                      placeholder="Nombre del producto..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-48"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Estado</Label>
+                    <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="active">Activo</SelectItem>
+                        <SelectItem value="pending">Pendiente</SelectItem>
+                        <SelectItem value="suspended">Suspendido</SelectItem>
+                        <SelectItem value="hidden">Oculto</SelectItem>
+                        <SelectItem value="banned">Prohibido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-2">
+                    <Button
+                      onClick={() => {
+                        setAppliedSearch(search);
+                        setAppliedStatus(statusFilter);
+                      }}
+                      disabled={appliedSearch === search && appliedStatus === statusFilter}
+                    >
+                      Buscar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setAppliedSearch("");
+                        setAppliedStatus("all");
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
+                </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -241,7 +325,7 @@ const MyProductsPage: React.FC = () => {
               </TableHeader>
 
               <TableBody>
-                {products.slice(productsPage * productsPerPage, (productsPage + 1) * productsPerPage).map((product) => (
+                {filteredProducts.slice(productsPage * productsPerPage, (productsPage + 1) * productsPerPage).map((product) => (
                   <TableRow key={product.itemId} className="align-middle">
                     {/* Producto */}
                     <TableCell>
@@ -360,8 +444,8 @@ const MyProductsPage: React.FC = () => {
               </TableBody>
             </Table>
               <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-gray-600">
-                  Mostrando {productsPage * productsPerPage + 1} - {Math.min((productsPage + 1) * productsPerPage, products.length)} de {products.length}
+                  <div className="text-sm text-gray-600">
+                  Mostrando {productsPage * productsPerPage + 1} - {Math.min((productsPage + 1) * productsPerPage, filteredProducts.length)} de {filteredProducts.length}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -375,8 +459,8 @@ const MyProductsPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setProductsPage((p) => Math.min(p + 1, Math.floor((products.length - 1) / productsPerPage)))}
-                    disabled={(productsPage + 1) * productsPerPage >= products.length}
+                    onClick={() => setProductsPage((p) => Math.min(p + 1, Math.floor((filteredProducts.length - 1) / productsPerPage)))}
+                    disabled={(productsPage + 1) * productsPerPage >= filteredProducts.length}
                   >
                     Siguiente
                   </Button>
