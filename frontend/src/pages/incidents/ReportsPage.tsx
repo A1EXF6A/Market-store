@@ -609,6 +609,8 @@ const ReportsPage: React.FC = () => {
                     toast.error('Error al resolver incidencia');
                   }
                 }}
+                disabled={selectedIncident?.status !== ItemStatus.PENDING}
+                title={selectedIncident?.status !== ItemStatus.PENDING ? 'Solo se pueden resolver incidencias en estado Pendiente' : undefined}
               >Resolver Incidencia</Button>
             </DialogFooter>
           </DialogContent>
