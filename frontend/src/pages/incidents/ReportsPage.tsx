@@ -129,27 +129,56 @@ const ReportsPage: React.FC = () => {
             Crear Incidencia
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
+            <div className="flex items-start gap-3">
+              <Shield className="h-6 w-6 text-blue-600 mt-1" />
+              <div>
+                <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">Revisa la información del reporte y añade una descripción adicional si lo deseas.</p>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Producto ID: {report.itemId}
-            </p>
+
+          <div className="space-y-4 mt-2">
+            <div className="bg-gray-50 border border-gray-100 p-3 rounded-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Producto ID: <span className="font-medium text-gray-900">{report.itemId}</span></p>
+                  <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{report.buyerId}</span></p>
+                </div>
+                <div className="text-sm text-gray-500">{new Date(report.reportedAt).toLocaleDateString()}</div>
+              </div>
+
+              {report.comment && (
+                <div className="mt-3 px-1">
+                  <h4 className="text-xs font-semibold text-gray-700">Comentario del reportante</h4>
+                  <p className="text-sm text-gray-600 mt-1">{report.comment}</p>
+                </div>
+              )}
+            </div>
+
             <div>
               <Label>Descripción (opcional)</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                placeholder="Añade contexto adicional para la incidencia (p. ej. pasos para reproducir, evidencias, etc.)"
+                className="min-h-[120px]"
+                maxLength={1000}
               />
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">Máx. 1000 caracteres</p>
+                <p className="text-xs text-gray-500">{description.length}/1000</p>
+              </div>
             </div>
+
             <div className="flex justify-end gap-2">
-              <Button onClick={handleCreate} disabled={loadingCreate}>
-                Crear
-              </Button>
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
+              </Button>
+              <Button onClick={handleCreate} disabled={loadingCreate}>
+                {loadingCreate ? "Creando..." : "Crear Incidencia"}
               </Button>
             </div>
           </div>
