@@ -216,6 +216,16 @@ export class IncidentsService {
     return queryBuilder.orderBy("report.reportedAt", "DESC").getMany();
   }
 
+  async getReportIncidentsCount(reportId: number): Promise<{ count: number }> {
+    const report = await this.reportRepository.findOne({ where: { reportId } });
+    if (!report) {
+      throw new NotFoundException("Report not found");
+    }
+
+    const count = await this.incidentRepository.count({ where: { itemId: report.itemId } });
+    return { count };
+  }
+
   async assignModerator(
     incidentId: number,
     actorId: number,

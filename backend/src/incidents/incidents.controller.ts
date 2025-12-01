@@ -58,6 +58,13 @@ export class IncidentsController {
     return this.incidentsService.getReports(filters);
   }
 
+  @Get("reports/:id/incidents-count")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  getReportIncidentsCount(@Param("id") id: string) {
+    return this.incidentsService.getReportIncidentsCount(+id);
+  }
+
   @Post("reports/:id/create-incident")
   @UseGuards(RolesGuard)
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
