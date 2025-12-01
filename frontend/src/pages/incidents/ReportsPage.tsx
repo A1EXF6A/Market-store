@@ -31,6 +31,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
 import { incidentsService, type ReportFilters } from "@services/incidents";
 import { productsService } from "@services/products";
+import { API_BASE } from "@services/api";
 import {
   AlertTriangle,
   Ban,
@@ -47,6 +48,7 @@ import {
   User,
   X,
   MoreHorizontal,
+  MapPin,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Textarea } from "@components/ui/textarea";
@@ -81,6 +83,7 @@ const ReportsPage: React.FC = () => {
   // State to control product details modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productLoading, setProductLoading] = useState(false);
+  const [productModalReportId, setProductModalReportId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -132,6 +135,7 @@ const ReportsPage: React.FC = () => {
   const openProductDetails = async (report: Report) => {
     try {
       setProductLoading(true);
+      setProductModalReportId(report.reportId);
       // If the API already included the item object or name, use it; otherwise fetch by id
       // @ts-ignore
       if ((report as any).item) {
@@ -149,6 +153,8 @@ const ReportsPage: React.FC = () => {
       setProductLoading(false);
     }
   };
+
+  
   const getReportTypeBadge = (type: ReportType) => {
     const typeMap: Record<ReportType, { text: string; class: string; icon: React.ComponentType<any> }> = {
       [ReportType.SPAM]: {
@@ -765,33 +771,86 @@ const ReportsPage: React.FC = () => {
 
             {selectedProduct && !productLoading && (
               <div className="space-y-4">
-                {selectedProduct.photos && selectedProduct.photos.length > 0 && (
-                  <div className="w-full bg-gray-100 rounded-md overflow-hidden flex items-center justify-center aspect-[4/3]">
-                    {/* show first photo if URL available */}
-                    <img src={selectedProduct.photos[0].url} alt={selectedProduct.name} className="w-full h-full object-contain" />
-                  </div>
-                )}
-
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{selectedProduct.name}</h3>
-                  {selectedProduct.category && <p className="text-sm text-gray-500">{selectedProduct.category}</p>}
-                  {selectedProduct.location && <p className="text-sm text-gray-500">Dirección: {selectedProduct.location}</p>}
-                </div>
-
-                {selectedProduct.description && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700">Descripción</h4>
-                    <p className="text-sm text-gray-600 mt-1">{selectedProduct.description}</p>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{selectedProduct.name}</h3>
+                      {selectedProduct.category && <p className="text-sm text-gray-500">{selectedProduct.category}</p>}
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">{selectedProduct.publishedAt ? new Date(selectedProduct.publishedAt).toLocaleDateString() : ''}</span>
+                    </div>
                   </div>
-                )}
 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-700">Precio</div>
-                  <div className="font-medium">{typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : '—'}</div>
-                </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="text-xl font-bold text-gray-900">{typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : '—'}</div>
+                    <div>
+                      {selectedProduct.status === 'active' && <Badge className="bg-green-100 text-green-800">Activo</Badge>}
+                      {selectedProduct.status === 'suspended' && <Badge className="bg-red-100 text-red-800">Suspendido</Badge>}
+                      {selectedProduct.status === 'hidden' && <Badge className="bg-gray-100 text-gray-800">Oculto</Badge>}
+                      {selectedProduct.status === 'pending' && <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>}
+                      {selectedProduct.status === 'banned' && <Badge className="bg-red-100 text-red-800">Baneado</Badge>}
+                    </div>
+                  </div>
 
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={() => setSelectedProduct(null)}>Cerrar</Button>
+                    {selectedProduct.seller && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Vendedor</p>
+                          {selectedProduct.seller.phone && <p className="text-sm text-gray-600">{selectedProduct.seller.phone}</p>}
+                        </div>
+                        <div className="text-sm text-gray-500">ID: {selectedProduct.seller.userId}</div>
+                      </div>
+                    </div>
+                    )}
+
+                  {selectedProduct.location && (
+                    <div className="mt-3">
+                      <Card className="border-0 shadow-md">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Ubicación</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="block rounded-lg overflow-hidden aspect-video">
+                            <iframe
+                              title={`map-${selectedProduct.itemId}`}
+                              src={`https://www.google.com/maps?q=${encodeURIComponent(selectedProduct.location)}&output=embed`}
+                              className="w-full h-full"
+                              loading="lazy"
+                            />
+                          </div>
+
+                          <div className="flex items-center text-gray-700 gap-2">
+                            <MapPin className="h-4 w-4" />
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedProduct.location)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline hover:text-gray-900 text-sm"
+                              title="Ver en Google Maps"
+                            >
+                              {selectedProduct.location}
+                            </a>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {selectedProduct.description && (
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium text-gray-700">Descripción</h4>
+                      <p className="text-sm text-gray-600 mt-1">{selectedProduct.description}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Link to={`/products/${selectedProduct.itemId}`}>
+                      <Button variant="outline">Ir al producto</Button>
+                    </Link>
+                    <Button onClick={() => { if (productModalReportId) setCreateDialogOpenFor(productModalReportId); setSelectedProduct(null); }}>Crear Incidencia</Button>
+                  </div>
                 </div>
               </div>
             )}
