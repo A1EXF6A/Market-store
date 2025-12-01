@@ -219,26 +219,22 @@ const ProductDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Optional static map preview */}
-          {product.location && staticMapUrl && (
+          {/* Map preview (embedded) */}
+          {product.location && (
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Ubicación</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <a
-                  href={googleMapsHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Ver en Google Maps"
-                  className="block rounded-lg overflow-hidden"
-                >
-                  <img
-                    src={staticMapUrl}
-                    alt={`Mapa de ${product.location}`}
-                    className="w-full h-40 md:h-48 object-cover"
+                <div className="block rounded-lg overflow-hidden">
+                  <iframe
+                    title={`map-${product.itemId}`}
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(product.location)}&output=embed`}
+                    className="w-full h-40 md:h-48"
+                    loading="lazy"
                   />
-                </a>
+                </div>
+
                 <div className="flex items-center text-gray-700 gap-2">
                   <MapPin className="h-4 w-4" />
                   <a
