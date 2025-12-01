@@ -22,6 +22,7 @@ import {
   ShoppingBag,
   User,
   Users,
+  Trash,
 } from "lucide-react";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -374,7 +375,7 @@ const Layout: React.FC = () => {
                   <DropdownMenuItem onClick={handleSettings}><Settings className="h-4 w-4 mr-2" />Configuración</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600"><LogOut className="h-4 w-4 mr-2" />Cerrar Sesión</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setDeleteModalOpen(true)} className="text-red-600">Eliminar cuenta</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDeleteModalOpen(true)} className="text-red-600"><Trash className="h-4 w-4 mr-2" />Eliminar cuenta</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
