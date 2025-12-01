@@ -77,6 +77,8 @@ const IncidentsPage: React.FC = () => {
     description: "",
   });
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [incidentsPage, setIncidentsPage] = useState<number>(0);
+  const [incidentsPerPage] = useState<number>(8);
 
   useEffect(() => {
     loadIncidents();
@@ -88,6 +90,7 @@ const IncidentsPage: React.FC = () => {
       const currentFilters = customFilters !== undefined ? customFilters : filters;
       const data = await incidentsService.getIncidents(currentFilters);
       setIncidents(data);
+      setIncidentsPage(0);
     } catch (error: any) {
       toast.error("Error al cargar incidencias");
     } finally {
@@ -359,7 +362,7 @@ const IncidentsPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {incidents.map((incident) => (
+              {incidents.slice(incidentsPage * incidentsPerPage, (incidentsPage + 1) * incidentsPerPage).map((incident) => (
                 <TableRow key={incident.incidentId}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -465,7 +468,33 @@ const IncidentsPage: React.FC = () => {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+
+          {incidents.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {incidentsPage * incidentsPerPage + 1} - {Math.min((incidentsPage + 1) * incidentsPerPage, incidents.length)} de {incidents.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.max(0, p - 1))}
+                  disabled={incidentsPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.min(p + 1, Math.floor((incidents.length - 1) / incidentsPerPage)))}
+                  disabled={(incidentsPage + 1) * incidentsPerPage >= incidents.length}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
 
           {incidents.length === 0 && (
             <div className="text-center py-12">
