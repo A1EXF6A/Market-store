@@ -1,5 +1,5 @@
-import type { Report, Appeal, Product } from "@/types";
-import { ReportType } from "@/types";
+import type { Report, Appeal, Product, Incident } from "@/types";
+import { ReportType, ItemStatus } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
@@ -8,6 +8,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@components/ui/dialog";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
@@ -60,6 +62,12 @@ import {
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [appealsPage, setAppealsPage] = useState<number>(0);
+  const [appealsPerPage, setAppealsPerPage] = useState<number>(5);
+  const [appealActionLoading, setAppealActionLoading] = useState<number | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const [resolution, setResolution] = useState<{ status: ItemStatus; description: string }>({ status: ItemStatus.ACTIVE, description: "" });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ReportFilters>({});
   const [activeTab, setActiveTab] = useState("reports");
@@ -91,6 +99,7 @@ const ReportsPage: React.FC = () => {
       } else if (activeTab === "appeals") {
         const data = await incidentsService.getAppeals();
         setAppeals(data);
+        setAppealsPage(0);
       }
     } catch (error: any) {
       toast.error("Error al cargar datos");
@@ -480,70 +489,157 @@ const ReportsPage: React.FC = () => {
           )}
         </TabsContent>
 
+        {/* Resolve Incident Dialog (used from appeals 'Revisar') */}
+        <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Resolver Incidencia</DialogTitle>
+              <DialogDescription>Define el estado final y la resolución para esta incidencia.</DialogDescription>
+            </DialogHeader>
+
+            {selectedIncident && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium">{selectedIncident.item?.name || `ID ${selectedIncident.itemId}`}</h4>
+                  <p className="text-sm text-gray-600">Vendedor: {selectedIncident.seller?.firstName} {selectedIncident.seller?.lastName}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Estado Final</Label>
+                  <Select
+                    value={resolution.status}
+                    onValueChange={(value) => setResolution((prev) => ({ ...prev, status: value as ItemStatus }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ItemStatus.ACTIVE}>Mantener Activo</SelectItem>
+                      <SelectItem value={ItemStatus.SUSPENDED}>Suspender</SelectItem>
+                      <SelectItem value={ItemStatus.BANNED}>Prohibir</SelectItem>
+                      <SelectItem value={ItemStatus.HIDDEN}>Ocultar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Descripción de la Resolución</Label>
+                  <Textarea
+                    placeholder="Explica las razones de esta decisión..."
+                    value={resolution.description}
+                    onChange={(e) => setResolution((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsResolveDialogOpen(false)}>Cancelar</Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedIncident) return;
+                  try {
+                    await incidentsService.resolveIncident(selectedIncident.incidentId, resolution.status);
+                    toast.success('Incidencia resuelta');
+                    setIsResolveDialogOpen(false);
+                    setSelectedIncident(null);
+                    loadData();
+                  } catch (err:any) {
+                    toast.error('Error al resolver incidencia');
+                  }
+                }}
+              >Resolver Incidencia</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <TabsContent value="appeals" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Apelaciones ({appeals.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                      <TableHead>Apelación ID</TableHead>
-                      <TableHead>Incidencia</TableHead>
-                      <TableHead>Vendedor</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Estado</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appeals.map((appeal) => (
-                    <TableRow key={appeal.appealId}>
-                      <TableCell>
-                        <div className="font-medium">{appeal.appealId}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-gray-600">{appeal.incidentId}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-gray-600">
-                          {(
-                            // prefer seller email if provided by API, fallback to seller object or id
-                            // @ts-ignore
-                            appeal.sellerEmail || (appeal as any).seller?.email || appeal.sellerId
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <p className="text-sm text-gray-600 line-clamp-2">{appeal.reason}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-gray-600">
-                          {new Date(appeal.createdAt).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {appeal.reviewed ? (
-                          <Badge className="bg-green-100 text-green-800">Revisada</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
-                        )}
-                      </TableCell>
-                    
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {appeals.length === 0 && (
+              {appeals.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay apelaciones</h3>
                   <p className="text-gray-600">No se encontraron apelaciones en el sistema.</p>
                 </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Apelación ID</TableHead>
+                        <TableHead>Incidencia</TableHead>
+                        <TableHead>Vendedor</TableHead>
+                        <TableHead>Motivo</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Estado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {appeals.slice(appealsPage * appealsPerPage, (appealsPage + 1) * appealsPerPage).map((appeal) => (
+                        <TableRow key={appeal.appealId}>
+                          <TableCell>
+                            <div className="font-medium">{appeal.appealId}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">{appeal.incidentId}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              {(appeal as any).sellerEmail || (appeal as any).seller?.email || appeal.sellerId}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <p className="text-sm text-gray-600 line-clamp-2">{appeal.reason}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-gray-600">
+                              {new Date(appeal.createdAt).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {appeal.reviewed ? (
+                              <Badge className="bg-green-100 text-green-800">Revisada</Badge>
+                            ) : (
+                              <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+                            )}
+                          </TableCell>
+                          
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-600">
+                      Mostrando {appealsPage * appealsPerPage + 1} - {Math.min((appealsPage + 1) * appealsPerPage, appeals.length)} de {appeals.length}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppealsPage((p) => Math.max(0, p - 1))}
+                        disabled={appealsPage === 0}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppealsPage((p) => Math.min(p + 1, Math.floor((appeals.length - 1) / appealsPerPage)))}
+                        disabled={(appealsPage + 1) * appealsPerPage >= appeals.length}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
