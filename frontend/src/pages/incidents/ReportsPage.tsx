@@ -353,7 +353,11 @@ const ReportsPage: React.FC = () => {
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-gray-400" />
-                          <span>Usuario ID: {report.buyerId}</span>
+                          <span>{
+                            // prefer buyer email if provided by API, fallback to buyer object or id
+                            // @ts-ignore
+                            (report as any).buyerEmail || (report as any).buyer?.email || `ID ${report.buyerId}`
+                          }</span>
                         </div>
                       </TableCell>
                       <TableCell>{getReportTypeBadge(report.type)}</TableCell>
