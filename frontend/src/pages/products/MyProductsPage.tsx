@@ -62,6 +62,8 @@ const MyProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ProductWithCoercedPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
+  const [productsPage, setProductsPage] = useState<number>(0);
+  const [productsPerPage] = useState<number>(6);
 
   const countActive = useMemo(
     () => products.filter((p) => p.availability).length,
@@ -81,6 +83,7 @@ const MyProductsPage: React.FC = () => {
         price: coercePrice((p as any).price),
       }));
       setProducts(normalized);
+      setProductsPage(0);
     } catch {
       toast.error("Error al cargar tus productos");
     } finally {
@@ -238,7 +241,7 @@ const MyProductsPage: React.FC = () => {
               </TableHeader>
 
               <TableBody>
-                {products.map((product) => (
+                {products.slice(productsPage * productsPerPage, (productsPage + 1) * productsPerPage).map((product) => (
                   <TableRow key={product.itemId} className="align-middle">
                     {/* Producto */}
                     <TableCell>
@@ -355,6 +358,29 @@ const MyProductsPage: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                  Mostrando {productsPage * productsPerPage + 1} - {Math.min((productsPage + 1) * productsPerPage, products.length)} de {products.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductsPage((p) => Math.max(0, p - 1))}
+                    disabled={productsPage === 0}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductsPage((p) => Math.min(p + 1, Math.floor((products.length - 1) / productsPerPage)))}
+                    disabled={(productsPage + 1) * productsPerPage >= products.length}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
           </CardContent>
         </Card>
       )}
