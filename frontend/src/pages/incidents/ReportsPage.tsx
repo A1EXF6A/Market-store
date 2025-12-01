@@ -1,4 +1,4 @@
-import type { Report, Appeal } from "@/types";
+import type { Report, Appeal, Product } from "@/types";
 import { ReportType } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -28,6 +28,7 @@ import {
 } from "@components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
 import { incidentsService, type ReportFilters } from "@services/incidents";
+import { productsService } from "@services/products";
 import {
   AlertTriangle,
   Ban,
@@ -67,6 +68,9 @@ const ReportsPage: React.FC = () => {
   const [createDialogOpenFor, setCreateDialogOpenFor] = useState<number | null>(null);
   const [createDescription, setCreateDescription] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
+  // State to control product details modal
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productLoading, setProductLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -110,6 +114,27 @@ const ReportsPage: React.FC = () => {
       toast.error("Error al crear incidencia");
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const openProductDetails = async (report: Report) => {
+    try {
+      setProductLoading(true);
+      // If the API already included the item object or name, use it; otherwise fetch by id
+      // @ts-ignore
+      if ((report as any).item) {
+        // @ts-ignore
+        setSelectedProduct((report as any).item as Product);
+      } else if (report.itemId) {
+        const prod = await productsService.getById(report.itemId);
+        setSelectedProduct(prod);
+      } else {
+        setSelectedProduct(null);
+      }
+    } catch (error: any) {
+      toast.error("Error al cargar los detalles del producto");
+    } finally {
+      setProductLoading(false);
     }
   };
   const getReportTypeBadge = (type: ReportType) => {
@@ -317,12 +342,10 @@ const ReportsPage: React.FC = () => {
                               variant="link"
                               size="sm"
                               className="p-0 h-auto text-blue-600"
-                              asChild
+                              onClick={() => openProductDetails(report)}
                             >
-                              <Link to={`/products/${report.itemId}`}>
-                                <Eye className="h-3 w-3 mr-1" />
-                                Ver producto
-                              </Link>
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver producto
                             </Button>
                           </div>
                         </div>
@@ -365,11 +388,9 @@ const ReportsPage: React.FC = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link to={`/products/${report.itemId}`} className="flex items-center">
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Revisar
-                                </Link>
+                              <DropdownMenuItem onClick={() => openProductDetails(report)} className="flex items-center">
+                                <Eye className="h-4 w-4 mr-2" />
+                                Revisar
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setCreateDialogOpenFor(report.reportId)} className="flex items-center">
                                 <Shield className="h-4 w-4 mr-2" />
@@ -591,6 +612,60 @@ const ReportsPage: React.FC = () => {
                 </div>
               </>
             ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Details Modal (opened from report actions) */}
+      <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <Package className="h-6 w-6 text-blue-600 mt-1" />
+              <div>
+                <DialogTitle>{selectedProduct ? selectedProduct.name : (productLoading ? 'Cargando...' : 'Detalle del producto')}</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">Detalles del producto reportado</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {productLoading && (
+              <div className="text-center py-6">Cargando producto...</div>
+            )}
+
+            {selectedProduct && !productLoading && (
+              <div className="space-y-4">
+                {selectedProduct.photos && selectedProduct.photos.length > 0 && (
+                  <div className="w-full h-48 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                    {/* show first photo if URL available */}
+                    <img src={selectedProduct.photos[0].url} alt={selectedProduct.name} className="max-h-full object-contain" />
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedProduct.name}</h3>
+                  {selectedProduct.category && <p className="text-sm text-gray-500">{selectedProduct.category}</p>}
+                  {selectedProduct.location && <p className="text-sm text-gray-500">Dirección: {selectedProduct.location}</p>}
+                </div>
+
+                {selectedProduct.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">Descripción</h4>
+                    <p className="text-sm text-gray-600 mt-1">{selectedProduct.description}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">Precio</div>
+                  <div className="font-medium">{typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : '—'}</div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={() => setSelectedProduct(null)}>Cerrar</Button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
