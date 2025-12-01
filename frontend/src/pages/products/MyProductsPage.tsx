@@ -185,18 +185,18 @@ const MyProductsPage: React.FC = () => {
   };
 
   const AvailabilityBadge = ({ available }: { available: boolean }) => (
-    <Badge className={available ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+    <Badge className={available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
       {available ? "Disponible" : "Vendido"}
     </Badge>
   );
 
   const StatusBadge = ({ status }: { status: string }) => {
     const map: Record<string, { text: string; cls: string }> = {
-      active: { text: "Activo", cls: "bg-emerald-100 text-emerald-800" },
-      pending: { text: "Pendiente", cls: "bg-amber-100 text-amber-800" },
-      suspended: { text: "Suspendido", cls: "bg-rose-100 text-rose-800" },
+      active: { text: "Activo", cls: "bg-green-100 text-green-800" },
+      pending: { text: "Pendiente", cls: "bg-yellow-100 text-yellow-800" },
+      suspended: { text: "Suspendido", cls: "bg-red-100 text-red-800" },
       hidden:    { text: "Oculto", cls: "bg-slate-100 text-slate-800" },
-      banned:    { text: "Prohibido", cls: "bg-rose-100 text-rose-800" },
+      banned:    { text: "Prohibido", cls: "bg-red-100 text-red-800" },
     };
     const s = map[status] ?? map.active;
     return <Badge className={s.cls}>{s.text}</Badge>;
@@ -205,7 +205,7 @@ const MyProductsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-emerald-500 p-[1px]">
+        <div className="rounded-2xl bg-blue-600 p-[1px]">
           <div className="rounded-2xl bg-white dark:bg-neutral-950 p-5">
             <div className="flex items-center justify-between">
               <div className="h-8 w-56 rounded-md bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
@@ -245,11 +245,11 @@ const MyProductsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header con borde degradado */}
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow">
+      <div className="rounded-2xl bg-blue-600 p-[1px] shadow-lg">
         <div className="rounded-2xl bg-white dark:bg-neutral-950 px-5 py-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 grid place-items-center rounded-xl bg-indigo-600/10 text-indigo-600">
+              <div className="h-9 w-9 grid place-items-center rounded-xl bg-blue-600/10 text-blue-600">
                 <ShoppingBag className="h-5 w-5" />
               </div>
               <div>
@@ -259,7 +259,7 @@ const MyProductsPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Button asChild className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-90">
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
               <Link to="/products/create">
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Producto
@@ -272,7 +272,7 @@ const MyProductsPage: React.FC = () => {
       {products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-14 text-center">
-            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-indigo-600/10 text-indigo-600 grid place-items-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-blue-600/10 text-blue-600 grid place-items-center">
               <Plus className="h-6 w-6" />
             </div>
             <h3 className="text-lg font-semibold mb-1">Aún no tienes productos</h3>
@@ -424,7 +424,7 @@ const MyProductsPage: React.FC = () => {
                     {/* Precio (normalizado; muestra también 0) */}
                     <TableCell>
                       {typeof product.price === "number" ? (
-                        <div className="inline-flex items-center gap-1 font-medium text-emerald-600">
+                        <div className="inline-flex items-center gap-1 font-medium text-blue-600">
                           <DollarSign className="h-4 w-4" />
                           {currency.format(product.price)}
                         </div>
