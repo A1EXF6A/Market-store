@@ -25,7 +25,14 @@ import {
   Clock,
   FileText,
   MessageSquare,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -209,41 +216,30 @@ export default function MyIncidentsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {canAppeal(incident) ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateAppeal(incident)}
-                        >
-                          Apelar
-                        </Button>
-                      ) : (
-                        // Show reason via native tooltip (title) and small helper text
-                        <div>
-                          <span
-                            className="text-sm text-gray-500"
-                            title={
-                              incident.appeals?.some((appeal) => !appeal.reviewed)
-                                ? "Tienes una apelación pendiente: espera la revisión del moderador."
-                                : incident.status === ItemStatus.PENDING
-                                ? "No se puede apelar: ya existe una apelación en revisión o la política lo impide."
-                                : "Solo puedes crear apelaciones cuando la incidencia está en estado 'Pendiente'."
-                            }
-                          >
-                            {incident.appeals?.some((appeal) => !appeal.reviewed)
-                              ? "Apelación pendiente"
-                              : "No se puede apelar"}
-                          </span>
-                          <div className="text-xs text-gray-400 mt-1">
-                            {incident.appeals?.some((appeal) => !appeal.reviewed)
-                              ? "Motivo: ya existe una apelación sin resolver."
-                              : incident.status === ItemStatus.PENDING
-                              ? "Motivo: revisa tus apelaciones previas o contacta al soporte."
-                              : "Motivo: la incidencia no está en estado 'Pendiente'."}
-                          </div>
-                        </div>
-                      )}
+                    <TableCell className="text-right">
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canAppeal(incident) ? (
+                              <DropdownMenuItem onClick={() => handleCreateAppeal(incident)}>
+                                Apelar
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                {incident.appeals?.some((appeal) => !appeal.reviewed)
+                                  ? "Apelación pendiente"
+                                  : "No se puede apelar"}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {/* No helper text: only the dropdown menu is shown */}
                     </TableCell>
                   </TableRow>
                 ))}
