@@ -226,11 +226,11 @@ const ProductDetailPage: React.FC = () => {
                 <CardTitle className="text-lg">Ubicación</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="block rounded-lg overflow-hidden">
+                <div className="block rounded-lg overflow-hidden aspect-video">
                   <iframe
                     title={`map-${product.itemId}`}
                     src={`https://www.google.com/maps?q=${encodeURIComponent(product.location)}&output=embed`}
-                    className="w-full h-40 md:h-48"
+                    className="w-full h-full"
                     loading="lazy"
                   />
                 </div>

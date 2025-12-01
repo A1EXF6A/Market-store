@@ -641,9 +641,9 @@ const ReportsPage: React.FC = () => {
             {selectedProduct && !productLoading && (
               <div className="space-y-4">
                 {selectedProduct.photos && selectedProduct.photos.length > 0 && (
-                  <div className="w-full h-48 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                  <div className="w-full bg-gray-100 rounded-md overflow-hidden flex items-center justify-center aspect-[4/3]">
                     {/* show first photo if URL available */}
-                    <img src={selectedProduct.photos[0].url} alt={selectedProduct.name} className="max-h-full object-contain" />
+                    <img src={selectedProduct.photos[0].url} alt={selectedProduct.name} className="w-full h-full object-contain" />
                   </div>
                 )}
 

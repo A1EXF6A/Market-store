@@ -52,7 +52,7 @@ export function ProductCard({
     <Card className="group hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300">
       <div className="relative">
         {/* Image */}
-        <div className="w-full h-48 bg-gray-100 rounded-t-lg overflow-hidden">
+        <div className="w-full bg-gray-100 rounded-t-lg overflow-hidden aspect-[4/3]">
           {product.photos.length > 0 ? (
             <img
               src={`${API_BASE}${product.photos[0].url}`}
@@ -119,12 +119,10 @@ export function ProductCard({
                 <span className="font-medium">Ubicación</span>
               </div>
 
-              <div className="w-full h-40 rounded-md overflow-hidden border border-gray-100">
+              <div className="w-full rounded-md overflow-hidden border border-gray-100 aspect-video">
                 <iframe
                   title={`map-${product.itemId}`}
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(
-                    product.location,
-                  )}&output=embed`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(product.location)}&output=embed`}
                   className="w-full h-full"
                   loading="lazy"
                 />
