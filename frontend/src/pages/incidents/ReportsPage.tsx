@@ -84,6 +84,7 @@ const ReportsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productLoading, setProductLoading] = useState(false);
   const [productModalReportId, setProductModalReportId] = useState<number | null>(null);
+  const [incidentsCountMap, setIncidentsCountMap] = useState<Record<number, number>>({});
 
   useEffect(() => {
     loadData();
@@ -102,6 +103,26 @@ const ReportsPage: React.FC = () => {
         const data = await incidentsService.getReports(currentFilters);
         setReports(data);
         setReportsPage(0);
+        // fetch counts per report using dedicated endpoint to avoid large payloads
+        try {
+          const counts = await Promise.all(
+            data.map(async (r) => {
+              try {
+                const res = await incidentsService.getReportIncidentsCount(r.reportId);
+                return { itemId: r.itemId, count: res.count };
+              } catch (err) {
+                return { itemId: r.itemId, count: 0 };
+              }
+            }),
+          );
+          const map: Record<number, number> = {};
+          counts.forEach((c) => {
+            if (c.itemId) map[c.itemId] = c.count;
+          });
+          setIncidentsCountMap(map);
+        } catch (e) {
+          setIncidentsCountMap({});
+        }
       } else if (activeTab === "appeals") {
         const data = await incidentsService.getAppeals();
         setAppeals(data);
@@ -339,6 +360,7 @@ const ReportsPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producto</TableHead>
+                    <TableHead className="w-[120px] text-center">Incidencias</TableHead>
                     <TableHead>Reportado por</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Comentario</TableHead>
@@ -367,6 +389,9 @@ const ReportsPage: React.FC = () => {
                             </Button>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {incidentsCountMap[report.itemId] ?? ((report as any).incidentCount ?? (report as any).incidents?.length ?? 0)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
