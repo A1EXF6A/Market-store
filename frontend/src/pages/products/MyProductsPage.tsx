@@ -311,14 +311,16 @@ const MyProductsPage: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem
-                              onClick={() => toggleProductAvailability(product.itemId, product.availability)}
-                              disabled={actionBusyId === product.itemId}
-                              className={actionBusyId === product.itemId ? 'text-neutral-400' : ''}
-                            >
-                              <ShoppingBag className="h-4 w-4 mr-2" />
-                              {product.availability ? 'Marcar vendido' : 'Marcar disponible'}
-                            </DropdownMenuItem>
+                            {product.status === 'active' && (
+                              <DropdownMenuItem
+                                onClick={() => toggleProductAvailability(product.itemId, product.availability)}
+                                disabled={actionBusyId === product.itemId}
+                                className={actionBusyId === product.itemId ? 'text-neutral-400' : ''}
+                              >
+                                <ShoppingBag className="h-4 w-4 mr-2" />
+                                {product.availability ? 'Marcar vendido' : 'Marcar disponible'}
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.itemId}`}>
                                 <Eye className="h-4 w-4 mr-2" />
