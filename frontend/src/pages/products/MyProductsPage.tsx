@@ -304,22 +304,6 @@ const MyProductsPage: React.FC = () => {
                     {/* Acciones */}
                     <TableCell className="text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={product.availability ? "secondary" : "default"}
-                          className={
-                            product.availability
-                              ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200"
-                              : "bg-emerald-600 hover:bg-emerald-600/90"
-                          }
-                          disabled={actionBusyId === product.itemId}
-                          onClick={() =>
-                            toggleProductAvailability(product.itemId, product.availability)
-                          }
-                        >
-                          {product.availability ? "Marcar vendido" : "Marcar disponible"}
-                        </Button>
-
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon">
@@ -327,18 +311,33 @@ const MyProductsPage: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem
+                              onClick={() => toggleProductAvailability(product.itemId, product.availability)}
+                              disabled={actionBusyId === product.itemId}
+                              className={actionBusyId === product.itemId ? 'text-neutral-400' : ''}
+                            >
+                              <ShoppingBag className="h-4 w-4 mr-2" />
+                              {product.availability ? 'Marcar vendido' : 'Marcar disponible'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.itemId}`}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver detalles
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/products/${product.itemId}/edit`}>
+                            {product.status === 'active' ? (
+                              <DropdownMenuItem asChild>
+                                <Link to={`/products/${product.itemId}/edit`}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </Link>
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem disabled className="text-neutral-400" title="Solo se puede editar productos con estado Activo">
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
-                              </Link>
-                            </DropdownMenuItem>
+                              </DropdownMenuItem>
+                            )}
                             {
                               // Disable delete for products that are not 'active'
                             }
