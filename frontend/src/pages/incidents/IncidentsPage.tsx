@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/authStore";
-import type { Incident } from "@/types";
+import type { Incident, Product } from "@/types";
 import { ItemStatus, UserRole } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -38,6 +38,7 @@ import {
 import { Textarea } from "@components/ui/textarea";
 import { incidentsService, type IncidentFilters } from "@services/incidents";
 import { usersService } from "@services/users";
+import { productsService } from "@services/products";
 import {
   AlertTriangle,
   Calendar,
@@ -79,6 +80,9 @@ const IncidentsPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [incidentsPage, setIncidentsPage] = useState<number>(0);
   const [incidentsPerPage] = useState<number>(8);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [productLoading, setProductLoading] = useState(false);
 
   useEffect(() => {
     loadIncidents();
@@ -419,6 +423,28 @@ const IncidentsPage: React.FC = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const itemId = incident.itemId;
+                            try {
+                              setProductLoading(true);
+                              let prod = incident.item as Product | undefined;
+                              if (!prod) {
+                                prod = await productsService.getById(itemId);
+                              }
+                              setSelectedProduct(prod || null);
+                              setIsProductDialogOpen(true);
+                            } catch (err: any) {
+                              toast.error("Error al cargar el producto");
+                            } finally {
+                              setProductLoading(false);
+                            }
+                          }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Ver Producto
+                        </DropdownMenuItem>
+
                         {!incident.moderatorId && (
                           <>
                             <DropdownMenuItem
@@ -628,6 +654,64 @@ const IncidentsPage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      {/* Product Details Dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles del Producto</DialogTitle>
+            <DialogDescription>
+              Información básica del producto y ubicación (si está disponible).
+            </DialogDescription>
+          </DialogHeader>
+
+          {productLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+            </div>
+          ) : selectedProduct ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-lg">{selectedProduct.name}</h4>
+                <p className="text-sm text-gray-600">ID: {selectedProduct.itemId}</p>
+                {selectedProduct.description && (
+                  <p className="text-sm text-gray-700 mt-2">{selectedProduct.description}</p>
+                )}
+              </div>
+
+              {selectedProduct.location && (
+                <div className="w-full rounded overflow-hidden border">
+                  <iframe
+                    title="Ubicación del producto"
+                    width="100%"
+                    height="240"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(
+                      selectedProduct.location,
+                    )}&output=embed`}
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <p>No se encontró el producto.</p>
+          )}
+
+          <DialogFooter>
+            {selectedProduct && (
+              <a
+                href={`/products/${selectedProduct.itemId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button>Ir al producto</Button>
+              </a>
+            )}
+            <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
