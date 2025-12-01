@@ -793,17 +793,7 @@ const ReportsPage: React.FC = () => {
                     </div>
                   </div>
 
-                    {selectedProduct.seller && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Vendedor</p>
-                          {selectedProduct.seller.phone && <p className="text-sm text-gray-600">{selectedProduct.seller.phone}</p>}
-                        </div>
-                        <div className="text-sm text-gray-500">ID: {selectedProduct.seller.userId}</div>
-                      </div>
-                    </div>
-                    )}
+                    {/* Seller information removed per UX request */}
 
                   {selectedProduct.location && (
                     <div className="mt-3">
