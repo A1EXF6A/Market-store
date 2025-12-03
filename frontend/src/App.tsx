@@ -1,4 +1,4 @@
-import React from "react";
+import "react";
 import AppRouter from "./AppRouter";
 import PageBackground from "@/components/PageBackground";
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { FC } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 
@@ -89,7 +90,7 @@ function ClickCatcher({
   return null;
 }
 
-const LocationPicker: React.FC<Props> = ({
+const LocationPicker: FC<Props> = ({
   value,
   onChange,
   height = 320,

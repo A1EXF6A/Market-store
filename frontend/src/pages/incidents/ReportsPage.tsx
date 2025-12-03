@@ -31,7 +31,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
 import { incidentsService, type ReportFilters } from "@services/incidents";
 import { productsService } from "@services/products";
-import { API_BASE } from "@services/api";
 import {
   AlertTriangle,
   Ban,
@@ -65,10 +64,9 @@ const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [appealsPage, setAppealsPage] = useState<number>(0);
-  const [appealsPerPage, setAppealsPerPage] = useState<number>(5);
+  const [appealsPerPage] = useState<number>(5);
   const [reportsPage, setReportsPage] = useState<number>(0);
-  const [reportsPerPage, setReportsPerPage] = useState<number>(10);
-  const [appealActionLoading, setAppealActionLoading] = useState<number | null>(null);
+  const [reportsPerPage] = useState<number>(10);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const [resolution, setResolution] = useState<{ status: ItemStatus; description: string }>({ status: ItemStatus.ACTIVE, description: "" });

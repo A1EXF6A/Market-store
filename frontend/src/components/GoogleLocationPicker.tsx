@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { FC } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, useLoadScript, Autocomplete } from "@react-google-maps/api";
 import type { Libraries } from "@react-google-maps/api";
 
@@ -19,7 +20,7 @@ const DEFAULT_CENTER = { lat: -1.241, lng: -78.619 };
 
 const libraries: Libraries = ["places"];
 
-const GoogleLocationPicker: React.FC<Props> = ({ value, onChange, height = 320, defaultCenter = DEFAULT_CENTER }) => {
+const GoogleLocationPicker: FC<Props> = ({ value, onChange, height = 320, defaultCenter = DEFAULT_CENTER }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey || "", libraries });
   const [point, setPoint] = useState<{ lat: number; lng: number } | null>(value ? { lat: value.lat, lng: value.lng } : null);

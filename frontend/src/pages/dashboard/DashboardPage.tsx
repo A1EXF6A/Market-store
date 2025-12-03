@@ -182,7 +182,7 @@ const DashboardPage: React.FC = () => {
           <div className="relative inline-block">
             <div className="absolute inset-0 bg-blue-100/50 dark:bg-blue-900/20 rounded-full blur-xl animate-pulse"></div>
             <h1 className="relative text-4xl md:text-6xl font-bold text-blue-600 dark:text-blue-400">
-              ¡Bienvenido{user.name ? `, ${user.name}` : ""}! 👋
+              ¡Bienvenido{user.firstName ? `, ${user.firstName} ${user.lastName}` : ""}! 👋
             </h1>
           </div>
           

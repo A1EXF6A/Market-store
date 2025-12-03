@@ -1,6 +1,6 @@
 // src/pages/VerifyEmailPage.tsx
 import React from "react";
-import { useSearchParams, Link, useNavigate } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -15,7 +15,7 @@ import { ShieldCheck, Loader2, Zap } from "lucide-react";
 
 const VerifyEmailPage: React.FC = () => {
   const [search] = useSearchParams();
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Removed unused navigate
   const token = search.get("token");
   const [loading, setLoading] = React.useState(false);
   const [done, setDone] = React.useState<null | "ok" | "fail">(null);

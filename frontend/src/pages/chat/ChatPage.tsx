@@ -18,13 +18,13 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { set } from "zod";
+import type { User } from "@/types";
 
 const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const {user, getToken } = useAuthStore();
-  const [otherUser, setOtherUser] = useState(null);
+  const { user, getToken } = useAuthStore();
+  const [otherUser, setOtherUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -108,8 +108,9 @@ const ChatPage: React.FC = () => {
       socketService.onUserTyping(({ userId, isTyping }) => {
         setTypingUsers((prev) => {
           const newSet = new Set(prev);
-          if (isTyping) newSet.add(userId);
-          else newSet.delete(userId);
+          const uid = Number(userId);
+          if (isTyping) newSet.add(uid);
+          else newSet.delete(uid);
           return newSet;
         });
       });
@@ -145,9 +146,8 @@ const ChatPage: React.FC = () => {
       setMessages(messagesData);
 
       // set other user
-      const other =
-        user?.userId === chat.buyerId ? chat.seller : chat.buyer;
-      setOtherUser(other);
+      const other = user?.userId === chat.buyerId ? chat.seller : chat.buyer;
+      setOtherUser(other ?? null);
 
       // Update URL
       navigate(`/chat/${chat.chatId}`, { replace: true });
@@ -163,11 +163,13 @@ const ChatPage: React.FC = () => {
       setSending(true);
       const content = newMessage.trim();
 
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMsg: Message = {
+      const tempId = -Date.now();
+      const optimisticMsg: any = {
+        messageId: tempId,
         chatId: selectedChat.chatId,
         content,
-        senderId: user?.userId,
+        senderId: user?.userId ?? 0,
+        sentAt: new Date().toISOString(),
       };
 
 
@@ -177,10 +179,9 @@ const ChatPage: React.FC = () => {
       socketService.sendMessage(optimisticMsg);
 
       // También guardar por API (para obtener id real, etc.)
-      const savedMessage = await chatService.sendMessage({
+      await chatService.sendMessage({
         chatId: selectedChat.chatId,
         content,
-        senderId: user?.userId,
       });
 
       setNewMessage("");
@@ -413,9 +414,7 @@ const ChatPage: React.FC = () => {
               })}
 
               {/* Typing Indicator */}
-              {Array.from(typingUsers).filter(
-                (userId) => userId !== otherUser?.userId,
-              ).length > 0 && (
+              {Array.from(typingUsers).filter((userId) => userId !== (otherUser?.userId ?? -1)).length > 0 && (
                   <div className="flex justify-start">
                     <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">
                       <div className="flex items-center space-x-1">
