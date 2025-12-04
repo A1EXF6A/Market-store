@@ -5,13 +5,17 @@ agent none
   agent {  dockerfile {
         dir 'frontend'
         
-    } }
+    } 
+steps {    }
+}
                    }
  stage('levantar back') { 
   agent {  dockerfile {
         dir 'backend'
         
-    } }                  }
+    } }
+steps {    }
+}
 
     }
 }
