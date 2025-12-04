@@ -1,17 +1,31 @@
 pipeline {
-   
-    stages {
-        stage('levantar front') { 
-  agent {  dockerfile {
-        dir 'frontend'
-        
-    } }
-                   }
- stage('levantar back') { 
-  agent {  dockerfile {
-        dir 'backend'
-        
-    } }                  }
+    agent none // Correcto, el agente se define por stage
 
-    }
-}
+    stages {
+        // --- STAGE 1: levantar front ---
+        stage('levantar front') { 
+            agent {  
+                dockerfile {
+                    dir 'frontend'
+                }
+            }
+            steps {
+                echo 'Hello, Frontend' // He cambiado el mensaje para diferenciarlo
+            }
+        } // <-- Cierre del stage 1: 'levantar front'
+        
+        // --- STAGE 2: levantar back ---
+        stage('levantar back') { 
+            agent {  
+                dockerfile {
+                    dir 'backend'
+                }
+            }
+            steps {
+                echo 'Hello, Backend' // He cambiado el mensaje para diferenciarlo
+            }
+        } // <-- Cierre del stage 2: 'levantar back'
+
+    } // <-- Cierre de la sección 'stages'. ¡Aquí es donde debe ir!
+
+} // <-- Cierre de la sección 'pipeline'
