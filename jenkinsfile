@@ -21,7 +21,7 @@ pipeline {
             // Usaremos 'Frontend' y 'Backend' con mayúsculas, asumiendo que el 'ls -F' lo confirmará.
             agent {  
                 dockerfile {
-                    dir 'Frontend' 
+                    dir 'frontend' 
                 }
             }
             steps {
@@ -33,7 +33,7 @@ pipeline {
         stage('levantar back') { 
             agent {  
                 dockerfile {
-                    dir 'Backend' 
+                    dir 'backend' 
                 }
             }
             steps {
