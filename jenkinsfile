@@ -2,13 +2,13 @@ pipeline {
     agent none
     stages {
         stage('levantar front') { 
-  agent {  dockerfile {
+  agent {  docker {
         dir 'frontend'
         
     } }
                    }
  stage('levantar back') { 
-  agent {  dockerfile {
+  agent {  docker {
         dir 'backend'
         
     } }                  }
