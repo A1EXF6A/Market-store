@@ -6,7 +6,7 @@ pipeline {
         stage('levantar front') { 
             agent {  
                 dockerfile {
-                    dir 'frontend'
+                    dir 'PracticaAutomatizacionDeDespliege/frontend'
                 }
             }
             steps {
@@ -18,7 +18,7 @@ pipeline {
         stage('levantar back') { 
             agent {  
                 dockerfile {
-                    dir 'backend'
+                    dir 'PracticaAutomatizacionDeDespliege/backend'
                 }
             }
             steps {
