@@ -1,0 +1,17 @@
+pipeline {
+   
+    stages {
+        stage('levantar front') { 
+  agent {  dockerfile {
+        dir 'frontend'
+        
+    } }
+                   }
+ stage('levantar back') { 
+  agent {  dockerfile {
+        dir 'backend'
+        
+    } }                  }
+
+    }
+}
