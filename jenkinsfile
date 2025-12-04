@@ -7,7 +7,8 @@ agent none
         
     }
 }
-steps {    }
+steps {                 echo 'Hello, Maven'
+    }
 }
                    }
  stage('levantar back') { 
@@ -15,7 +16,8 @@ steps {    }
         dir 'backend'
         
     } }
-steps {    }
+steps {                   echo 'Hello, Maven'
+ }
 }
 
     }
