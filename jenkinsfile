@@ -1,31 +1,38 @@
 pipeline {
-    agent none // Correcto, el agente se define por stage
+    agent none
 
     stages {
+        // --- STAGE 0: Checkout del Código ---
+        stage('Checkout') {
+            agent any
+            steps {
+                // Descarga el código del repositorio
+                checkout scm 
+            }
+        }
+        
         // --- STAGE 1: levantar front ---
         stage('levantar front') { 
             agent {  
                 dockerfile {
-                    dir 'PracticaAutomatizacionDeDespliege/frontend'
+                    dir 'Frontend' // 👈 CORRECCIÓN: Usar 'Frontend' con F mayúscula
                 }
             }
             steps {
-                echo 'Hello, Frontend' // He cambiado el mensaje para diferenciarlo
+                echo 'Iniciando Frontend...'
             }
-        } // <-- Cierre del stage 1: 'levantar front'
+        }
         
         // --- STAGE 2: levantar back ---
         stage('levantar back') { 
             agent {  
                 dockerfile {
-                    dir 'PracticaAutomatizacionDeDespliege/backend'
+                    dir 'Backend' // 👈 CORRECCIÓN: Usar 'Backend' con B mayúscula
                 }
             }
             steps {
-                echo 'Hello, Backend' // He cambiado el mensaje para diferenciarlo
+                echo 'Iniciando Backend...'
             }
-        } // <-- Cierre del stage 2: 'levantar back'
-
-    } // <-- Cierre de la sección 'stages'. ¡Aquí es donde debe ir!
-
-} // <-- Cierre de la sección 'pipeline'
+        }
+    }
+}
