@@ -9,9 +9,7 @@
 
 ### 2. Items (Productos/Servicios)
 - Tipos: product, service
-- Estados: active, suspended, hidden, pending, banned
-
-### 3. Services - Extensión de items para servicios
+- Estados: active, suspended, hidensión de items para servicios
 ### 4. ItemPhotos - Fotos de productos
 ### 5. Chats - Conversaciones entre buyer y seller
 ### 6. Messages - Mensajes dentro de chats
