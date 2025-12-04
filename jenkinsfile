@@ -2,20 +2,26 @@ pipeline {
     agent none
 
     stages {
-        // --- STAGE 0: Checkout del Código ---
-        stage('Checkout') {
+        // --- STAGE 0: Checkout del Código y Verificación ---
+        stage('Checkout y Verificación') {
             agent any
             steps {
-                // Descarga el código del repositorio
+                // 1. Descarga el código del repositorio
+                echo 'Descargando el código del repositorio...'
                 checkout scm 
+                
+                // 2. Lista los contenidos del directorio de trabajo para verificar
+                echo 'Listando directorios y archivos en el workspace:'
+                sh 'ls -F' 
             }
         }
         
         // --- STAGE 1: levantar front ---
         stage('levantar front') { 
+            // Usaremos 'Frontend' y 'Backend' con mayúsculas, asumiendo que el 'ls -F' lo confirmará.
             agent {  
                 dockerfile {
-                    dir 'Frontend' // 👈 CORRECCIÓN: Usar 'Frontend' con F mayúscula
+                    dir 'Frontend' 
                 }
             }
             steps {
@@ -27,7 +33,7 @@ pipeline {
         stage('levantar back') { 
             agent {  
                 dockerfile {
-                    dir 'Backend' // 👈 CORRECCIÓN: Usar 'Backend' con B mayúscula
+                    dir 'Backend' 
                 }
             }
             steps {
