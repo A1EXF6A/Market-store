@@ -5,7 +5,8 @@ agent none
   agent {  dockerfile {
         dir 'frontend'
         
-    } 
+    }
+}
 steps {    }
 }
                    }
