@@ -158,3 +158,8 @@ dist/
 # Lock files
 pnpm-lock.yaml*
 package-lock.json*
+vendedor/
+comprador/
+general/
+.pytest_cache/
+prueba/
