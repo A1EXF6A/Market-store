@@ -1,4 +1,9 @@
-process.loadEnvFile(__dirname + "/../../.env");
+try {
+  // Load .env if present; ignore if missing in container
+  process.loadEnvFile(__dirname + "/../../.env");
+} catch (e) {
+  // no-op: environment variables can come from process.env
+}
 
 interface Config {
   port: number;

@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: marketstore-postgres
+    environment:
+      POSTGRES_DB: marketstore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432" # host 5435 -> container 5432 (requested change)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: marketstore-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000 # align with frontend default API_BASE
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: marketstore
+      # Alternatively set DATABASE_URL to override all DB_* vars
+      # DATABASE_URL: postgres://postgres:postgres@postgres:5432/marketstore
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: ""
+      EMAIL_PASS: ""
+      EMAIL_FROM: ""
+      JWT_SECRET: your_jwt_secret
+      JWT_EXPIRES_IN: 1h
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://localhost:3000
+        GOOGLE_MAPS_API_KEY: ""
+    container_name: marketstore-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4173:4173"
+
+volumes:
+  pgdata:
+  backend_uploads:

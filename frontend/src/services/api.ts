@@ -1,8 +1,8 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-//export const API_BASE = '/api';
-export const API_BASE = 'http://localhost:3000';
+// Prefer runtime config from window.APP_CONFIG, fallback to localhost
+export const API_BASE = (window as any)?.APP_CONFIG?.BACKEND_URL ?? 'http://localhost:3000';
 
 
 export const api = axios.create({
