@@ -1,0 +1,8 @@
+{
+  "rootDir": ".",
+  "testRegex": "test/integration/.*\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testEnvironment": "node"
+}

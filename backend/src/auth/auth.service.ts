@@ -21,13 +21,21 @@ export class AuthService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(EmailService) private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, nationalId, password, role, ...userData } = registerDto;
 
+    // ✅ Corrección del typo 'Iif' -> 'if'
     if (!email || !nationalId || !password) {
       throw new ConflictException("All fields are required");
+    }
+
+    // ✅ Validación de formato de email
+    const emailRegex =
+      /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+    if (!emailRegex.test(email)) {
+      throw new ConflictException("Invalid email format");
     }
 
     const emailExists = await this.userRepository.findOne({ where: { email } });
@@ -53,7 +61,6 @@ export class AuthService {
     const vPayload: Record<string, any> = { userId: user.userId, type: "email_verification" };
     const vToken = this.jwtService.sign(vPayload, {
       secret: process.env.EMAIL_VERIFICATION_SECRET || process.env.JWT_SECRET,
-      // Si tu tipo de JwtSignOptions protesta, deja solo '24h' o castea como any:
       expiresIn: ("24h" as any),
     });
 
@@ -103,7 +110,7 @@ export class AuthService {
 
   async validateUser(userId: number): Promise<User> {
     return this.userRepository.findOne({ where: { userId } });
-    }
+  }
 
   async forgotPassword(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });

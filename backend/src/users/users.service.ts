@@ -27,20 +27,11 @@ export class UsersService {
 
   async findAll(filters?: UserFilters): Promise<User[]> {
     const where: any = {};
-
     if (filters?.role) where.role = filters.role;
     if (filters?.status) where.status = filters.status;
 
     if (filters?.search) {
       where.firstName = Like(`%${filters.search}%`);
-      // Si quieres que también busque por email/lastName:
-      // return this.userRepository.find({
-      //   where: [
-      //     { firstName: Like(`%${filters.search}%`) },
-      //     { lastName: Like(`%${filters.search}%`) },
-      //     { email: Like(`%${filters.search}%`) },
-      //   ],
-      // });
     }
 
     return this.userRepository.find({ where, order: { createdAt: "DESC" } });
@@ -84,7 +75,7 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-    async updateUserStatus(
+  async updateUserStatus(
     userId: number,
     status: UserStatus,
     bannedUntil?: Date | null,
@@ -92,12 +83,7 @@ export class UsersService {
     const user = await this.findById(userId);
 
     user.status = status;
-
-    if (status === UserStatus.BANNED) {
-      user.bannedUntil = bannedUntil ?? null; // null = definitivo
-    } else {
-      user.bannedUntil = null; // al activar o suspender, limpiamos el ban
-    }
+    user.bannedUntil = status === UserStatus.BANNED ? bannedUntil ?? null : null;
 
     return this.userRepository.save(user);
   }
@@ -108,22 +94,14 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  // =========================================================
-  // ✅ NUEVO: CAMBIO DE ROL PARA EL MISMO USUARIO
-  // Vendedor ⇄ Comprador
-  // =========================================================
   async switchMyRole(userId: number, targetRole: UserRole): Promise<User> {
     const user = await this.findById(userId);
 
-    // No permitir que admin/mod cambien su rol aquí
-    if (user.role === UserRole.ADMIN || user.role === UserRole.MODERATOR) {
+    if (user.role === UserRole.ADMIN || user.role === UserRole.MODERATOR)
       throw new ForbiddenException("Admins/Moderators cannot change role here");
-    }
 
-    // Solo permitir buyer/seller
-    if (![UserRole.BUYER, UserRole.SELLER].includes(targetRole)) {
+    if (![UserRole.BUYER, UserRole.SELLER].includes(targetRole))
       throw new ForbiddenException("Invalid target role");
-    }
 
     user.role = targetRole;
     return this.userRepository.save(user);
@@ -132,5 +110,24 @@ export class UsersService {
   async deleteUser(userId: number): Promise<void> {
     const user = await this.findById(userId);
     await this.userRepository.remove(user);
+  }
+
+  // =========================================================
+  // ✅ NUEVO: Método seguro para crear usuario
+  // Devuelve ConflictException si el email ya existe
+  // =========================================================
+  async createUserSafe(userData: Partial<User>): Promise<User> {
+    const existing = await this.findByEmail(userData.email);
+    if (existing) {
+      throw new ConflictException("Email already in use");
+    }
+
+    // Asegurarse de tener passwordHash
+    if (!userData.passwordHash && userData['password']) {
+      userData.passwordHash = await bcrypt.hash(userData['password'], 10);
+      delete userData['password'];
+    }
+
+    return this.userRepository.save(userData as User);
   }
 }
