@@ -30,13 +30,19 @@ const env: Config = {
   port: Number(process.env.PORT || 3000),
 
   database: {
+    // Determina puerto por entorno: producción (Docker) 5432, local 5435
+    port: Number(
+      process.env.DB_PORT || (process.env.NODE_ENV === "production" ? 5432 : 5435)
+    ),
+
     // DATABASE_URL tiene prioridad absoluta (ideal en Docker)
     url:
       process.env.DATABASE_URL ||
-      `postgres://${process.env.DB_USER || "postgres"}:${process.env.DB_PASSWORD || "postgres"}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || "marketstore"}`,
+      `postgres://${process.env.DB_USER || "postgres"}:${process.env.DB_PASSWORD || "postgres"}@${process.env.DB_HOST || "localhost"}:${
+        process.env.DB_PORT || (process.env.NODE_ENV === "production" ? 5432 : 5435)
+      }/${process.env.DB_NAME || "marketstore"}`,
 
     host: process.env.DB_HOST || "localhost",
-    port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     name: process.env.DB_NAME || "marketstore",

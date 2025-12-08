@@ -4,6 +4,11 @@ export class InitialSchema00011765152000000 implements MigrationInterface {
   name = "InitialSchema00011765152000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Si ya existe la tabla principal, asumimos que el esquema inicial está aplicado
+    const usersExists = await queryRunner.hasTable("users");
+    if (usersExists) {
+      return;
+    }
     // Enums
     await queryRunner.query(`CREATE TYPE "user_gender_enum" AS ENUM ('male', 'female', 'other')`);
     await queryRunner.query(`CREATE TYPE "user_role_enum" AS ENUM ('buyer', 'seller', 'moderator', 'admin')`);
