@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
-
 import env from "./config/env";
+
+// Importa tus entidades
 import { User } from "./entities/user.entity";
 import { Item } from "./entities/item.entity";
 import { ItemPhoto } from "./entities/item-photo.entity";
@@ -18,9 +19,26 @@ const AppDataSource = new DataSource({
   url: env.database.url,
   synchronize: false,
   logging: true,
-  entities: [User, Item, ItemPhoto, Service, Favorite, Report, Appeal, Incident, Chat, Message, Rating],
-  // Point to source migrations for ts-node CLI runs
-  migrations: ["src/migrations/*{.ts,.js}"],
+
+  entities: [
+    User,
+    Item,
+    ItemPhoto,
+    Service,
+    Favorite,
+    Report,
+    Appeal,
+    Incident,
+    Chat,
+    Message,
+    Rating,
+  ],
+
+  // 🔥 Importante: rutas correctas para migraciones
+  migrations:
+    process.env.NODE_ENV === "production"
+      ? ["dist/migrations/*.js"] // Docker (compilado)
+      : ["src/migrations/*{.ts,.js}"], // Desarrollo
 });
 
 export default AppDataSource;
