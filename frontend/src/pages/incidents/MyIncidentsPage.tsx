@@ -25,8 +25,24 @@ import {
   Clock,
   FileText,
   MessageSquare,
+  MoreHorizontal,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@components/ui/dropdown-menu";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 
 export default function MyIncidentsPage() {
@@ -36,15 +52,48 @@ export default function MyIncidentsPage() {
     null,
   );
   const [showAppealModal, setShowAppealModal] = useState(false);
+  const [incidentsPage, setIncidentsPage] = useState<number>(0);
+  const [incidentsPerPage] = useState<number>(5);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [appliedStatus, setAppliedStatus] = useState<string>("all");
+  const [appliedStartDate, setAppliedStartDate] = useState<string>("");
+  const [appliedEndDate, setAppliedEndDate] = useState<string>("");
 
   useEffect(() => {
     loadMyIncidents();
   }, []);
 
+  // Reset page when applied filters change
+  useEffect(() => {
+    setIncidentsPage(0);
+  }, [appliedStatus, appliedStartDate, appliedEndDate]);
+
+  const filteredIncidents = useMemo<Incident[]>(() => {
+    return incidents.filter((inc) => {
+      if (appliedStatus !== "all" && inc.status !== appliedStatus) return false;
+      if (appliedStartDate) {
+        const s = new Date(appliedStartDate);
+        const reported = new Date(inc.reportedAt);
+        if (reported < s) return false;
+      }
+      if (appliedEndDate) {
+        const e = new Date(appliedEndDate);
+        const reported = new Date(inc.reportedAt);
+        // include the whole day for endDate
+        e.setHours(23, 59, 59, 999);
+        if (reported > e) return false;
+      }
+      return true;
+    });
+  }, [incidents, appliedStatus, appliedStartDate, appliedEndDate]);
+
   const loadMyIncidents = async () => {
     try {
       const data = await incidentsService.getMyIncidents();
       setIncidents(data);
+      setIncidentsPage(0);
     } catch (error: any) {
       toast.error("Error al cargar incidencias");
     } finally {
@@ -52,7 +101,7 @@ export default function MyIncidentsPage() {
     }
   };
 
-  const getStatusBadge = (status: ItemStatus | undefined) => {
+  const getStatusBadge = (status?: ItemStatus) => {
     const variants = {
       [ItemStatus.ACTIVE]: { variant: "default" as const, label: "Activo" },
       [ItemStatus.SUSPENDED]: {
@@ -70,22 +119,14 @@ export default function MyIncidentsPage() {
       },
     };
 
-    if (!status) {
-      return <Badge variant="secondary">Desconocido</Badge>;
-    }
-
-    const config = variants[status] || {
+    const config = (status ? variants[status] : undefined) || {
       variant: "secondary" as const,
-      label: status,
+      label: status ?? "Desconocido",
     };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getStatusIcon = (status: ItemStatus | undefined) => {
-    if (!status) {
-      return <FileText className="h-4 w-4 text-gray-600" />;
-    }
-
+  const getStatusIcon = (status?: ItemStatus) => {
     switch (status) {
       case ItemStatus.ACTIVE:
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -100,18 +141,10 @@ export default function MyIncidentsPage() {
   };
 
   const canAppeal = (incident: Incident) => {
-    const hasActiveAppeal = incident.appeals?.some(
-      (appeal) => !appeal.reviewed,
-    );
-
-    const statusToCheck =
-      incident.item?.status ?? incident.status;
-
-    const isSuspendedOrBanned =
-      statusToCheck === ItemStatus.SUSPENDED ||
-      statusToCheck === ItemStatus.BANNED;
-
-    return isSuspendedOrBanned && !hasActiveAppeal;
+    // Allow creating an appeal only when the INCIDENT status is PENDING
+    const hasActiveAppeal = incident.appeals?.some((appeal) => !appeal.reviewed);
+    const isPending = incident.status === ItemStatus.PENDING;
+    return isPending && !hasActiveAppeal;
   };
 
   const handleCreateAppeal = (incident: Incident) => {
@@ -144,7 +177,7 @@ export default function MyIncidentsPage() {
         </p>
       </div>
 
-      {incidents.length === 0 ? (
+      {filteredIncidents.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -157,15 +190,60 @@ export default function MyIncidentsPage() {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
+            <CardHeader>
             <CardTitle>Incidencias de mis productos</CardTitle>
             <CardDescription>
-              {incidents.length} incidencia
-              {incidents.length !== 1 ? "s" : ""} encontrada
-              {incidents.length !== 1 ? "s" : ""}.
+              {filteredIncidents.length} incidencia{filteredIncidents.length !== 1 ? "s" : ""} {" "}
+              encontrada{filteredIncidents.length !== 1 ? "s" : ""}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-start gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Label>Estado</Label>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value={ItemStatus.PENDING}>Pendiente</SelectItem>
+                    <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
+                    <SelectItem value={ItemStatus.SUSPENDED}>Suspendido</SelectItem>
+                    <SelectItem value={ItemStatus.HIDDEN}>Oculto</SelectItem>
+                    <SelectItem value={ItemStatus.BANNED}>Prohibido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label>Fecha Inicio</Label>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label>Fecha Fin</Label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => {
+                    setAppliedStatus(statusFilter);
+                    setAppliedStartDate(startDate);
+                    setAppliedEndDate(endDate);
+                  }}
+                >Buscar</Button>
+                <Button variant="outline" onClick={() => {
+                  setStatusFilter("all");
+                  setStartDate("");
+                  setEndDate("");
+                  setAppliedStatus("all");
+                  setAppliedStartDate("");
+                  setAppliedEndDate("");
+                }}>Limpiar</Button>
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -178,86 +256,109 @@ export default function MyIncidentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.map((incident) => {
-                  const statusToUse =
-                    incident.item?.status ?? incident.status;
-
-                  return (
-                    <TableRow key={incident.incidentId}>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(statusToUse)}
-                          <div>
-                            <p className="font-medium">
-                              {incident.item?.name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              ID: {incident.item?.itemId}
-                            </p>
-                          </div>
+                {filteredIncidents.slice(incidentsPage * incidentsPerPage, (incidentsPage + 1) * incidentsPerPage).map((incident) => (
+                  <TableRow key={incident.incidentId}>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(incident.item?.status)}
+                        <div>
+                          <p className="font-medium">{incident.item?.name}</p>
+                          <p className="text-sm text-gray-500">
+                            ID: {incident.item?.itemId}
+                          </p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(statusToUse)}
-                      </TableCell>
-                      <TableCell>
-                        <p
-                          className="max-w-xs truncate"
-                          title={incident.description}
-                        >
-                          {incident.description}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-sm">
-                          {new Date(
-                            incident.reportedAt,
-                          ).toLocaleDateString("es-ES", {
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(incident.item?.status)}
+                    </TableCell>
+                    <TableCell>
+                      <p
+                        className="max-w-xs truncate"
+                        title={incident.description}
+                      >
+                        {incident.description}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm">
+                        {new Date(incident.reportedAt).toLocaleDateString(
+                          "es-ES",
+                          {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
-                          })}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <MessageSquare className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">
-                            {incident.appeals?.length || 0}
-                          </span>
-                          {incident.appeals?.some(
-                            (appeal) => !appeal.reviewed,
-                          ) && (
-                            <Badge variant="outline" className="text-xs">
-                              Pendiente
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {canAppeal(incident) ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCreateAppeal(incident)}
-                          >
-                            Apelar
-                          </Button>
-                        ) : (
-                          <span className="text-sm text-gray-500">
-                            {incident.appeals?.some(
-                              (appeal) => !appeal.reviewed,
-                            )
-                              ? "Apelación pendiente"
-                              : "No se puede apelar"}
-                          </span>
+                          },
                         )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <MessageSquare className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm">
+                          {incident.appeals?.length || 0}
+                        </span>
+                        {incident.appeals?.some(
+                          (appeal) => !appeal.reviewed,
+                        ) && (
+                          <Badge variant="outline" className="text-xs">
+                            Pendiente
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canAppeal(incident) ? (
+                              <DropdownMenuItem onClick={() => handleCreateAppeal(incident)}>
+                                Apelar
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem disabled>
+                                {incident.appeals?.some((appeal) => !appeal.reviewed)
+                                  ? "Apelación pendiente"
+                                  : "No se puede apelar"}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {/* No helper text: only the dropdown menu is shown */}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
+            <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                Mostrando {incidentsPage * incidentsPerPage + 1} - {Math.min((incidentsPage + 1) * incidentsPerPage, filteredIncidents.length)} de {filteredIncidents.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.max(0, p - 1))}
+                  disabled={incidentsPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.min(p + 1, Math.floor((filteredIncidents.length - 1) / incidentsPerPage)))}
+                  disabled={(incidentsPage + 1) * incidentsPerPage >= filteredIncidents.length}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/authStore";
-import type { Incident, Appeal } from "@/types";
+import type { Incident, Product } from "@/types";
 import { ItemStatus, UserRole } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -37,6 +37,8 @@ import {
 } from "@components/ui/table";
 import { Textarea } from "@components/ui/textarea";
 import { incidentsService, type IncidentFilters } from "@services/incidents";
+import { usersService } from "@services/users";
+import { productsService } from "@services/products";
 import {
   AlertTriangle,
   Calendar,
@@ -44,6 +46,7 @@ import {
   Clock,
   Filter,
   MoreHorizontal,
+  FileText,
   Package,
   Search,
   User,
@@ -75,12 +78,11 @@ const IncidentsPage: React.FC = () => {
 
   /** Modal resolve */
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
-
-  /** Modal appeal */
   const [isAppealDialogOpen, setIsAppealDialogOpen] = useState(false);
-  const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
-
-  /** Estado de resolución */
+  const [moderators, setModerators] = useState<any[]>([]);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [assignIncidentId, setAssignIncidentId] = useState<number | null>(null);
+  const [selectedModeratorId, setSelectedModeratorId] = useState<number | undefined>(undefined);
   const [resolution, setResolution] = useState<{
     status: ItemStatus;
     description: string;
@@ -90,6 +92,11 @@ const IncidentsPage: React.FC = () => {
   });
 
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [incidentsPage, setIncidentsPage] = useState<number>(0);
+  const [incidentsPerPage] = useState<number>(8);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [productLoading, setProductLoading] = useState(false);
 
   /* ============================================================
      Cargar incidencias
@@ -99,6 +106,12 @@ const IncidentsPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const statusCounts = incidents.reduce<Record<string, number>>((acc, inc) => {
+    const s = inc.status ?? "unknown";
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
   const loadIncidents = async (customFilters?: IncidentFilters) => {
     try {
       setLoading(true);
@@ -106,8 +119,8 @@ const IncidentsPage: React.FC = () => {
         customFilters !== undefined ? customFilters : filters;
 
       const data = await incidentsService.getIncidents(currentFilters);
-
-      setIncidents(data as IncidentWithAppeals[]);
+      setIncidents(data);
+      setIncidentsPage(0);
     } catch (error: any) {
       toast.error("Error al cargar incidencias");
     } finally {
@@ -138,9 +151,34 @@ const IncidentsPage: React.FC = () => {
     }
   };
 
-  /* ============================================================
-     Resolver incidencia
-     ============================================================ */
+  const openAssignDialog = async (incidentId: number) => {
+    try {
+      setAssignIncidentId(incidentId);
+      const mods = await usersService.getAll({ role: UserRole.MODERATOR });
+      setModerators(mods || []);
+      setSelectedModeratorId(mods?.[0]?.userId);
+      setIsAssignDialogOpen(true);
+    } catch (error: any) {
+      toast.error("Error al obtener moderadores");
+    }
+  };
+
+  const handleAdminAssign = async () => {
+    if (!assignIncidentId || !selectedModeratorId) return;
+    try {
+      setActionLoading(assignIncidentId);
+      await incidentsService.assignIncident(assignIncidentId, selectedModeratorId);
+      toast.success("Incidencia asignada");
+      setIsAssignDialogOpen(false);
+      setAssignIncidentId(null);
+      loadIncidents();
+    } catch (error: any) {
+      toast.error("Error al asignar incidencia");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleResolveIncident = async () => {
     if (!selectedIncident) return;
 
@@ -238,6 +276,42 @@ const IncidentsPage: React.FC = () => {
      ============================================================ */
   return (
     <div className="space-y-6">
+      {/* Assign dialog for admins */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar Moderador</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Seleccionar moderador</Label>
+              <Select
+                value={selectedModeratorId?.toString()}
+                onValueChange={(val) => setSelectedModeratorId(Number(val))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un moderador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {moderators.map((m) => (
+                    <SelectItem key={m.userId} value={m.userId.toString()}>
+                      {m.firstName} {m.lastName} (ID: {m.userId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleAdminAssign} disabled={!selectedModeratorId}>
+                Asignar
+              </Button>
+              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center gap-4">
         <AlertTriangle className="h-8 w-8 text-orange-600" />
         <div>
@@ -246,9 +320,9 @@ const IncidentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ============================================================
-         FILTROS
-         ============================================================ */}
+      
+
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -378,7 +452,7 @@ const IncidentsPage: React.FC = () => {
             </TableHeader>
 
             <TableBody>
-              {incidents.map((incident) => (
+              {incidents.slice(incidentsPage * incidentsPerPage, (incidentsPage + 1) * incidentsPerPage).map((incident) => (
                 <TableRow key={incident.incidentId}>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -434,31 +508,48 @@ const IncidentsPage: React.FC = () => {
                       </DropdownMenuTrigger>
 
                       <DropdownMenuContent align="end">
-                        {/* Asignar */}
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const itemId = incident.itemId;
+                            try {
+                              setProductLoading(true);
+                              let prod = incident.item as Product | undefined;
+                              if (!prod) {
+                                prod = await productsService.getById(itemId);
+                              }
+                              setSelectedProduct(prod || null);
+                              setIsProductDialogOpen(true);
+                            } catch (err: any) {
+                              toast.error("Error al cargar el producto");
+                            } finally {
+                              setProductLoading(false);
+                            }
+                          }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Ver Producto
+                        </DropdownMenuItem>
+
                         {!incident.moderatorId && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleAssignIncident(incident.incidentId)
-                            }
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Asignar a mí
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleAssignIncident(incident.incidentId)
+                              }
+                            >
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Asignar a mí
+                            </DropdownMenuItem>
+                            {currentUser?.role === UserRole.ADMIN && (
+                              <DropdownMenuItem
+                                onClick={() => openAssignDialog(incident.incidentId)}
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                Asignar a...
+                              </DropdownMenuItem>
+                            )}
+                          </>
                         )}
-
-                        {/* Ver apelación */}
-                        {(incident.appeals?.length ?? 0) > 0 && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              openAppealDialog(incident as IncidentWithAppeals)
-                            }
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-2" />
-                            Ver Apelación
-                          </DropdownMenuItem>
-                        )}
-
-                        {/* Resolver */}
                         {(incident.moderatorId === currentUser?.userId ||
                           currentUser?.role === UserRole.ADMIN) && (
                           <DropdownMenuItem
@@ -468,9 +559,26 @@ const IncidentsPage: React.FC = () => {
                               );
                               setIsResolveDialogOpen(true);
                             }}
+                            disabled={incident.status !== ItemStatus.PENDING}
+                            title={
+                              incident.status !== ItemStatus.PENDING
+                                ? "Solo se pueden resolver incidencias en estado Pendiente"
+                                : undefined
+                            }
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Resolver
+                          </DropdownMenuItem>
+                        )}
+                        {incident.appeals && incident.appeals.length > 0 && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedIncident(incident);
+                              setIsAppealDialogOpen(true);
+                            }}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Ver Apelaciones
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -479,45 +587,70 @@ const IncidentsPage: React.FC = () => {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </Table>
 
-      {/* ============================================================
-         Modal Ver Apelación
-         ============================================================ */}
-      <Dialog open={isAppealDialogOpen} onOpenChange={setIsAppealDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Apelación del vendedor</DialogTitle>
-            <DialogDescription>
-              Mensaje enviado para reconsiderar la sanción.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedAppeal && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-100 rounded text-sm whitespace-pre-wrap">
-                {selectedAppeal.reason}
+          {incidents.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {incidentsPage * incidentsPerPage + 1} - {Math.min((incidentsPage + 1) * incidentsPerPage, incidents.length)} de {incidents.length}
               </div>
-              <div className="text-xs text-gray-500">
-                Fecha:{" "}
-                {new Date(selectedAppeal.createdAt).toLocaleString()}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.max(0, p - 1))}
+                  disabled={incidentsPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncidentsPage((p) => Math.min(p + 1, Math.floor((incidents.length - 1) / incidentsPerPage)))}
+                  disabled={(incidentsPage + 1) * incidentsPerPage >= incidents.length}
+                >
+                  Siguiente
+                </Button>
               </div>
             </div>
           )}
 
-          <DialogFooter>
-            <Button onClick={() => setIsAppealDialogOpen(false)}>
-              Cerrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {incidents.length === 0 && (
+            <div className="text-center py-12">
+              <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se encontraron incidencias
+              </h3>
+              <p className="text-gray-600">
+                No hay incidencias que coincidan con los filtros seleccionados
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* ============================================================
-         Modal Resolver Incidencia
-         ============================================================ */}
+      {incidents.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            { key: ItemStatus.PENDING, label: "Pendientes", color: "text-yellow-600" },
+            { key: ItemStatus.ACTIVE, label: "Activas", color: "text-green-600" },
+            { key: ItemStatus.SUSPENDED, label: "Suspendidas", color: "text-red-600" },
+            { key: ItemStatus.HIDDEN, label: "Ocultas", color: "text-gray-600" },
+            { key: ItemStatus.BANNED, label: "Prohibidas", color: "text-red-700" },
+          ].map((s) => (
+            <Card key={s.key}>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${s.color}`}>{statusCounts[s.key] ?? 0}</div>
+                  <p className="text-sm text-gray-600">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Resolve Incident Dialog */}
       <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -588,8 +721,112 @@ const IncidentsPage: React.FC = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={handleResolveIncident}>
+            <Button
+              onClick={handleResolveIncident}
+              disabled={selectedIncident?.status !== ItemStatus.PENDING}
+            >
               Resolver Incidencia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+        {/* Appeals Dialog */}
+        <Dialog open={isAppealDialogOpen} onOpenChange={setIsAppealDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Apelaciones</DialogTitle>
+              <DialogDescription>
+                Revisa las apelaciones asociadas a esta incidencia.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedIncident ? (
+              <div className="space-y-4">
+                {selectedIncident.appeals &&
+                selectedIncident.appeals.length > 0 ? (
+                  selectedIncident.appeals.map((appeal) => (
+                    <div key={appeal.appealId} className="p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm">{appeal.reason}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-gray-500">
+                          {new Date(appeal.createdAt).toLocaleString()}
+                        </p>
+                        <Badge className={appeal.reviewed ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                          {appeal.reviewed ? "Revisada" : "Pendiente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p>No hay apelaciones para esta incidencia.</p>
+                )}
+              </div>
+            ) : (
+              <p>No se ha seleccionado ninguna incidencia.</p>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAppealDialogOpen(false)}>
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      {/* Product Details Dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles del Producto</DialogTitle>
+            <DialogDescription>
+              Información básica del producto y ubicación (si está disponible).
+            </DialogDescription>
+          </DialogHeader>
+
+          {productLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+            </div>
+          ) : selectedProduct ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-lg">{selectedProduct.name}</h4>
+                <p className="text-sm text-gray-600">ID: {selectedProduct.itemId}</p>
+                {selectedProduct.description && (
+                  <p className="text-sm text-gray-700 mt-2">{selectedProduct.description}</p>
+                )}
+              </div>
+
+              {selectedProduct.location && (
+                <div className="w-full rounded overflow-hidden border">
+                  <iframe
+                    title="Ubicación del producto"
+                    width="100%"
+                    height="240"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(
+                      selectedProduct.location,
+                    )}&output=embed`}
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <p>No se encontró el producto.</p>
+          )}
+
+          <DialogFooter>
+            {selectedProduct && (
+              <a
+                href={`/products/${selectedProduct.itemId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button>Ir al producto</Button>
+              </a>
+            )}
+            <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>

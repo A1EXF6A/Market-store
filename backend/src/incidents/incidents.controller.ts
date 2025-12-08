@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { IncidentsService, IncidentFilters } from "./incidents.service";
 import { CreateReportDto } from "./dto/create-report.dto";
+import { CreateIncidentFromReportDto } from "./dto/create-incident-from-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -25,7 +26,7 @@ export class IncidentsController {
 
   @Post("reports")
   @UseGuards(RolesGuard)
-   @Roles(UserRole.BUYER, UserRole.MODERATOR, UserRole.ADMIN)
+  @Roles(UserRole.BUYER, UserRole.ADMIN, UserRole.MODERATOR)
   createReport(
     @Body() createReportDto: CreateReportDto,
     @GetUser() user: User,
@@ -56,14 +57,27 @@ export class IncidentsController {
   getReports(@Query() filters: any) {
     return this.incidentsService.getReports(filters);
   }
-   @Post("reports/:id/create-incident")
+
+  @Get("reports/:id/incidents-count")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  getReportIncidentsCount(@Param("id") id: string) {
+    return this.incidentsService.getReportIncidentsCount(+id);
+  }
+
+  @Post("reports/:id/create-incident")
   @UseGuards(RolesGuard)
   @Roles(UserRole.MODERATOR, UserRole.ADMIN)
   createIncidentFromReport(
     @Param("id") id: string,
+    @Body() body: CreateIncidentFromReportDto,
     @GetUser() user: User,
   ) {
-    return this.incidentsService.createIncidentFromReport(+id, user.userId);
+    return this.incidentsService.createIncidentFromReport(
+      +id,
+      body.description || "",
+      user.userId,
+    );
   }
 
   @Get("my-incidents")
@@ -75,15 +89,13 @@ export class IncidentsController {
 
   @Patch(":id/assign")
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
   assignModerator(
     @Param("id") id: string,
     @Body("moderatorId") moderatorId: number,
     @GetUser() user: User,
   ) {
-    // Si no se manda moderatorId, se autoasigna al admin
-    const targetId = moderatorId ?? user.userId;
-    return this.incidentsService.assignModerator(+id, targetId);
+    return this.incidentsService.assignModerator(+id, user.userId, moderatorId);
   }
 
 

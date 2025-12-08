@@ -27,4 +27,11 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(255)
   address?: string;
+  
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(50)
+  gender?: string;
+
 }

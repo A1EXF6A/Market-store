@@ -9,7 +9,7 @@ import { Incident } from "../entities/incident.entity";
 import { Report } from "../entities/report.entity";
 import { Appeal } from "../entities/appeal.entity";
 import { Item, ItemStatus } from "../entities/item.entity";
-import { User } from "../entities/user.entity";
+import { User, UserRole } from "../entities/user.entity";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { CreateAppealDto } from "./dto/create-appeal.dto";
 
@@ -40,6 +40,8 @@ export class IncidentsService {
     private appealRepository: Repository<Appeal>,
     @InjectRepository(Item)
     private itemRepository: Repository<Item>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   async createReport(
@@ -85,6 +87,19 @@ export class IncidentsService {
     return this.incidentRepository.save(incident);
   }
 
+  async createIncidentFromReport(
+    reportId: number,
+    description: string,
+    moderatorId?: number,
+  ): Promise<Incident> {
+    const report = await this.reportRepository.findOne({ where: { reportId } });
+    if (!report) {
+      throw new NotFoundException("Report not found");
+    }
+
+    return this.createIncident(report.itemId, description, moderatorId);
+  }
+
   async createAppeal(
     createAppealDto: CreateAppealDto,
     sellerId: number,
@@ -104,6 +119,13 @@ export class IncidentsService {
       throw new ForbiddenException("You can only appeal your own incidents");
     }
 
+    // Only allow creating an appeal when the incident is in PENDING state
+    if (incident.status !== ItemStatus.PENDING) {
+      throw new ForbiddenException(
+        "Appeals can only be created for incidents in pending state",
+      );
+    }
+
     const appeal = this.appealRepository.create({
       incidentId,
       sellerId,
@@ -116,14 +138,13 @@ export class IncidentsService {
     return this.appealRepository.save(appeal);
   }
 
- async getIncidents(filters?: IncidentFilters): Promise<Incident[]> {
-  const queryBuilder = this.incidentRepository
-    .createQueryBuilder("incident")
-    .leftJoinAndSelect("incident.item", "item")
-    .leftJoinAndSelect("incident.seller", "seller")
-    .leftJoinAndSelect("incident.moderator", "moderator")
-    // 👇 NUEVO: traer también las apelaciones
-    .leftJoinAndSelect("incident.appeals", "appeals");
+  async getIncidents(filters?: any): Promise<Incident[]> {
+    const queryBuilder = this.incidentRepository
+      .createQueryBuilder("incident")
+      .leftJoinAndSelect("incident.item", "item")
+      .leftJoinAndSelect("incident.seller", "seller")
+      .leftJoinAndSelect("incident.moderator", "moderator")
+      .leftJoinAndSelect("incident.appeals", "appeals");
 
   if (filters?.startDate && filters?.endDate) {
     queryBuilder.andWhere(
@@ -209,9 +230,20 @@ async findPendingByItem(itemId: number) {
     return queryBuilder.orderBy("report.reportedAt", "DESC").getMany();
   }
 
+  async getReportIncidentsCount(reportId: number): Promise<{ count: number }> {
+    const report = await this.reportRepository.findOne({ where: { reportId } });
+    if (!report) {
+      throw new NotFoundException("Report not found");
+    }
+
+    const count = await this.incidentRepository.count({ where: { itemId: report.itemId } });
+    return { count };
+  }
+
     async assignModerator(
     incidentId: number,
-    moderatorId: number,
+    actorId: number,
+    targetModeratorId?: number,
   ): Promise<Incident> {
     const incident = await this.incidentRepository.findOne({
       where: { incidentId },
@@ -221,21 +253,45 @@ async findPendingByItem(itemId: number) {
       throw new NotFoundException("Incident not found");
     }
 
-    incident.moderatorId = moderatorId;
+    const assignTo = targetModeratorId ?? actorId;
+
+    // If assigning to someone else, only admins are allowed
+    if (targetModeratorId && targetModeratorId !== actorId) {
+      const actor = await this.userRepository.findOne({ where: { userId: actorId } });
+      if (!actor) throw new NotFoundException("Actor user not found");
+      if (actor.role !== UserRole.ADMIN) {
+        throw new ForbiddenException("Only admins can assign incidents to other moderators");
+      }
+
+      const target = await this.userRepository.findOne({ where: { userId: targetModeratorId } });
+      if (!target) throw new NotFoundException("Target moderator not found");
+      if (target.role !== UserRole.MODERATOR) {
+        throw new ForbiddenException("Target user is not a moderator");
+      }
+    }
+
+    // Ensure the assignee is a moderator or an admin (admins can self-assign)
+    const targetUser = await this.userRepository.findOne({ where: { userId: assignTo } });
+    if (!targetUser) {
+      throw new NotFoundException("User to assign not found");
+    }
+    if (targetUser.role !== UserRole.MODERATOR && targetUser.role !== UserRole.ADMIN) {
+      throw new ForbiddenException("Assigned user must be a moderator or an admin");
+    }
+
+    incident.moderatorId = assignTo;
     return this.incidentRepository.save(incident);
   }
 
-
- async resolveIncident(
-  incidentId: number,
-  incidentStatus: ItemStatus, // ← corregido
-  moderatorId: number,
-  itemStatus?: ItemStatus,
-): Promise<Incident> {
-  const incident = await this.incidentRepository.findOne({
-    where: { incidentId },
-    relations: ["item", "appeals"], 
-  });
+  async resolveIncident(
+    incidentId: number,
+    status: ItemStatus,
+    moderatorId: number,
+  ): Promise<Incident> {
+    const incident = await this.incidentRepository.findOne({
+      where: { incidentId },
+      relations: ["item", "appeals"],
+    });
 
   if (!incident) {
     throw new NotFoundException("Incident not found");
@@ -245,23 +301,17 @@ async findPendingByItem(itemId: number) {
   incident.status = incidentStatus;
   incident.moderatorId = moderatorId;
 
-  // Si tienes este campo agregado, usa esto:
-  // incident.resolvedAt = new Date();
+    // update item status
+    await this.itemRepository.update(incident.itemId, { status });
 
-  // Cambiar estado del producto (si aplica)
-  if (itemStatus !== undefined) {
-    await this.itemRepository.update(incident.itemId, {
-      status: itemStatus,
-    });
-  }
-
-  // Marcar apelaciones como revisadas
-  if (incident.appeals?.length) {
-    await this.appealRepository.update(
-      { incidentId: incident.incidentId },
-      { reviewed: true },
-    );
-  }
+    // If the incident has appeals and the resolved status is not PENDING,
+    // mark all associated appeals as reviewed (true)
+    if (incident.appeals && incident.appeals.length > 0 && status !== ItemStatus.PENDING) {
+      for (const appeal of incident.appeals) {
+        appeal.reviewed = true;
+        await this.appealRepository.save(appeal);
+      }
+    }
 
   return this.incidentRepository.save(incident);
 }
@@ -273,38 +323,36 @@ async findPendingByItem(itemId: number) {
       order: { reportedAt: "DESC" },
     });
   }
-    async createIncidentFromReport(
-    reportId: number,
-    moderatorId: number,
-  ): Promise<Incident> {
-    const report = await this.reportRepository.findOne({
-      where: { reportId },
-      relations: ["item"],
-    });
 
-    if (!report) {
-      throw new NotFoundException("Report not found");
+  async getAppeals(): Promise<Appeal[]> {
+    return this.appealRepository.find({
+      relations: ["incident", "seller"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async reviewAppeal(id: number, approved: boolean, moderatorId: number): Promise<Appeal> {
+    const appeal = await this.appealRepository.findOne({ where: { appealId: id }, relations: ["incident"] });
+    if (!appeal) {
+      throw new NotFoundException("Appeal not found");
     }
 
-    const item = report.item;
-    if (!item) {
-      throw new NotFoundException("Product not found for this report");
+    // mark as reviewed
+    appeal.reviewed = true;
+
+    // update incident status based on decision
+    const incident = await this.incidentRepository.findOne({ where: { incidentId: appeal.incidentId }, relations: ["item"] });
+    if (incident) {
+      if (approved) {
+        incident.status = ItemStatus.ACTIVE;
+      } else {
+        incident.status = ItemStatus.SUSPENDED;
+      }
+      incident.moderatorId = moderatorId;
+      await this.itemRepository.update(incident.itemId, { status: incident.status });
+      await this.incidentRepository.save(incident);
     }
 
-    // Creamos la incidencia ligada al producto y al vendedor
-    const incident = this.incidentRepository.create({
-      itemId: item.itemId,
-      description: `Incidencia creada a partir del reporte #${report.reportId}. Tipo: ${report.type}. Comentario: ${report.comment ?? "Sin comentario"}`,
-      status: ItemStatus.PENDING,
-      sellerId: item.sellerId,
-      moderatorId,         // moderador que crea la incidencia
-    });
-
-    // Producto pasa a estado PENDING mientras se revisa
-    await this.itemRepository.update(item.itemId, {
-      status: ItemStatus.PENDING,
-    });
-
-    return this.incidentRepository.save(incident);
+    return this.appealRepository.save(appeal);
   }
 }

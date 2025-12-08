@@ -13,6 +13,7 @@ export interface UpdateUserData {
 export interface UserFilters {
   role?: UserRole;
   status?: UserStatus;
+  showDeleted?: boolean;
   search?: string;
 }
 
@@ -25,6 +26,7 @@ export const usersService = {
     const params = new URLSearchParams();
     if (filters?.role) params.append("role", filters.role);
     if (filters?.status) params.append("status", filters.status);
+    if (filters?.showDeleted) params.append("showDeleted", String(filters.showDeleted));
     if (filters?.search) params.append("search", filters.search);
 
     const response = await api.get(`/users?${params.toString()}`);
@@ -37,12 +39,22 @@ export const usersService = {
   },
 
   update: async (id: number, data: UpdateUserData): Promise<User> => {
+    console.log("Updating user with data:", data);
+    console.log("User ID:", id);
     const response = await api.patch(`/users/${id}`, data);
     return response.data;
   },
+  updateMe: async (data: UpdateUserData): Promise<User> => {
+    console.log("Updating current user with data:", data);
+    const response = await api.patch(`/users/me`, data);
+    return response.data;
+  },
 
-  suspend: async (id: number): Promise<void> => {
-    await api.patch(`/users/${id}/status`, { status: "suspended" });
+
+  suspend: async (id: number, suspendedUntil?: string | null): Promise<void> => {
+    const payload: any = { status: "suspended" };
+    if (suspendedUntil) payload.suspendedUntil = suspendedUntil;
+    await api.patch(`/users/${id}/status`, payload);
   },
 
   unsuspend: async (id: number): Promise<void> => {
@@ -50,6 +62,10 @@ export const usersService = {
   },
 
   delete: async (id: number): Promise<void> => {
+    await api.delete(`/users/${id}`);
+  },
+
+  deleteAccount: async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
   },
 

@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Body,
-  UseGuards,
-  Put,
-  Delete,
-  Query,
-} from "@nestjs/common";
+import { Controller, Get, Param, Req, Patch, Body, UseGuards, Put, Delete, Query,   BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UsersService, UserFilters } from "./users.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -21,7 +11,7 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 @Controller("users")
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   // =========================
   // ADMIN/MOD: LISTAR USUARIOS
@@ -34,6 +24,7 @@ export class UsersController {
       role: query.role,
       status: query.status,
       search: query.search,
+      showDeleted: query.showDeleted === "true",
     };
     return this.usersService.findAll(filters);
   }
@@ -46,23 +37,16 @@ export class UsersController {
     return this.usersService.updateUser(user.userId, dto);
   }
 
-  // =========================
-  // CAMBIAR CONTRASEÑA PROPIA
-  // =========================
-  @Patch("change-password")
-  changePassword(@GetUser() user: User, @Body() dto: ChangePasswordDto) {
-    return this.usersService.changePassword(user.userId, dto);
-  }
-
-  // =========================
-  // ✅ NUEVO: CAMBIAR ROL PROPIO BUYER/SELLER
-  // =========================
-  @Patch("me/role")
-  switchMyRole(
-    @GetUser() user: User,
-    @Body("role") role: UserRole,
+  @Patch(":id/status")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
+  updateStatus(
+    @Param("id") id: string,
+    @Body("status") status: UserStatus,
+    @Body("suspendedUntil") suspendedUntil?: string,
   ) {
-    return this.usersService.switchMyRole(user.userId, role);
+    const until = suspendedUntil ? new Date(suspendedUntil) : null;
+    return this.usersService.updateUserStatus(+id, status, until);
   }
 
   // =========================
@@ -75,10 +59,36 @@ export class UsersController {
     return this.usersService.verifyUser(+id);
   }
 
-  // =========================
-  // ADMIN: SUSPENDER/ACTIVAR
-  // =========================
-   @Patch(":id/status")
+  @Put("profile")
+  updateProfile(@GetUser() user: User, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.updateUser(user.userId, updateUserDto);
+  }
+
+  @Patch("change-password")
+  async changePassword(@GetUser() user: User, @Body() changePasswordDto: ChangePasswordDto) {
+    await this.usersService.changePassword(user.userId, changePasswordDto);
+    return { message: "Password changed successfully" };
+  }
+  @Patch('me')
+  @UseGuards(JwtAuthGuard,) // solo autenticados
+  async updateMe(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+    if (!userId || !userEmail||userEmail!==updateUserDto.email) {
+      throw new BadRequestException('Usuario no autenticado correctamente');
+    }
+    console.log("Authenticated user ID:", updateUserDto);
+    // Impedir que usuarios normales intenten cambiar role o status desde /me
+    // (si quieres permitirlo para admins, tendrías que verificar el role)
+    const dto = { ...updateUserDto } as any;
+    if (dto.role) delete dto.role;
+    if (dto.status) delete dto.status;
+
+    // Dejar que el servicio haga la comprobación de email (conflictos) como ya tienes
+    return this.usersService.updateUser(userId, dto);
+  }
+
+  @Patch(":id")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   updateStatus(
@@ -108,10 +118,16 @@ export class UsersController {
   // ADMIN: ELIMINAR
   // =========================
   @Delete(":id")
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  async deleteUser(@Param("id") id: string) {
-    await this.usersService.deleteUser(+id);
+  async deleteUser(@Param("id") id: string, @GetUser() actor?: User) {
+    const targetId = +id;
+    // allow admin or the user themself
+    if (!actor) throw new ForbiddenException("Not authorized");
+    if (actor.role !== UserRole.ADMIN && actor.userId !== targetId) {
+      throw new ForbiddenException("Insufficient permissions to delete this user");
+    }
+
+    await this.usersService.deleteUser(targetId);
+    // if the actor deleted their own account, return a message client can act on
     return { message: "User deleted successfully" };
   }
 

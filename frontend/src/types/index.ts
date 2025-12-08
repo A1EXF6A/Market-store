@@ -185,4 +185,5 @@ export interface ProductFilters {
   maxPrice?: number;
   location?: string;
   search?: string;
+  status?: ItemStatus;
 }

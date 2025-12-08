@@ -25,10 +25,12 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
+
           const response = await authService.login({ email, password });
           localStorage.setItem("access_token", response.access_token);
           localStorage.setItem("user", JSON.stringify(response.user));
-
+          
+          console.log ("Logged in user:", response.user);
           set({
             user: response.user,
             isAuthenticated: true,
@@ -45,15 +47,9 @@ export const useAuthStore = create<AuthState>()(
       register: async (data) => {
         set({ isLoading: true });
         try {
-          const response = await authService.register(data);
-          localStorage.setItem("access_token", response.access_token);
-          localStorage.setItem("user", JSON.stringify(response.user));
-
-          set({
-            user: response.user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+          await authService.register(data);
+          // Do not auto-login on register. The UI should redirect to login screen.
+          set({ isLoading: false });
         } catch (error) {
           set({ isLoading: false });
           throw error;

@@ -11,7 +11,7 @@ import { Favorite } from "src/entities/favorite.entity";
 import { ItemPhoto } from "src/entities/item-photo.entity";
 import { ItemStatus, ItemType } from "../entities/enums";
 import { Service } from "src/entities/service.entity";
-import { User } from "src/entities/user.entity";
+import { User, UserRole } from "src/entities/user.entity";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { Item } from "src/entities/item.entity";
@@ -189,8 +189,19 @@ export class ProductsService {
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.seller", "seller")
       .leftJoinAndSelect("item.photos", "photos")
-      .leftJoinAndSelect("item.service", "service")
-      .where("item.status != :banned", { banned: ItemStatus.BANNED });
+      .leftJoinAndSelect("item.service", "service");
+
+    // Por defecto mostrar solo productos 'active', pero si se pasa un filtro
+    // `status` lo respetamos.
+    if (filters?.status) {
+      queryBuilder.where("item.status = :status", { status: filters.status });
+    } else {
+      queryBuilder.where("item.status = :status", { status: ItemStatus.ACTIVE });
+    }
+
+    if (!filters) {
+      return queryBuilder.getMany();
+    }
 
     if (filters?.search) {
       query.andWhere("item.name ILIKE :s", { s: `%${filters.search}%` });
@@ -317,14 +328,21 @@ export class ProductsService {
   async remove(id: number, user: User): Promise<void> {
     const item = await this.findOne(id);
 
-    if (item.sellerId !== user.userId)
-      throw new ForbiddenException("No puedes eliminar productos ajenos");
+    if (item.sellerId !== user.userId) {
+      throw new ForbiddenException("You can only delete your own products");
+    }
 
-    const pending = await this.incidentsService.findPendingByItem(id);
-    if (pending.length > 0)
+    // Sellers are not allowed to delete products that are not ACTIVE
+    if (user.role === UserRole.SELLER && item.status !== ItemStatus.ACTIVE) {
       throw new ForbiddenException(
-        "No puedes eliminar un producto con incidentes pendientes",
+        "You cannot delete a product that is not in active state",
       );
+    }
+
+    // Keep explicit ban check for clarity
+    if (item.status === ItemStatus.BANNED) {
+      throw new ForbiddenException("Banned products cannot be deleted");
+    }
 
     await this.itemRepository.delete(id);
   }
@@ -398,10 +416,113 @@ export class ProductsService {
     const uploadDir = path.join(__dirname, "..", "..", "uploads");
 
     for (const url of urls) {
-      const filename = path.basename(url);
-      const full = path.join(uploadDir, filename);
-
-      if (fs.existsSync(full)) fs.unlinkSync(full);
+      const fileName = path.basename(url);
+      const filePath = path.join(uploadDir, fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
+  }
+
+  async updateStatus(
+    id: number,
+    status: ItemStatus,
+    reason?: string,
+  ): Promise<Item> {
+    const item = await this.findOne(id);
+
+    await this.itemRepository.update(id, { status });
+
+    return this.findOne(id);
+  }
+
+  private detectProhibitedContent(name: string, description?: string): boolean {
+    // Categorized prohibited terms and phrases. Each category contains explicit
+    // phrases and keywords that constitute prohibited content. The check is
+    // case-insensitive and matches both single words and multi-word phrases.
+    const prohibitedByCategory: Record<string, string[]> = {
+      "weapons": [
+        "arma", "armas", "weapon", "weapons", "pistola", "pistolas", "pistol", "rifle", "rifles",
+        "gun", "guns", "firearm", "firearms", "ammunition", "munición", "municiones",
+        "silenciador", "silencer", "automatico", "automatic", "ak-47", "ar-15",
+        "detonador", "detonator", "bala", "bullet", "cargador", "magazine"
+      ],
+      "explosives": [
+        "bomba", "bomb", "explosivo", "explosive", "dinamita", "dynamite", "granada", "grenade",
+        "pólvora", "gunpowder", "detonador", "detonator", "tnt", "C4", "c-4"
+      ],
+      "drugs": [
+        "droga", "drogas", "drug", "drugs", "narcótico", "narcotic", "cocaína", "cocaine", "heroína", "heroin",
+        "marihuana", "marijuana", "cannabis", "lsd", "éxtasis", "ecstasy", "metanfetamina", "meth",
+        "psicotrópico", "opioide", "fentanyl", "cough syrup for misuse", "supply drugs"
+      ],
+      "illicit_services": [
+        "servicio ilícito", "servicios ilícitos", "illegal service", "hacking service", "hackear",
+        "ransomware", "ddos", "ddos attack", "fraud service", "deepfake service", "venta de datos personales",
+        "venta de correos", "phishing service", "falsificación de documentos", "fake diploma service"
+      ],
+      "fraud_and_scams": [
+        "fraude", "fraud", "scam", "estafa", "phishing", "ponzi", "pyramid scheme", "fake offer",
+        "venta de cuentas robadas", "stolen accounts", "sell hacked accounts", "fake tickets", "counterfeit tickets",
+        "chargeback guarantee", "safe payment guarantee"
+      ],
+      "counterfeit_goods": [
+        "falsificado", "falsificados", "counterfeit", "knockoff", "replica", "réplica", "fake brand",
+        "imitación marca", "reloj replica", "bolso falso", "fake handbag", "counterfeit currency"
+      ],
+      "deceptive_services": [
+        "servicio falso", "servicios falsos", "fake service", "false advertising", "misleading service",
+        "garantía falsa", "fake warranty", "unauthorized repair service"
+      ],
+      "high_risk_items": [
+        "material radioactivo", "radioactive material", "biological sample", "pathogen", "virus sample",
+        "hazardous chemical", "toxic chemical", "mercury", "asbestos", "hazardous waste"
+      ],
+      "regulated_without_license": [
+        "venta de medicamentos sin receta", "prescription drugs without prescription", "medical device without certification",
+        "venta de pesticidas no autorizados", "licensed required", "sin licencia", "without license"
+      ],
+      "offensive_and_hate": [
+        "pornografía", "pornography", "sex trafficking", "sexual exploitation", "hate speech", "discurso de odio",
+        "contenido ofensivo", "offensive content", "racial slur", "insulto racial"
+      ],
+      "intellectual_property": [
+        "infracción de derechos", "copyright infringement", "pirateado", "warez", "unauthorized distribution",
+        "venta de obras protegidas", "sell copyrighted materials"
+      ],
+      "identity_and_documents": [
+        "documento falso", "fake document", "fake id", "pasaporte falso", "cedula falsa", "fake passport",
+        "forged diploma", "licencia falsa"
+      ],
+      "human_trafficking_and_exploitation": [
+        "tráfico de personas", "human trafficking", "servicio sexual pago", "sexual slavery", "esclavo humano"
+      ],
+      "personal_data_and_privacy": [
+        "venta de datos personales", "personal data sale", "doxing service", "do-xing", "leaked database"
+      ]
+    };
+
+    const content = `${name} ${description || ""}`.toLowerCase();
+
+    // Build a flat list of phrases and also keep category mapping for logging
+    const flatList: { phrase: string; category: string }[] = [];
+    for (const [category, phrases] of Object.entries(prohibitedByCategory)) {
+      for (const p of phrases) {
+        flatList.push({ phrase: p.toLowerCase(), category });
+      }
+    }
+
+    // Normalize: collapse multiple whitespace and compare
+    const normalized = content.replace(/\s+/g, " ").trim();
+
+    const matches = flatList.filter((entry) => normalized.includes(entry.phrase));
+    if (matches.length > 0) {
+      // Optional: log which categories matched for easier moderation/debugging
+      const categories = Array.from(new Set(matches.map((m) => m.category)));
+      console.warn(`Prohibited content detected for categories: ${categories.join(", ")}`);
+      return true;
+    }
+
+    return false;
   }
 }

@@ -47,8 +47,9 @@ export const incidentsService = {
     return response.data;
   },
 
-  assignIncident: async (id: number): Promise<Incident> => {
-    const response = await api.patch(`/incidents/${id}/assign`);
+  assignIncident: async (id: number, moderatorId?: number): Promise<Incident> => {
+    const payload = moderatorId ? { moderatorId } : {};
+    const response = await api.patch(`/incidents/${id}/assign`, payload);
     return response.data;
   },
 
@@ -71,6 +72,11 @@ export const incidentsService = {
     return response.data;
   },
 
+  getReportIncidentsCount: async (reportId: number): Promise<{ count: number }> => {
+    const response = await api.get(`/incidents/reports/${reportId}/incidents-count`);
+    return response.data;
+  },
+
   createReport: async (data: CreateReportData): Promise<Report> => {
     const response = await api.post("/incidents/reports", data);
     return response.data;
@@ -89,6 +95,17 @@ export const incidentsService = {
 
   createAppeal: async (data: CreateAppealData): Promise<Appeal> => {
     const response = await api.post("/incidents/appeals", data);
+    return response.data;
+  },
+
+  createIncidentFromReport: async (
+    reportId: number,
+    data: { description?: string },
+  ): Promise<any> => {
+    const response = await api.post(
+      `/incidents/reports/${reportId}/create-incident`,
+      data,
+    );
     return response.data;
   },
 

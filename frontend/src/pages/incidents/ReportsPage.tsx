@@ -1,12 +1,5 @@
-/*****************************************************************************************
- * REPORTS PAGE — COMPLETAMENTE CORREGIDO
- * - Corregido el tipo de IconComponent para permitir className
- * - Incluye botón Crear Incidencia
- * - Sin errores de TS
- *****************************************************************************************/
-
-import type { Incident, Report } from "@/types";
-import { ItemStatus, ReportType } from "@/types";
+import type { Report, Appeal, Product, Incident } from "@/types";
+import { ReportType, ItemStatus } from "@/types";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
@@ -15,7 +8,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@components/ui/dialog";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
@@ -35,19 +29,13 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs";
-
-import {
-  incidentsService,
-  type ReportFilters,
-  type IncidentFilters,
-} from "@services/incidents";
-
+import { incidentsService, type ReportFilters } from "@services/incidents";
+import { productsService } from "@services/products";
+import { API_BASE } from "@services/api";
 import {
   AlertTriangle,
   Ban,
   Calendar,
-  CheckCircle,
-  Clock,
   Eye,
   FileText,
   Filter,
@@ -58,34 +46,57 @@ import {
   Shield,
   Trash,
   User,
-  UserCheck,
   X,
-  XCircle,
+  MoreHorizontal,
+  MapPin,
 } from "lucide-react";
 
 import React, { useEffect, useState } from "react";
+import { Textarea } from "@components/ui/textarea";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@components/ui/dropdown-menu";
 
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [appealsPage, setAppealsPage] = useState<number>(0);
+  const [appealsPerPage, setAppealsPerPage] = useState<number>(5);
+  const [reportsPage, setReportsPage] = useState<number>(0);
+  const [reportsPerPage, setReportsPerPage] = useState<number>(10);
+  const [appealActionLoading, setAppealActionLoading] = useState<number | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const [resolution, setResolution] = useState<{ status: ItemStatus; description: string }>({ status: ItemStatus.ACTIVE, description: "" });
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ReportFilters & IncidentFilters>({});
+  const [filters, setFilters] = useState<ReportFilters>({});
   const [activeTab, setActiveTab] = useState("reports");
+
+  // State to control the create-incident modal triggered from actions menu
+  const [createDialogOpenFor, setCreateDialogOpenFor] = useState<number | null>(null);
+  const [createDescription, setCreateDescription] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
+  // State to control product details modal
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productModalReportId, setProductModalReportId] = useState<number | null>(null);
+  const [incidentsCountMap, setIncidentsCountMap] = useState<Record<number, number>>({});
 
   useEffect(() => {
     loadData();
   }, [activeTab]);
 
   const clearFilters = async () => {
-    const emptyFilters = {};
-    setFilters(emptyFilters);
-    await loadData(emptyFilters);
+    setFilters({});
+    await loadData({});
   };
 
-  const loadData = async (customFilters?: ReportFilters & IncidentFilters) => {
+  const loadData = async (customFilters?: ReportFilters) => {
     try {
       setLoading(true);
 
@@ -95,9 +106,31 @@ const ReportsPage: React.FC = () => {
       if (activeTab === "reports") {
         const data = await incidentsService.getReports(currentFilters);
         setReports(data);
-      } else {
-        const data = await incidentsService.getIncidents(currentFilters);
-        setIncidents(data);
+        setReportsPage(0);
+        // fetch counts per report using dedicated endpoint to avoid large payloads
+        try {
+          const counts = await Promise.all(
+            data.map(async (r) => {
+              try {
+                const res = await incidentsService.getReportIncidentsCount(r.reportId);
+                return { itemId: r.itemId, count: res.count };
+              } catch (err) {
+                return { itemId: r.itemId, count: 0 };
+              }
+            }),
+          );
+          const map: Record<number, number> = {};
+          counts.forEach((c) => {
+            if (c.itemId) map[c.itemId] = c.count;
+          });
+          setIncidentsCountMap(map);
+        } catch (e) {
+          setIncidentsCountMap({});
+        }
+      } else if (activeTab === "appeals") {
+        const data = await incidentsService.getAppeals();
+        setAppeals(data);
+        setAppealsPage(0);
       }
     } catch (error) {
       toast.error("Error al cargar datos");
@@ -106,75 +139,49 @@ const ReportsPage: React.FC = () => {
     }
   };
 
-  /* ============================================================
-      ASIGNAR MODERADOR
-  ============================================================ */
-  const handleAssignModerator = async (incidentId: number) => {
+  const selectedReport = createDialogOpenFor !== null ? reports.find(r => r.reportId === createDialogOpenFor) : null;
+
+  const handleCreateIncident = async () => {
+    if (!selectedReport) return;
     try {
-      setProcessing(`assign-${incidentId}`);
-      await incidentsService.assignIncident(incidentId);
-      toast.success("Te has asignado como moderador");
+      setCreateLoading(true);
+      await incidentsService.createIncidentFromReport(selectedReport.reportId, { description: createDescription });
+      toast.success("Incidencia creada");
+      setCreateDialogOpenFor(null);
+      setCreateDescription("");
       loadData();
-    } catch {
-      toast.error("Error al asignarse como moderador");
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  /* ============================================================
-      RESOLVER INCIDENTE
-  ============================================================ */
-  const handleResolveIncident = async (
-    incidentId: number,
-    status: ItemStatus,
-  ) => {
-    try {
-      setProcessing(`resolve-${incidentId}`);
-      await incidentsService.resolveIncident(incidentId, status);
-
-      toast.success(
-        status === ItemStatus.ACTIVE
-          ? "Incidente resuelto - Producto reactivado"
-          : "Incidente resuelto - Producto suspendido",
-      );
-
-      loadData();
-    } catch {
-      toast.error("Error al resolver incidente");
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  /* ============================================================
-      CREAR INCIDENTE DESDE REPORTE
-  ============================================================ */
-  const handleCreateIncidentFromReport = async (reportId: number) => {
-    try {
-      setProcessing(`create-${reportId}`);
-      await incidentsService.createIncidentFromReport(reportId);
-      toast.success("Incidencia creada correctamente");
-      loadData();
-    } catch {
+    } catch (error: any) {
       toast.error("Error al crear incidencia");
     } finally {
-      setProcessing(null);
+      setCreateLoading(false);
     }
   };
 
-  /* ============================================================
-      BADGE: TIPOS DE REPORTES (CORREGIDO)
-  ============================================================ */
-  const getReportTypeBadge = (type: ReportType) => {
-    const typeMap: Record<
-      ReportType,
-      {
-        text: string;
-        class: string;
-        icon: React.ComponentType<{ className?: string }>;
+  const openProductDetails = async (report: Report) => {
+    try {
+      setProductLoading(true);
+      setProductModalReportId(report.reportId);
+      // If the API already included the item object or name, use it; otherwise fetch by id
+      // @ts-ignore
+      if ((report as any).item) {
+        // @ts-ignore
+        setSelectedProduct((report as any).item as Product);
+      } else if (report.itemId) {
+        const prod = await productsService.getById(report.itemId);
+        setSelectedProduct(prod);
+      } else {
+        setSelectedProduct(null);
       }
-    > = {
+    } catch (error: any) {
+      toast.error("Error al cargar los detalles del producto");
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
+  
+  const getReportTypeBadge = (type: ReportType) => {
+    const typeMap: Record<ReportType, { text: string; class: string; icon: React.ComponentType<any> }> = {
       [ReportType.SPAM]: {
         text: "Spam",
         class: "bg-orange-100 text-orange-800",
@@ -208,55 +215,7 @@ const ReportsPage: React.FC = () => {
     );
   };
 
-  /* ============================================================
-      BADGE: ESTADOS DE INCIDENTES (CORREGIDO)
-  ============================================================ */
-  const getStatusBadge = (status: ItemStatus) => {
-    const statusMap: Record<
-      ItemStatus,
-      {
-        text: string;
-        class: string;
-        icon: React.ComponentType<{ className?: string }>;
-      }
-    > = {
-      [ItemStatus.PENDING]: {
-        text: "Pendiente",
-        class: "bg-yellow-100 text-yellow-800",
-        icon: Clock,
-      },
-      [ItemStatus.ACTIVE]: {
-        text: "Activo",
-        class: "bg-green-100 text-green-800",
-        icon: CheckCircle,
-      },
-      [ItemStatus.SUSPENDED]: {
-        text: "Suspendido",
-        class: "bg-red-100 text-red-800",
-        icon: XCircle,
-      },
-      [ItemStatus.HIDDEN]: {
-        text: "Oculto",
-        class: "bg-gray-100 text-gray-800",
-        icon: Clock,
-      },
-      [ItemStatus.BANNED]: {
-        text: "Prohibido",
-        class: "bg-red-100 text-red-800",
-        icon: XCircle,
-      },
-    };
-
-    const statusInfo = statusMap[status];
-    const IconComponent = statusInfo.icon;
-
-    return (
-      <Badge className={statusInfo.class}>
-        <IconComponent className="h-3 w-3 mr-1" />
-        {statusInfo.text}
-      </Badge>
-    );
-  };
+  
 
   /* ============================================================
       LOADING
@@ -284,25 +243,21 @@ const ReportsPage: React.FC = () => {
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Moderación</h1>
-          <p className="text-gray-600 mt-2">
-            Gestiona reportes, incidentes y apelaciones
-          </p>
+          <p className="text-gray-600 mt-2">Gestiona reportes</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {/* TABS */}
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <Flag className="h-4 w-4" />
-            Reportes
-          </TabsTrigger>
-
-          <TabsTrigger value="incidents" className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Incidentes y Apelaciones
-          </TabsTrigger>
-        </TabsList>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <Flag className="h-4 w-4" />
+              Reportes
+            </TabsTrigger>
+            <TabsTrigger value="appeals" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Apelaciones
+            </TabsTrigger>
+          </TabsList>
 
         {/* ======================================================================
             TAB DE REPORTES
@@ -438,6 +393,7 @@ const ReportsPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Producto</TableHead>
+                    <TableHead className="w-[120px] text-center">Incidencias</TableHead>
                     <TableHead>Reportado por</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Comentario</TableHead>
@@ -447,7 +403,7 @@ const ReportsPage: React.FC = () => {
                 </TableHeader>
 
                 <TableBody>
-                  {reports.map((report) => (
+                  {reports.slice(reportsPage * reportsPerPage, (reportsPage + 1) * reportsPerPage).map((report) => (
                     <TableRow key={report.reportId}>
                       {/* PRODUCTO */}
                       <TableCell>
@@ -462,23 +418,26 @@ const ReportsPage: React.FC = () => {
                             <Button
                               variant="link"
                               size="sm"
-                              asChild
                               className="p-0 h-auto text-blue-600"
+                              onClick={() => openProductDetails(report)}
                             >
-                              <Link to={`/products/${report.itemId}`}>
-                                <Eye className="h-3 w-3 mr-1" />
-                                Ver producto
-                              </Link>
+                              <Eye className="h-3 w-3 mr-1" />
+                              Ver producto
                             </Button>
                           </div>
                         </div>
                       </TableCell>
-
-                      {/* USUARIO */}
+                      <TableCell className="text-center">
+                        {incidentsCountMap[report.itemId] ?? ((report as any).incidentCount ?? (report as any).incidents?.length ?? 0)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4 text-gray-400" />
-                          <span>Usuario ID: {report.buyerId}</span>
+                          <span>{
+                            // prefer buyer email if provided by API, fallback to buyer object or id
+                            // @ts-ignore
+                            (report as any).buyerEmail || (report as any).buyer?.email || `ID ${report.buyerId}`
+                          }</span>
                         </div>
                       </TableCell>
 
@@ -515,28 +474,24 @@ const ReportsPage: React.FC = () => {
 
                       {/* ACCIONES */}
                       <TableCell className="text-right">
-                        <div className="flex flex-col items-end gap-2">
-
-                          {/* REVISAR */}
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/products/${report.itemId}`}>
-                              <Eye className="h-4 w-4 mr-1" />
-                              Revisar
-                            </Link>
-                          </Button>
-
-                          {/* CREAR INCIDENCIA */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={processing === `create-${report.reportId}`}
-                            onClick={() =>
-                              handleCreateIncidentFromReport(report.reportId)
-                            }
-                          >
-                            <Shield className="h-4 w-4 mr-1" />
-                            Crear incidencia
-                          </Button>
+                        <div className="flex gap-2 justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openProductDetails(report)} className="flex items-center">
+                                <Eye className="h-4 w-4 mr-2" />
+                                Revisar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCreateDialogOpenFor(report.reportId)} className="flex items-center">
+                                <Shield className="h-4 w-4 mr-2" />
+                                Crear Incidencia
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -554,6 +509,32 @@ const ReportsPage: React.FC = () => {
                   <p className="text-gray-600">
                     No hay reportes que coincidan con los filtros seleccionados
                   </p>
+                </div>
+              )}
+
+              {reports.length > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                    Mostrando {reportsPage * reportsPerPage + 1} - {Math.min((reportsPage + 1) * reportsPerPage, reports.length)} de {reports.length}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReportsPage((p) => Math.max(0, p - 1))}
+                      disabled={reportsPage === 0}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReportsPage((p) => Math.min(p + 1, Math.floor((reports.length - 1) / reportsPerPage)))}
+                      disabled={(reportsPage + 1) * reportsPerPage >= reports.length}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -610,360 +591,359 @@ const ReportsPage: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* ======================================================================
-            TAB DE INCIDENTES
-        ====================================================================== */}
-        <TabsContent value="incidents" className="space-y-6">
+        {/* Resolve Incident Dialog (used from appeals 'Revisar') */}
+        <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Resolver Incidencia</DialogTitle>
+              <DialogDescription>Define el estado final y la resolución para esta incidencia.</DialogDescription>
+            </DialogHeader>
 
-          {/* FILTROS DE INCIDENTES */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtros
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                {/* SEARCH */}
-                <div className="space-y-2">
-                  <Label htmlFor="search-incidents">Buscar</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="search-incidents"
-                      placeholder="Producto, vendedor..."
-                      className="pl-10"
-                      value={filters.search || ""}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          search: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
+            {selectedIncident && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium">{selectedIncident.item?.name || `ID ${selectedIncident.itemId}`}</h4>
+                  <p className="text-sm text-gray-600">Vendedor: {selectedIncident.seller?.firstName} {selectedIncident.seller?.lastName}</p>
                 </div>
 
-                {/* STATUS */}
                 <div className="space-y-2">
-                  <Label>Estado</Label>
+                  <Label>Estado Final</Label>
                   <Select
-                    value={filters.status || "all"}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        status:
-                          value === "all"
-                            ? undefined
-                            : (value as ItemStatus),
-                      }))
-                    }
+                    value={resolution.status}
+                    onValueChange={(value) => setResolution((prev) => ({ ...prev, status: value as ItemStatus }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Todos los estados" />
+                      <SelectValue />
                     </SelectTrigger>
 
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value={ItemStatus.PENDING}>
-                        Pendiente
-                      </SelectItem>
-                      <SelectItem value={ItemStatus.ACTIVE}>Activo</SelectItem>
-                      <SelectItem value={ItemStatus.SUSPENDED}>
-                        Suspendido
-                      </SelectItem>
+                      <SelectItem value={ItemStatus.ACTIVE}>Mantener Activo</SelectItem>
+                      <SelectItem value={ItemStatus.SUSPENDED}>Suspender</SelectItem>
+                      <SelectItem value={ItemStatus.BANNED}>Prohibir</SelectItem>
+                      <SelectItem value={ItemStatus.HIDDEN}>Ocultar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* FECHAS */}
                 <div className="space-y-2">
-                  <Label>Fecha Inicio</Label>
-                  <Input
-                    type="date"
-                    value={filters.startDate || ""}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        startDate: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Fecha Fin</Label>
-                  <Input
-                    type="date"
-                    value={filters.endDate || ""}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        endDate: e.target.value,
-                      }))
-                    }
+                  <Label>Descripción de la Resolución</Label>
+                  <Textarea
+                    placeholder="Explica las razones de esta decisión..."
+                    value={resolution.description}
+                    onChange={(e) => setResolution((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
                   />
                 </div>
               </div>
+            )}
 
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={clearFilters}
-                >
-                  <X className="h-4 w-4" />
-                  Limpiar
-                </Button>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsResolveDialogOpen(false)}>Cancelar</Button>
+              <Button
+                onClick={async () => {
+                  if (!selectedIncident) return;
+                  try {
+                    await incidentsService.resolveIncident(selectedIncident.incidentId, resolution.status);
+                    toast.success('Incidencia resuelta');
+                    setIsResolveDialogOpen(false);
+                    setSelectedIncident(null);
+                    loadData();
+                  } catch (err:any) {
+                    toast.error('Error al resolver incidencia');
+                  }
+                }}
+                disabled={selectedIncident?.status !== ItemStatus.PENDING}
+                title={selectedIncident?.status !== ItemStatus.PENDING ? 'Solo se pueden resolver incidencias en estado Pendiente' : undefined}
+              >Resolver Incidencia</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-                <Button
-                  onClick={() => loadData()}
-                  className="flex items-center gap-2"
-                >
-                  <Search className="h-4 w-4" />
-                  Buscar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* TABLA DE INCIDENTES */}
+        <TabsContent value="appeals" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>
-                Incidentes y Apelaciones ({incidents.length})
-              </CardTitle>
+              <CardTitle>Apelaciones ({appeals.length})</CardTitle>
             </CardHeader>
 
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Moderador</TableHead>
-                    <TableHead>Apelaciones</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-
-                <TableBody>
-                  {incidents.map((incident) => (
-                    <TableRow key={incident.incidentId}>
-                      {/* PRODUCTO */}
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Package className="h-4 w-4 text-gray-400" />
-
-                          <div>
-                            <p className="font-medium">
-                              Producto ID: {incident.itemId}
-                            </p>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="p-0 h-auto text-blue-600"
-                              asChild
-                            >
-                              <Link to={`/products/${incident.itemId}`}>
-                                <Eye className="h-3 w-3 mr-1" />
-                                Ver producto
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* VENDEDOR */}
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <span>Usuario ID: {incident.sellerId}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* ESTADO */}
-                      <TableCell>{getStatusBadge(incident.status)}</TableCell>
-
-                      {/* MODERADOR */}
-                      <TableCell>
-                        {incident.moderatorId ? (
-                          <div className="flex items-center space-x-2">
-                            <UserCheck className="h-4 w-4 text-green-600" />
-                            <span className="text-sm">Asignado</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">
-                            Sin asignar
-                          </span>
-                        )}
-                      </TableCell>
-
-                      {/* APELACIONES */}
-                      <TableCell>
-                        {incident.appeals && incident.appeals.length > 0 ? (
-                          <div className="flex items-center space-x-2">
-                            <FileText className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-600">
-                              {incident.appeals.length} apelación
-                              {incident.appeals.length !== 1 ? "es" : ""}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">
-                            Sin apelaciones
-                          </span>
-                        )}
-                      </TableCell>
-
-                      {/* FECHA */}
-                      <TableCell>
-                        <div className="flex items-center text-gray-600">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {new Date(incident.reportedAt).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-
-                      {/* ACCIONES */}
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-
-                          {/* ASIGNAR */}
-                          {!incident.moderatorId && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleAssignModerator(incident.incidentId)
-                              }
-                              disabled={
-                                processing === `assign-${incident.incidentId}`
-                              }
-                            >
-                              <Shield className="h-4 w-4 mr-1" />
-                              Asignarme
-                            </Button>
-                          )}
-
-                          {/* RESOLVER */}
-                          {incident.moderatorId &&
-                            incident.status === ItemStatus.PENDING && (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Resolver
-                                  </Button>
-                                </DialogTrigger>
-
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>
-                                      Resolver Incidente
-                                    </DialogTitle>
-                                  </DialogHeader>
-
-                                  <div className="space-y-4">
-                                    <p className="text-sm text-gray-600">
-                                      Descripción: {incident.description}
-                                    </p>
-
-                                    {/* LISTA DE APELACIONES */}
-                                    {incident.appeals &&
-                                      incident.appeals.length > 0 && (
-                                        <div className="space-y-2">
-                                          <h4 className="font-semibold">
-                                            Apelaciones:
-                                          </h4>
-
-                                          {incident.appeals.map(
-                                            (appeal, index) => (
-                                              <div
-                                                key={index}
-                                                className="bg-gray-50 p-3 rounded-md"
-                                              >
-                                                <p className="text-sm">
-                                                  {appeal.reason}
-                                                </p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                  {new Date(
-                                                    appeal.createdAt,
-                                                  ).toLocaleDateString()}
-                                                </p>
-                                              </div>
-                                            ),
-                                          )}
-                                        </div>
-                                      )}
-
-                                    {/* BOTONES RESOLVER */}
-                                    <div className="flex gap-2">
-                                      <Button
-                                        onClick={() =>
-                                          handleResolveIncident(
-                                            incident.incidentId,
-                                            ItemStatus.ACTIVE,
-                                          )
-                                        }
-                                        disabled={
-                                          processing ===
-                                          `resolve-${incident.incidentId}`
-                                        }
-                                        className="bg-green-600 hover:bg-green-700"
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-1" />
-                                        Reactivar Producto
-                                      </Button>
-
-                                      <Button
-                                        onClick={() =>
-                                          handleResolveIncident(
-                                            incident.incidentId,
-                                            ItemStatus.SUSPENDED,
-                                          )
-                                        }
-                                        disabled={
-                                          processing ===
-                                          `resolve-${incident.incidentId}`
-                                        }
-                                        variant="destructive"
-                                      >
-                                        <XCircle className="h-4 w-4 mr-1" />
-                                        Suspender Producto
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* NO INCIDENTES */}
-              {incidents.length === 0 && (
+              {appeals.length === 0 ? (
                 <div className="text-center py-12">
-                  <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No se encontraron incidentes
-                  </h3>
-                  <p className="text-gray-600">
-                    No hay incidentes registrados
-                  </p>
+                  <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay apelaciones</h3>
+                  <p className="text-gray-600">No se encontraron apelaciones en el sistema.</p>
                 </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Apelación ID</TableHead>
+                        <TableHead>Incidencia</TableHead>
+                        <TableHead>Vendedor</TableHead>
+                        <TableHead>Motivo</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Estado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {appeals.slice(appealsPage * appealsPerPage, (appealsPage + 1) * appealsPerPage).map((appeal) => (
+                        <TableRow key={appeal.appealId}>
+                          <TableCell>
+                            <div className="font-medium">{appeal.appealId}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">{appeal.incidentId}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              {(appeal as any).sellerEmail || (appeal as any).seller?.email || appeal.sellerId}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <p className="text-sm text-gray-600 line-clamp-2">{appeal.reason}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-gray-600">
+                              {new Date(appeal.createdAt).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {appeal.reviewed ? (
+                              <Badge className="bg-green-100 text-green-800">Revisada</Badge>
+                            ) : (
+                              <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+                            )}
+                          </TableCell>
+                          
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-600">
+                      Mostrando {appealsPage * appealsPerPage + 1} - {Math.min((appealsPage + 1) * appealsPerPage, appeals.length)} de {appeals.length}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppealsPage((p) => Math.max(0, p - 1))}
+                        disabled={appealsPage === 0}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAppealsPage((p) => Math.min(p + 1, Math.floor((appeals.length - 1) / appealsPerPage)))}
+                        disabled={(appealsPage + 1) * appealsPerPage >= appeals.length}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
+
+          {appeals.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {appeals.filter((a) => !a.reviewed).length}
+                    </div>
+                    <p className="text-sm text-gray-600">Apelaciones Pendientes</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {appeals.filter((a) => a.reviewed).length}
+                    </div>
+                    <p className="text-sm text-gray-600">Apelaciones Resueltas</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Create Incident Modal (controlled by actions menu) */}
+      <Dialog open={createDialogOpenFor !== null} onOpenChange={(open) => { if (!open) { setCreateDialogOpenFor(null); setCreateDescription(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <Shield className="h-6 w-6 text-blue-600 mt-1" />
+              <div>
+                <DialogTitle>Crear Incidencia desde Reporte</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">Revisa la información del reporte y añade una descripción adicional si lo deseas.</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {selectedReport ? (
+              <>
+                <div className="bg-gray-50 border border-gray-100 p-3 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Producto: <span className="font-medium text-gray-900">{
+                        // prefer product name if provided by API, fallback to product object name or id
+                        // @ts-ignore
+                        (selectedReport.itemName) || (selectedReport as any).item?.name || `ID ${selectedReport.itemId}`
+                      }</span></p>
+                      <p className="text-sm text-gray-600">Reportado por: <span className="font-medium">{
+                        // prefer buyer email if provided by API, fallback to buyer object or id
+                        // @ts-ignore
+                        selectedReport.buyerEmail || (selectedReport as any).buyer?.email || selectedReport.buyerId
+                      }</span></p>
+                    </div>
+                    <div className="text-sm text-gray-500">{new Date(selectedReport.reportedAt).toLocaleDateString()}</div>
+                  </div>
+
+                  {selectedReport.comment && (
+                    <div className="mt-3 px-1">
+                      <h4 className="text-xs font-semibold text-gray-700">Comentario del reportante</h4>
+                      <p className="text-sm text-gray-600 mt-1">{selectedReport.comment}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Descripción (opcional)</Label>
+                  <Textarea
+                    value={createDescription}
+                    onChange={(e) => setCreateDescription(e.target.value)}
+                    placeholder="Añade contexto adicional para la incidencia (p. ej. pasos para reproducir, evidencias, etc.)"
+                    className="min-h-[120px]"
+                    maxLength={1000}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">Máx. 1000 caracteres</p>
+                    <p className="text-xs text-gray-500">{createDescription.length}/1000</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setCreateDialogOpenFor(null); setCreateDescription(""); }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleCreateIncident} disabled={createLoading}>
+                    {createLoading ? "Creando..." : "Crear Incidencia"}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Details Modal (opened from report actions) */}
+      <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-start gap-3">
+              <Package className="h-6 w-6 text-blue-600 mt-1" />
+              <div>
+                <DialogTitle>{selectedProduct ? selectedProduct.name : (productLoading ? 'Cargando...' : 'Detalle del producto')}</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">Detalles del producto reportado</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {productLoading && (
+              <div className="text-center py-6">Cargando producto...</div>
+            )}
+
+            {selectedProduct && !productLoading && (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{selectedProduct.name}</h3>
+                      {selectedProduct.category && <p className="text-sm text-gray-500">{selectedProduct.category}</p>}
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">{selectedProduct.publishedAt ? new Date(selectedProduct.publishedAt).toLocaleDateString() : ''}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="text-xl font-bold text-gray-900">{typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : '—'}</div>
+                    <div>
+                      {selectedProduct.status === 'active' && <Badge className="bg-green-100 text-green-800">Activo</Badge>}
+                      {selectedProduct.status === 'suspended' && <Badge className="bg-red-100 text-red-800">Suspendido</Badge>}
+                      {selectedProduct.status === 'hidden' && <Badge className="bg-gray-100 text-gray-800">Oculto</Badge>}
+                      {selectedProduct.status === 'pending' && <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>}
+                      {selectedProduct.status === 'banned' && <Badge className="bg-red-100 text-red-800">Baneado</Badge>}
+                    </div>
+                  </div>
+
+                    {/* Seller information removed per UX request */}
+
+                  {selectedProduct.location && (
+                    <div className="mt-3">
+                      <Card className="border-0 shadow-md">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Ubicación</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="block rounded-lg overflow-hidden aspect-video">
+                            <iframe
+                              title={`map-${selectedProduct.itemId}`}
+                              src={`https://www.google.com/maps?q=${encodeURIComponent(selectedProduct.location)}&output=embed`}
+                              className="w-full h-full"
+                              loading="lazy"
+                            />
+                          </div>
+
+                          <div className="flex items-center text-gray-700 gap-2">
+                            <MapPin className="h-4 w-4" />
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedProduct.location)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline hover:text-gray-900 text-sm"
+                              title="Ver en Google Maps"
+                            >
+                              {selectedProduct.location}
+                            </a>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {selectedProduct.description && (
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium text-gray-700">Descripción</h4>
+                      <p className="text-sm text-gray-600 mt-1">{selectedProduct.description}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Link to={`/products/${selectedProduct.itemId}`}>
+                      <Button variant="outline">Ir al producto</Button>
+                    </Link>
+                    <Button onClick={() => { if (productModalReportId) setCreateDialogOpenFor(productModalReportId); setSelectedProduct(null); }}>Crear Incidencia</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

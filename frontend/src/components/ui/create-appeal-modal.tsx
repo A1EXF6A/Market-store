@@ -1,4 +1,5 @@
 import type { Incident } from "@/types";
+import { ItemStatus } from "@/types";
 import { Button } from "@components/ui/button";
 import {
   Dialog,
@@ -34,6 +35,12 @@ export default function CreateAppealModal({
 
     if (!incident || !reason.trim()) {
       toast.error("Por favor ingresa el motivo de la apelación");
+      return;
+    }
+
+    // Extra guard: only allow submit if incident is pending
+    if (incident.status !== ItemStatus.PENDING) {
+      toast.error("No se puede crear apelación: la incidencia no está en estado Pendiente");
       return;
     }
 
@@ -93,6 +100,13 @@ export default function CreateAppealModal({
               Describe claramente por qué crees que tu producto no debería estar
               suspendido o baneado.
             </p>
+
+            {incident && incident.status !== ItemStatus.PENDING && (
+              <p className="text-xs text-red-500 mt-2">
+                Nota: no se pueden crear apelaciones porque la incidencia no está
+                en estado "Pendiente".
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -104,7 +118,17 @@ export default function CreateAppealModal({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading || !reason.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                isLoading || !reason.trim() || (incident ? incident.status !== ItemStatus.PENDING : true)
+              }
+              title={
+                incident && incident.status !== ItemStatus.PENDING
+                  ? "No se puede enviar: la incidencia no está en estado Pendiente"
+                  : undefined
+              }
+            >
               {isLoading ? "Enviando..." : "Enviar Apelación"}
             </Button>
           </div>

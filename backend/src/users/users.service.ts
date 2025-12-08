@@ -15,6 +15,7 @@ import * as bcrypt from "bcryptjs";
 export interface UserFilters {
   role?: UserRole;
   status?: UserStatus;
+  showDeleted?: boolean;
   search?: string;
 }
 
@@ -44,7 +45,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    return this.userRepository.findOne({ where: { email } });
+    return this.userRepository.findOne({ where: { email, deleted: false } });
   }
 
   async updateUser(userId: number, dto: UpdateUserDto): Promise<User> {

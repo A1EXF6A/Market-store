@@ -22,6 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -40,6 +48,15 @@ import {
   Trash2,
   ShoppingBag,
 } from "lucide-react";
+import { Input } from "@components/ui/input";
+import { Label } from "@components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@components/ui/select";
 
 /* ============ helpers de precio ============ */
 const currency = new Intl.NumberFormat("es-EC", {
@@ -62,6 +79,16 @@ const MyProductsPage: React.FC = () => {
   const [products, setProducts] = useState<ProductWithCoercedPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
+  const [productsPage, setProductsPage] = useState<number>(0);
+  const [productsPerPage] = useState<number>(6);
+  const [search, setSearch] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [appliedSearch, setAppliedSearch] = useState<string>("");
+  const [appliedStatus, setAppliedStatus] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState<string>("");
+  const [appliedDateTo, setAppliedDateTo] = useState<string>("");
 
   const countActive = useMemo(
     () => products.filter((p) => p.availability).length,
@@ -81,6 +108,7 @@ const MyProductsPage: React.FC = () => {
         price: coercePrice((p as any).price),
       }));
       setProducts(normalized);
+      setProductsPage(0);
     } catch {
       toast.error("Error al cargar tus productos");
     } finally {
@@ -88,9 +116,37 @@ const MyProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (productId: number) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return;
+  // Reset page when applied filters change
+  React.useEffect(() => {
+    setProductsPage(0);
+  }, [appliedSearch, appliedStatus, appliedDateFrom, appliedDateTo]);
 
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (appliedStatus !== "all" && p.status !== appliedStatus) return false;
+      if (appliedSearch.trim()) {
+        const s = appliedSearch.trim().toLowerCase();
+        const nameMatch = p.name?.toLowerCase().includes(s);
+        if (!nameMatch) return false;
+      }
+      // Filter by published date range (if applied)
+      if (appliedDateFrom) {
+        const from = new Date(appliedDateFrom);
+        const pd = new Date(p.publishedAt);
+        if (isNaN(from.getTime()) || isNaN(pd.getTime()) || pd < from) return false;
+      }
+      if (appliedDateTo) {
+        // include whole day for the 'to' date
+        const to = new Date(appliedDateTo);
+        to.setHours(23, 59, 59, 999);
+        const pd = new Date(p.publishedAt);
+        if (isNaN(to.getTime()) || isNaN(pd.getTime()) || pd > to) return false;
+      }
+      return true;
+    });
+  }, [products, appliedSearch, appliedStatus, appliedDateFrom, appliedDateTo]);
+
+  const handleDeleteProduct = async (productId: number) => {
     try {
       setActionBusyId(productId);
       await productsService.delete(productId);
@@ -101,6 +157,18 @@ const MyProductsPage: React.FC = () => {
     } finally {
       setActionBusyId(null);
     }
+  };
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductWithCoercedPrice | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.itemId;
+    await handleDeleteProduct(id);
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
   };
 
   const toggleProductAvailability = async (productId: number, available: boolean) => {
@@ -117,18 +185,18 @@ const MyProductsPage: React.FC = () => {
   };
 
   const AvailabilityBadge = ({ available }: { available: boolean }) => (
-    <Badge className={available ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+    <Badge className={available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
       {available ? "Disponible" : "Vendido"}
     </Badge>
   );
 
   const StatusBadge = ({ status }: { status: string }) => {
     const map: Record<string, { text: string; cls: string }> = {
-      active: { text: "Activo", cls: "bg-emerald-100 text-emerald-800" },
-      pending: { text: "Pendiente", cls: "bg-amber-100 text-amber-800" },
-      suspended: { text: "Suspendido", cls: "bg-rose-100 text-rose-800" },
+      active: { text: "Activo", cls: "bg-green-100 text-green-800" },
+      pending: { text: "Pendiente", cls: "bg-yellow-100 text-yellow-800" },
+      suspended: { text: "Suspendido", cls: "bg-red-100 text-red-800" },
       hidden:    { text: "Oculto", cls: "bg-slate-100 text-slate-800" },
-      banned:    { text: "Prohibido", cls: "bg-rose-100 text-rose-800" },
+      banned:    { text: "Prohibido", cls: "bg-red-100 text-red-800" },
     };
     const s = map[status] ?? map.active;
     return <Badge className={s.cls}>{s.text}</Badge>;
@@ -137,7 +205,7 @@ const MyProductsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-emerald-500 p-[1px]">
+        <div className="rounded-2xl bg-blue-600 p-[1px]">
           <div className="rounded-2xl bg-white dark:bg-neutral-950 p-5">
             <div className="flex items-center justify-between">
               <div className="h-8 w-56 rounded-md bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
@@ -177,11 +245,11 @@ const MyProductsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header con borde degradado */}
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow">
+      <div className="rounded-2xl bg-blue-600 p-[1px] shadow-lg">
         <div className="rounded-2xl bg-white dark:bg-neutral-950 px-5 py-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 grid place-items-center rounded-xl bg-indigo-600/10 text-indigo-600">
+              <div className="h-9 w-9 grid place-items-center rounded-xl bg-blue-600/10 text-blue-600">
                 <ShoppingBag className="h-5 w-5" />
               </div>
               <div>
@@ -191,7 +259,7 @@ const MyProductsPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Button asChild className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:opacity-90">
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
               <Link to="/products/create">
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Producto
@@ -204,7 +272,7 @@ const MyProductsPage: React.FC = () => {
       {products.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-14 text-center">
-            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-indigo-600/10 text-indigo-600 grid place-items-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-blue-600/10 text-blue-600 grid place-items-center">
               <Plus className="h-6 w-6" />
             </div>
             <h3 className="text-lg font-semibold mb-1">Aún no tienes productos</h3>
@@ -222,7 +290,92 @@ const MyProductsPage: React.FC = () => {
       ) : (
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle>Lista de Productos ({products.length})</CardTitle>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <CardTitle>Lista de Productos ({filteredProducts.length})</CardTitle>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Nombre</Label>
+                    <Input
+                      placeholder="Nombre del producto..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-48"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Estado</Label>
+                    <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="active">Activo</SelectItem>
+                        <SelectItem value="pending">Pendiente</SelectItem>
+                        <SelectItem value="suspended">Suspendido</SelectItem>
+                        <SelectItem value="hidden">Oculto</SelectItem>
+                        <SelectItem value="banned">Prohibido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Desde</Label>
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Hasta</Label>
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-40"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-2">
+                    <Button
+                      onClick={() => {
+                        setAppliedSearch(search);
+                        setAppliedStatus(statusFilter);
+                        setAppliedDateFrom(dateFrom);
+                        setAppliedDateTo(dateTo);
+                      }}
+                      disabled={
+                        appliedSearch === search &&
+                        appliedStatus === statusFilter &&
+                        appliedDateFrom === dateFrom &&
+                        appliedDateTo === dateTo
+                      }
+                    >
+                      Buscar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setDateFrom("");
+                        setDateTo("");
+                        setAppliedSearch("");
+                        setAppliedStatus("all");
+                        setAppliedDateFrom("");
+                        setAppliedDateTo("");
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
+                </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -238,7 +391,7 @@ const MyProductsPage: React.FC = () => {
               </TableHeader>
 
               <TableBody>
-                {products.map((product) => (
+                {filteredProducts.slice(productsPage * productsPerPage, (productsPage + 1) * productsPerPage).map((product) => (
                   <TableRow key={product.itemId} className="align-middle">
                     {/* Producto */}
                     <TableCell>
@@ -271,7 +424,7 @@ const MyProductsPage: React.FC = () => {
                     {/* Precio (normalizado; muestra también 0) */}
                     <TableCell>
                       {typeof product.price === "number" ? (
-                        <div className="inline-flex items-center gap-1 font-medium text-emerald-600">
+                        <div className="inline-flex items-center gap-1 font-medium text-blue-600">
                           <DollarSign className="h-4 w-4" />
                           {currency.format(product.price)}
                         </div>
@@ -301,22 +454,6 @@ const MyProductsPage: React.FC = () => {
                     {/* Acciones */}
                     <TableCell className="text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={product.availability ? "secondary" : "default"}
-                          className={
-                            product.availability
-                              ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200"
-                              : "bg-emerald-600 hover:bg-emerald-600/90"
-                          }
-                          disabled={actionBusyId === product.itemId}
-                          onClick={() =>
-                            toggleProductAvailability(product.itemId, product.availability)
-                          }
-                        >
-                          {product.availability ? "Marcar vendido" : "Marcar disponible"}
-                        </Button>
-
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon">
@@ -324,21 +461,46 @@ const MyProductsPage: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            {product.status === 'active' && (
+                              <DropdownMenuItem
+                                onClick={() => toggleProductAvailability(product.itemId, product.availability)}
+                                disabled={actionBusyId === product.itemId}
+                                className={actionBusyId === product.itemId ? 'text-neutral-400' : ''}
+                              >
+                                <ShoppingBag className="h-4 w-4 mr-2" />
+                                {product.availability ? 'Marcar vendido' : 'Marcar disponible'}
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem asChild>
                               <Link to={`/products/${product.itemId}`}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver detalles
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/products/${product.itemId}/edit`}>
+                            {product.status === 'active' ? (
+                              <DropdownMenuItem asChild>
+                                <Link to={`/products/${product.itemId}/edit`}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </Link>
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem disabled className="text-neutral-400" title="Solo se puede editar productos con estado Activo">
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
-                              </Link>
-                            </DropdownMenuItem>
+                              </DropdownMenuItem>
+                            )}
+                            {
+                              // Disable delete for products that are not 'active'
+                            }
                             <DropdownMenuItem
-                              onClick={() => handleDeleteProduct(product.itemId)}
-                              className="text-rose-600"
+                              onClick={() => {
+                                if (product.status !== 'active') return;
+                                setDeleteTarget(product);
+                                setDeleteDialogOpen(true);
+                              }}
+                              disabled={product.status !== 'active'}
+                              className={product.status !== 'active' ? 'text-neutral-400' : 'text-rose-600'}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Eliminar
@@ -351,6 +513,58 @@ const MyProductsPage: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+            {/* Delete confirmation dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirmar eliminación</DialogTitle>
+                  <DialogDescription>
+                    {deleteTarget ? (
+                      <>
+                        Vas a eliminar <strong>"{deleteTarget.name}"</strong> de forma permanente. Esta acción es irreversible y se eliminarán todas las fotos y datos asociados al anuncio.
+                      </>
+                    ) : (
+                      "Vas a eliminar este producto de forma permanente. Esta acción es irreversible."
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteTarget(null); }}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleConfirmDelete}
+                    disabled={!deleteTarget || actionBusyId === deleteTarget?.itemId}
+                  >
+                    {actionBusyId === deleteTarget?.itemId ? 'Eliminando...' : 'Eliminar producto'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+              <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                  Mostrando {productsPage * productsPerPage + 1} - {Math.min((productsPage + 1) * productsPerPage, filteredProducts.length)} de {filteredProducts.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductsPage((p) => Math.max(0, p - 1))}
+                    disabled={productsPage === 0}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setProductsPage((p) => Math.min(p + 1, Math.floor((filteredProducts.length - 1) / productsPerPage)))}
+                    disabled={(productsPage + 1) * productsPerPage >= filteredProducts.length}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
           </CardContent>
         </Card>
       )}
