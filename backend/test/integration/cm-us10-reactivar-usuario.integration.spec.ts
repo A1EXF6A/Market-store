@@ -26,7 +26,7 @@ describe("CM-US10 - Reactivar usuario", () => {
 
   const testUser = {
     email: "reactivar.usuario@email.com",
-    password: "Password123!",
+    password: "con1234",
   };
 
   beforeAll(async () => {
@@ -70,7 +70,7 @@ describe("CM-US10 - Reactivar usuario", () => {
     // Crear usuario suspendido
     const passwordHash = await bcrypt.hash(testUser.password, 10);
     const user = userRepository.create({
-      nationalId: "99999999",
+      nationalId: "999990999",
       firstName: "Usuario",
       lastName: "Suspendido",
       email: testUser.email,
