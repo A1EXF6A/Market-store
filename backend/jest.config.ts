@@ -1,16 +1,11 @@
-/** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
+// jest.config.js
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-      isolatedModules: true
-    },
+  moduleNameMapper: {
+    '^src/(.*)$': '<rootDir>/src/$1'
   },
-  moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.tsx?$': 'ts-jest'
   },
-  testMatch: ['**/*.spec.ts', '**/*.test.ts'],
 };
