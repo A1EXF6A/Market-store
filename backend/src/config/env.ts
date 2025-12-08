@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 
 // Cargar .env local en desarrollo (dentro de Docker simplemente no existe)
 dotenv.config();
