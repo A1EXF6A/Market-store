@@ -1,4 +1,4 @@
-// src/auth/auth.service.ts
+
 import {
   ConflictException,
   Inject,
@@ -22,58 +22,8 @@ export class AuthService {
     @Inject(JwtService) private readonly jwtService: JwtService,
     @Inject(EmailService) private readonly emailService: EmailService,
   ) { }
-  ) { }
 
   async register(registerDto: RegisterDto) {
-    const { email, nationalId, password, role, ...userData } = registerDto;
-
-    // ✅ Corrección del typo 'Iif' -> 'if'
-    if (!email || !nationalId || !password) {
-      throw new ConflictException("All fields are required");
-    }
-
-    // ✅ Validación de formato de email
-    const emailRegex =
-      /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-    if (!emailRegex.test(email)) {
-      throw new ConflictException("Invalid email format");
-    }
-
-    const emailExists = await this.userRepository.findOne({ where: { email, deleted: false } });
-    if (emailExists) throw new ConflictException("User already exists with this email");
-
-    const nationalIdExists = await this.userRepository.findOne({ where: { nationalId } });
-    if (nationalIdExists) throw new ConflictException("User already exists with this national ID");
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = this.userRepository.create({
-      ...userData,
-      email,
-      nationalId,
-      passwordHash,
-      role: (role as any) ?? UserRole.BUYER,
-      verified: false,
-    });
-
-    await this.userRepository.save(user);
-
-    // ---- Token de verificación (24h) ----
-    const vPayload: Record<string, any> = { userId: user.userId, type: "email_verification" };
-    const vToken = this.jwtService.sign(vPayload, {
-      secret: process.env.EMAIL_VERIFICATION_SECRET || process.env.JWT_SECRET,
-      expiresIn: ("24h" as any),
-    });
-
-    try {
-      await this.emailService.sendVerificationEmail(user.email, vToken, user.firstName);
-    } catch (err) {
-      console.error("Error sending verification email:", err?.message || err);
-    }
-
-    return {
-      message: "Registro exitoso. Revisa tu correo para verificar la cuenta (expira en 24h).",
-    };
   }
 
   async login(loginDto: LoginDto) {
@@ -161,8 +111,6 @@ export class AuthService {
   }
 
   async validateUser(userId: number): Promise<User> {
-    return this.userRepository.findOne({ where: { userId } });
-  }
     // When validating from token, ensure the account is not deleted
     return this.userRepository.findOne({ where: { userId, deleted: false } });
   }

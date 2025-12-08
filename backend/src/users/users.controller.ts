@@ -13,9 +13,6 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 export class UsersController {
   constructor(private usersService: UsersService) { }
 
-  // =========================
-  // ADMIN/MOD: LISTAR USUARIOS
-  // =========================
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MODERATOR)
@@ -29,12 +26,9 @@ export class UsersController {
     return this.usersService.findAll(filters);
   }
 
-  // =========================
-  // PERFIL PROPIO (EDITAR)
-  // =========================
-  @Put("profile")
-  updateProfile(@GetUser() user: User, @Body() dto: UpdateUserDto) {
-    return this.usersService.updateUser(user.userId, dto);
+  @Get(":id")
+  findOne(@Param("id") id: string) {
+    return this.usersService.findById(+id);
   }
 
   @Patch(":id/status")
@@ -49,9 +43,6 @@ export class UsersController {
     return this.usersService.updateUserStatus(+id, status, until);
   }
 
-  // =========================
-  // ADMIN: VERIFY
-  // =========================
   @Patch(":id/verify")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -91,22 +82,10 @@ export class UsersController {
   @Patch(":id")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  updateStatus(
-    @Param("id") id: string,
-    @Body("status") status: UserStatus,
-    @Body("bannedUntil") bannedUntil?: string,
-  ) {
-    return this.usersService.updateUserStatus(
-      +id,
-      status,
-      bannedUntil ? new Date(bannedUntil) : null,
-    );
+  updateUser(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.updateUser(+id, updateUserDto);
   }
 
-
-  // =========================
-  // ADMIN: CAMBIAR ROL A OTRO USUARIO
-  // =========================
   @Patch(":id/role")
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -114,9 +93,6 @@ export class UsersController {
     return this.usersService.updateUserRole(+id, role);
   }
 
-  // =========================
-  // ADMIN: ELIMINAR
-  // =========================
   @Delete(":id")
   async deleteUser(@Param("id") id: string, @GetUser() actor?: User) {
     const targetId = +id;
@@ -129,15 +105,5 @@ export class UsersController {
     await this.usersService.deleteUser(targetId);
     // if the actor deleted their own account, return a message client can act on
     return { message: "User deleted successfully" };
-  }
-
-  // =========================
-  // GET USER BY ID (ADMIN/MOD)
-  // =========================
-  @Get(":id")
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.MODERATOR)
-  findById(@Param("id") id: string) {
-    return this.usersService.findById(+id);
   }
 }

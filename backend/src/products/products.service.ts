@@ -24,168 +24,84 @@ export class ProductsService {
   constructor(
     @InjectRepository(Item)
     private itemRepository: Repository<Item>,
-
     @InjectRepository(ItemPhoto)
     private photoRepository: Repository<ItemPhoto>,
-
     @InjectRepository(Service)
     private serviceRepository: Repository<Service>,
-
     @InjectRepository(Favorite)
     private favoriteRepository: Repository<Favorite>,
-
     @Inject(forwardRef(() => IncidentsService))
     private incidentsService: IncidentsService,
   ) {}
+async create(
+  createProductDto: CreateProductDto,
+  files: { images?: Express.Multer.File[] },
+  sellerId: number,
+): Promise<Item> {
 
-  /* ===========================================================
-     PASO 11 — VOCABULARIO PROHIBIDO EXPANDIDO
-  ============================================================ */
-  private readonly prohibitedWords = [
-    // Weapons
-    "arma","armas","weapon","gun","guns","pistola","rifle","escopeta","shotgun",
-    "cuchillo","knife","blade","katana","machete","taser","ametralladora","munición",
-
-    // Explosives
-    "bomba","explosivo","bomb","molotov","dinamita","granada","c4","tnt","pólvora",
-
-    // Drugs
-    "droga","drogas","cocaína","heroína","crack","marihuana","cannabis","weed",
-    "hachís","metanfetamina","meth","lsd","éxtasis","mdma","opio","fentanilo",
-
-    // Prescription drugs
-    "xanax","adderall","ritalin","esteroides","steroids","anabólico",
-
-    // Sexual content
-    "porno","pornografía","xxx","sexual","erótico","dildo","vibrador","sex toy",
-
-    // Extremist content
-    "tortura","decapitación","isis","terrorismo","al qaeda",
-
-    // Fake documents
-    "pasaporte falso","dni falso","cedula falsa","fake id","fake passport",
-    "documento falso","licencia falsa","visa falsa",
-
-    // Stolen goods
-    "robado","stolen","mercancía robada","saqueado","loot",
-
-    // Cybercrime
-    "scam","fraude","phishing","hack","hacker","keylogger","botnet",
-    "carding","fullz","bank logs","ransomware","malware","skimmer",
-
-    // Wildlife trafficking
-    "marfil","ivory","piel de tigre","cuerno de rinoceronte","animal protegido",
-    "especies en peligro","tráfico animal",
-
-    // Dangerous chemicals
-    "veneno","poison","cianuro","mercurio","ácido sulfúrico",
-    "ácido nítrico","cloroformo","gas nervioso",
-
-    // Human trafficking
-    "órgano humano","venta de órganos","esclavo","tráfico humano",
-
-    // Radioactive material
-    "uranio","plutonio","material radioactivo",
-  ];
-
-  private readonly prohibitedCategories = [
-    "armas",
-    "drogas",
-    "explosivos",
-    "químicos peligrosos",
-    "sustancias químicas peligrosas",
-    "animales protegidos",
-    "documentos ilegales",
-    "identidad falsa",
-    "venenos",
-    "material sexual",
-    "objetos robados",
-    "material radioactivo",
-    "tráfico humano",
-    "cybercrime",
-    "fraude",
-  ];
-
-  private detectProhibitedContent(text?: string): boolean {
-    if (!text) return false;
-    const content = text.toLowerCase();
-    return this.prohibitedWords.some((w) => content.includes(w));
+  // ✅ 1. Convertir strings a número
+  if (createProductDto.price && typeof createProductDto.price === "string") {
+    createProductDto.price = parseFloat(createProductDto.price);
   }
 
-  private isCategoryDangerous(category?: string): boolean {
-    if (!category) return false;
-    const c = category.toLowerCase();
-    return this.prohibitedCategories.some((w) => c.includes(w));
+  // ✅ 2. Validar servicios
+  if (createProductDto.type === ItemType.SERVICE && !createProductDto.workingHours) {
+    throw new Error("El campo 'workingHours' es obligatorio para servicios");
   }
 
-  /* ===========================================================
-     CREATE PRODUCT
-  ============================================================ */
-  async create(
-    dto: CreateProductDto,
-    files: { images?: Express.Multer.File[] },
-    sellerId: number,
-  ): Promise<Item> {
-    if (dto.price && typeof dto.price === "string") {
-      dto.price = parseFloat(dto.price);
-    }
+  // ✅ 3. Generar código único
+  const code = await this.generateUniqueCode();
 
-    if (dto.type === ItemType.SERVICE && !dto.workingHours)
-      throw new Error("El campo 'workingHours' es obligatorio para servicios");
+  // ✅ 4. Detectar contenido peligroso
+  const isDangerous = this.detectProhibitedContent(
+    createProductDto.name,
+    createProductDto.description,
+  );
 
-    const code = await this.generateUniqueCode();
+  const { workingHours, ...itemData } = createProductDto;
 
-    const nameDanger = this.detectProhibitedContent(dto.name);
-    const descDanger = this.detectProhibitedContent(dto.description);
-    const categoryDanger = this.isCategoryDangerous(dto.category);
+  const item = this.itemRepository.create({
+    ...itemData,
+    code,
+    sellerId,
+    status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
+  });
 
-    const isDangerous = nameDanger || descDanger || categoryDanger;
+  const savedItem = await this.itemRepository.save(item);
 
-    const { workingHours, ...itemData } = dto;
+  if (isDangerous) {
+    await this.incidentsService.createIncident(
+      savedItem.itemId,
+      `Producto detectado automáticamente como potencialmente peligroso. Palabras detectadas en: "${itemData.name}" ${
+        itemData.description ? `- "${itemData.description}"` : ""
+      }`,
+    );
+  }
 
-    const item = this.itemRepository.create({
-      ...itemData,
-      code,
-      sellerId,
-      status: isDangerous ? ItemStatus.PENDING : ItemStatus.ACTIVE,
+  // ✅ 5. Guardar imágenes si existen
+  if (files.images && files.images.length > 0) {
+    const photoUrls = await this.saveImages(files.images);
+    const photoEntities = photoUrls.map((url) =>
+      this.photoRepository.create({ itemId: savedItem.itemId, url }),
+    );
+    await this.photoRepository.save(photoEntities);
+  }
+
+  // ✅ 6. Crear fila en services si es tipo 'service'
+  if (createProductDto.type === ItemType.SERVICE && workingHours) {
+    const service = this.serviceRepository.create({
+      itemId: savedItem.itemId,
+      workingHours,
     });
-
-    const savedItem = await this.itemRepository.save(item);
-
-    if (isDangerous) {
-      const reason = categoryDanger
-        ? `La categoría "${dto.category}" está prohibida.`
-        : `Contenido prohibido detectado en nombre o descripción.`;
-
-      await this.incidentsService.createIncident(savedItem.itemId, reason);
-    }
-
-    // Save images
-    if (files.images?.length) {
-      const urls = await this.saveImages(files.images);
-      await this.photoRepository.save(
-        urls.map((url) =>
-          this.photoRepository.create({ itemId: savedItem.itemId, url }),
-        ),
-      );
-    }
-
-    // Save service
-    if (dto.type === ItemType.SERVICE && workingHours) {
-      await this.serviceRepository.save({
-        itemId: savedItem.itemId,
-        workingHours,
-      });
-    }
-
-    return this.findOne(savedItem.itemId);
+    await this.serviceRepository.save(service);
   }
 
-  /* ===========================================================
-     FIND ALL
-  ============================================================ */
+  return this.findOne(savedItem.itemId);
+}
+
+
   async findAll(filters?: any): Promise<Item[]> {
-    const query = this.itemRepository
+    const queryBuilder = this.itemRepository
       .createQueryBuilder("item")
       .leftJoinAndSelect("item.seller", "seller")
       .leftJoinAndSelect("item.photos", "photos")
@@ -204,127 +120,112 @@ export class ProductsService {
     }
 
     if (filters?.search) {
-      query.andWhere("item.name ILIKE :s", { s: `%${filters.search}%` });
-    }
-
-    if (filters?.category) {
-      query.andWhere("item.category ILIKE :c", { c: `%${filters.category}%` });
+      queryBuilder.andWhere("item.name ILIKE :name", {
+        name: `%${filters.search}%`,
+      });
     }
 
     if (filters?.type) {
-      query.andWhere("item.type = :t", { t: filters.type });
+      queryBuilder.andWhere("item.type = :type", { type: filters.type });
     }
 
-    return query.getMany();
+    if (filters?.minPrice) {
+      queryBuilder.andWhere("item.price >= :minPrice", {
+        minPrice: filters.minPrice,
+      });
+    }
+
+    if (filters?.maxPrice) {
+      queryBuilder.andWhere("item.price <= :maxPrice", {
+        maxPrice: filters.maxPrice,
+      });
+    }
+
+    if (filters?.location) {
+      queryBuilder.andWhere("item.location ILIKE :location", {
+        location: `%${filters.location}%`,
+      });
+    }
+
+    if (filters?.category) {
+      queryBuilder.andWhere("item.category ILIKE :category", {
+        category: `%${filters.category}%`,
+      });
+    }
+
+    return queryBuilder.getMany();
   }
 
-  /* ===========================================================
-     FIND ONE
-  ============================================================ */
   async findOne(id: number): Promise<Item> {
     const item = await this.itemRepository.findOne({
       where: { itemId: id },
       relations: ["seller", "photos", "service"],
     });
 
-    if (!item) throw new NotFoundException("Product not found");
+    if (!item) {
+      throw new NotFoundException("Product not found");
+    }
 
     return item;
   }
 
-  /* ===========================================================
-     MÉTODO RESTAURADO — Buscar productos por vendedor
-  ============================================================ */
   async findBySeller(sellerId: number): Promise<Item[]> {
     return this.itemRepository.find({
       where: { sellerId },
-      relations: ["photos", "service", "seller"],
+      relations: ["photos", "service"],
     });
   }
 
-  /* ===========================================================
-     UPDATE PRODUCT
-  ============================================================ */
   async update(
     id: number,
-    dto: UpdateProductDto,
+    updateProductDto: UpdateProductDto,
     files: { images?: Express.Multer.File[] },
     user: User,
   ): Promise<Item> {
     const item = await this.findOne(id);
 
-    if (item.sellerId !== user.userId)
-      throw new ForbiddenException("Solo puedes actualizar tus productos");
+    if (item.sellerId !== user.userId) {
+      throw new ForbiddenException("You can only update your own products");
+    }
 
-    const pendingIncidents = await this.incidentsService.findPendingByItem(id);
-    if (pendingIncidents.length > 0)
-      throw new ForbiddenException(
-        "No puedes editar un producto con incidentes pendientes",
-      );
-
-    const { workingHours, removedImages, ...updateData } = dto;
+    const { workingHours, removedImages, ...updateData } = updateProductDto;
 
     await this.itemRepository.update(id, updateData);
 
-    if (removedImages?.length) {
+    if (removedImages && removedImages.length > 0) {
       await this.removeImages(removedImages);
       await this.photoRepository.delete({ itemId: id, url: In(removedImages) });
     }
 
     if (files.images) {
       await this.photoRepository.delete({ itemId: id });
-
-      const urls = await this.saveImages(files.images);
-
-      await this.photoRepository.save(
-        urls.map((url) =>
+      if (files.images.length > 0) {
+        const photoUrls = await this.saveImages(files.images);
+        const photoEntities = photoUrls.map((url) =>
           this.photoRepository.create({ itemId: id, url }),
-        ),
-      );
+        );
+        await this.photoRepository.save(photoEntities);
+      }
     }
 
     if (item.type === ItemType.SERVICE && workingHours) {
-      await this.serviceRepository.upsert({ itemId: id, workingHours }, ["itemId"]);
+      await this.serviceRepository.upsert({ itemId: id, workingHours }, [
+        "itemId",
+      ]);
     }
 
     return this.findOne(id);
   }
 
-  /* ===========================================================
-     MÉTODO RESTAURADO — Cambiar disponibilidad
-  ============================================================ */
-  async toggleAvailability(id: number, available: boolean): Promise<Item> {
+  toggleAvailability = async (id: number, available: boolean) => {
     const item = await this.findOne(id);
+
     item.availability = available;
     await this.itemRepository.save(item);
+
     return item;
-  }
+  };
 
-  /* ===========================================================
-     MÉTODO RESTAURADO — Actualizar status del ITEM
-  ============================================================ */
-  async updateStatus(
-    id: number,
-    status: ItemStatus,
-    reason?: string,
-  ): Promise<Item> {
-    const item = await this.findOne(id);
-
-    await this.itemRepository.update(id, { status });
-
-    if (status === ItemStatus.BANNED) {
-      await this.incidentsService.createIncident(
-        id,
-        reason || "Producto marcado como prohibido.",
-      );
-    }
-
-    return this.findOne(id);
-  }
-
-  /* ===========================================================
-     DELETE PRODUCT
-  ============================================================ */
   async remove(id: number, user: User): Promise<void> {
     const item = await this.findOne(id);
 
@@ -347,10 +248,10 @@ export class ProductsService {
     await this.itemRepository.delete(id);
   }
 
-  /* ===========================================================
-     FAVORITES
-  ============================================================ */
-  async toggleFavorite(itemId: number, userId: number) {
+  async toggleFavorite(
+    itemId: number,
+    userId: number,
+  ): Promise<{ isFavorite: boolean }> {
     const existing = await this.favoriteRepository.findOne({
       where: { itemId, userId },
     });
@@ -358,61 +259,54 @@ export class ProductsService {
     if (existing) {
       await this.favoriteRepository.delete({ itemId, userId });
       return { isFavorite: false };
+    } else {
+      await this.favoriteRepository.save({ itemId, userId });
+      return { isFavorite: true };
     }
-
-    await this.favoriteRepository.save({ itemId, userId });
-    return { isFavorite: true };
   }
-
   async getFavorites(userId: number): Promise<Item[]> {
-    const favs = await this.favoriteRepository.find({
-      where: { user: { userId } },
+    console.log("Buscando favoritos para usuario:", userId);
+
+    const favorites = await this.favoriteRepository.find({
+      where: { user: { userId } }, // 🔹 Filtra usando la relación
       relations: ["item", "item.seller", "item.photos"],
     });
 
-    return favs.map((f) => f.item);
+    return favorites.map((fav) => fav.item);
   }
 
-  /* ===========================================================
-     HELPERS
-  ============================================================ */
   private async generateUniqueCode(): Promise<string> {
-    let code = "";
+    let code: string;
     let exists = true;
 
     while (exists) {
-      code = `P${Date.now()}${Math.random()
-        .toString(36)
-        .substring(2, 6)
-        .toUpperCase()}`;
-
-      exists = !!(await this.itemRepository.findOne({ where: { code } }));
+      code = `P${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+      const existing = await this.itemRepository.findOne({ where: { code } });
+      exists = !!existing;
     }
 
     return code;
   }
 
   private async saveImages(images: Express.Multer.File[]): Promise<string[]> {
+    const urls: string[] = [];
     const uploadDir = path.join(__dirname, "..", "..", "uploads");
 
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
 
-    const urls: string[] = [];
-
-    for (const file of images) {
-      const filename = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)}${path.extname(file.originalname)}`;
-
-      fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
-
-      urls.push(`/uploads/${filename}`);
+    for (const image of images) {
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${path.extname(image.originalname)}`;
+      const filePath = path.join(uploadDir, uniqueName);
+      fs.writeFileSync(filePath, image.buffer);
+      urls.push(`/uploads/${uniqueName}`);
     }
 
     return urls;
   }
 
-  private async removeImages(urls: string[]) {
+  private async removeImages(urls: string[]): Promise<void> {
     const uploadDir = path.join(__dirname, "..", "..", "uploads");
 
     for (const url of urls) {

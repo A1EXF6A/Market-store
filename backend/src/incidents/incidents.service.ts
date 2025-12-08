@@ -146,57 +146,43 @@ export class IncidentsService {
       .leftJoinAndSelect("incident.moderator", "moderator")
       .leftJoinAndSelect("incident.appeals", "appeals");
 
-  if (filters?.startDate && filters?.endDate) {
-    queryBuilder.andWhere(
-      "incident.reportedAt BETWEEN :startDate AND :endDate",
-      {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      },
-    );
+    if (filters?.startDate && filters?.endDate) {
+      queryBuilder.andWhere(
+        "incident.reportedAt BETWEEN :startDate AND :endDate",
+        {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        },
+      );
+    }
+
+    if (filters?.status) {
+      queryBuilder.andWhere("incident.status = :status", {
+        status: filters.status,
+      });
+    }
+
+    if (filters?.moderatorId) {
+      queryBuilder.andWhere("incident.moderatorId = :moderatorId", {
+        moderatorId: +filters.moderatorId,
+      });
+    }
+
+    if (filters?.sellerId) {
+      queryBuilder.andWhere("incident.sellerId = :sellerId", {
+        sellerId: +filters.sellerId,
+      });
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        "(incident.description ILIKE :search OR item.name ILIKE :search OR item.code ILIKE :search OR seller.firstName ILIKE :search OR seller.lastName ILIKE :search)",
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    return queryBuilder.orderBy("incident.reportedAt", "DESC").getMany();
   }
-
-  if (filters?.status) {
-    queryBuilder.andWhere("incident.status = :status", {
-      status: filters.status,
-    });
-  }
-
-  if (filters?.moderatorId) {
-    queryBuilder.andWhere("incident.moderatorId = :moderatorId", {
-      moderatorId: +filters.moderatorId,
-    });
-  }
-
-  if (filters?.sellerId) {
-    queryBuilder.andWhere("incident.sellerId = :sellerId", {
-      sellerId: +filters.sellerId,
-    });
-  }
-
-  if (filters?.search) {
-    queryBuilder.andWhere(
-      "(incident.description ILIKE :search " +
-        "OR item.name ILIKE :search " +
-        "OR item.code ILIKE :search " +
-        "OR seller.firstName ILIKE :search " +
-        "OR seller.lastName ILIKE :search)",
-      { search: `%${filters.search}%` },
-    );
-  }
-
-  return queryBuilder.orderBy("incident.reportedAt", "DESC").getMany();
-}
-
-async findPendingByItem(itemId: number) {
-  return this.incidentRepository.find({
-    where: {
-      itemId,
-      status: ItemStatus.PENDING,
-    },
-    relations: ["seller", "moderator", "appeals"],
-  });
-}
 
   async getReports(filters?: ReportFilters): Promise<Report[]> {
     const queryBuilder = this.reportRepository
@@ -240,7 +226,7 @@ async findPendingByItem(itemId: number) {
     return { count };
   }
 
-    async assignModerator(
+  async assignModerator(
     incidentId: number,
     actorId: number,
     targetModeratorId?: number,
@@ -248,7 +234,6 @@ async findPendingByItem(itemId: number) {
     const incident = await this.incidentRepository.findOne({
       where: { incidentId },
     });
-
     if (!incident) {
       throw new NotFoundException("Incident not found");
     }
@@ -293,13 +278,12 @@ async findPendingByItem(itemId: number) {
       relations: ["item", "appeals"],
     });
 
-  if (!incident) {
-    throw new NotFoundException("Incident not found");
-  }
+    if (!incident) {
+      throw new NotFoundException("Incident not found");
+    }
 
-  // Estado final de la incidencia
-  incident.status = incidentStatus;
-  incident.moderatorId = moderatorId;
+    incident.status = status;
+    incident.moderatorId = moderatorId;
 
     // update item status
     await this.itemRepository.update(incident.itemId, { status });
@@ -313,8 +297,8 @@ async findPendingByItem(itemId: number) {
       }
     }
 
-  return this.incidentRepository.save(incident);
-}
+    return this.incidentRepository.save(incident);
+  }
 
   async getSellerIncidents(sellerId: number): Promise<Incident[]> {
     return this.incidentRepository.find({
