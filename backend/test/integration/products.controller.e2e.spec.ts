@@ -77,12 +77,18 @@ describe('ProductsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Create a user via the auth endpoint to ensure all required fields are set
+    const unique = Date.now();
+    const sellerEmail = `seller_${unique}@example.com`;
+    const buyerEmail = `buyer_${unique}@example.com`;
+    const sellerId = String(9000000 + (unique % 1000000));
+    const buyerId = String(8000000 + (unique % 1000000));
+
+    // Create a seller via the auth endpoint
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'seller@example.com',
-        nationalId: '9999',
+        email: sellerEmail,
+        nationalId: sellerId,
         password: '12345678',
         firstName: 'Seller',
         lastName: 'One',
@@ -93,8 +99,8 @@ describe('ProductsController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'buyer@example.com',
-        nationalId: '8888',
+        email: buyerEmail,
+        nationalId: buyerId,
         password: '12345678',
         firstName: 'Buyer',
         lastName: 'One',
@@ -105,26 +111,31 @@ describe('ProductsController (e2e)', () => {
     const dataSource = app.get<any>(DataSource);
     const manager = dataSource.manager;
 
-      const sellers = await manager.query('SELECT * FROM users WHERE email=$1', ['seller@example.com']);
+      const sellers = await manager.query('SELECT * FROM users WHERE email=$1', [sellerEmail]);
       seller = sellers[0];
 
-    const buyers = await manager.query('SELECT * FROM users WHERE email=$1', ['buyer@example.com']);
+    const buyers = await manager.query('SELECT * FROM users WHERE email=$1', [buyerEmail]);
     buyer = buyers[0];
+
+  // Mark both users as verified to allow protected flows
+  await manager.query('UPDATE users SET verified=$1 WHERE user_id IN ($2,$3)', [true, seller.user_id, buyer.user_id]);
 
   // Ensure the registered user has seller role so protected endpoints allow creation
   await manager.query('UPDATE users SET role=$1 WHERE user_id=$2', ['seller', seller.user_id]);
 
     // Insert items using raw SQL to match DB column names
+    const code1 = `C${Date.now()}A`;
     await manager.query(
       `INSERT INTO items(code, seller_id, type, name, description, price, location, availability, status)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      ['C1', seller.user_id, 'product', 'Product A', 'Desc A', 50, 'CityX', true, 'active'],
+      [code1, seller.user_id, 'product', 'Product A', 'Desc A', 50, 'CityX', true, 'active'],
     );
 
+    const code2 = `C${Date.now()}B`;
     await manager.query(
       `INSERT INTO items(code, seller_id, type, name, description, price, location, availability, status)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      ['C2', seller.user_id, 'service', 'Service B', 'Desc B', 200, 'CityY', true, 'active'],
+      [code2, seller.user_id, 'service', 'Service B', 'Desc B', 200, 'CityY', true, 'active'],
     );
 
     // nothing: we'll use x-test-user header in requests

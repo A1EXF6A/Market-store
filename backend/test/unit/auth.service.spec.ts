@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { User } from '../../src/entities/user.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { EmailService } from '../../src/common/services/email.service';
+import { EmailService } from '../../src/email/email.service';
 import * as bcrypt from 'bcryptjs';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 
@@ -11,12 +11,11 @@ describe('AuthService', () => {
   let service: AuthService;
   let userRepo: jest.Mocked<Repository<User>>;
   let jwtService: jest.Mocked<JwtService>;
-  let emailService: jest.Mocked<EmailService>;
+  let emailService: any;
 
   beforeEach(() => {
     userRepo = {
       findOne: jest.fn(),
-      findOneBy: jest.fn(),
       save: jest.fn(),
       create: jest.fn(),
     } as any;
@@ -28,14 +27,23 @@ describe('AuthService', () => {
     emailService = {
       sendVerificationEmail: jest.fn(),
       sendPasswordResetEmail: jest.fn(),
+      // stub optional internals to satisfy type usage
+      logger: console,
+      transporter: {} as any,
+      getFrom: jest.fn().mockReturnValue('no-reply@example.com'),
+      getFrontendUrl: jest.fn().mockReturnValue('http://localhost'),
     } as any;
 
     service = new AuthService(userRepo, jwtService, emailService);
   });
 
   describe('register', () => {
-    it('debería registrar un nuevo usuario y devolver un token', async () => {
-      userRepo.findOneBy.mockResolvedValue(null);
+    it('debería registrar un nuevo usuario y devolver mensaje', async () => {
+      // email check (deleted: false) returns null
+      (userRepo.findOne as jest.Mock)
+        .mockResolvedValueOnce(null) // email exists?
+        .mockResolvedValueOnce(null); // nationalId exists?
+
       userRepo.create.mockReturnValue({ userId: 1, email: 'test@example.com' } as any);
       userRepo.save.mockResolvedValue({ userId: 1, email: 'test@example.com' } as any);
 
@@ -47,12 +55,13 @@ describe('AuthService', () => {
         lastName: 'User'
       } as any);
 
-      expect(result.access_token).toBe('fake-jwt');
+      expect(result).toHaveProperty('message');
       expect(userRepo.save).toHaveBeenCalled();
+      expect(emailService.sendVerificationEmail).toHaveBeenCalled();
     });
 
     it('debería lanzar error si el email ya existe', async () => {
-      userRepo.findOneBy.mockResolvedValue({ email: 'test@example.com' } as any);
+      (userRepo.findOne as jest.Mock).mockResolvedValueOnce({ email: 'test@example.com' } as any);
       await expect(service.register({
         email: 'test@example.com',
         nationalId: '1234567890',
@@ -68,7 +77,7 @@ describe('AuthService', () => {
 
     it('debería lanzar error si nationalId ya existe', async () => {
       // Simular que la verificación por email no encuentra nada, pero la de nationalId sí
-      (userRepo.findOneBy as jest.Mock)
+      (userRepo.findOne as jest.Mock)
         .mockResolvedValueOnce(null) // email check
         .mockResolvedValueOnce({ nationalId: '123' } as any); // nationalId check
 
@@ -86,7 +95,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('debería loguear con credenciales válidas', async () => {
-      const user = { userId: 1, email: 'test@example.com', passwordHash: await bcrypt.hash('12345678', 10) } as User;
+      const user = { userId: 1, email: 'test@example.com', passwordHash: await bcrypt.hash('12345678', 10), verified: true, status: 'active', deleted: false } as any;
       userRepo.findOne.mockResolvedValue(user);
 
       const result = await service.login({ email: 'test@example.com', password: '12345678' });
@@ -107,11 +116,11 @@ describe('AuthService', () => {
 
   describe('validateUser', () => {
     it('debería devolver usuario por id usando userRepository.findOne', async () => {
-      const user = { userId: 42, email: 'u@example.com' } as any;
+      const user = { userId: 42, email: 'u@example.com', deleted: false } as any;
       userRepo.findOne.mockResolvedValue(user);
       const result = await service.validateUser(42);
       expect(result).toBe(user);
-      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { userId: 42 } });
+      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { userId: 42, deleted: false } });
     });
   });
 });

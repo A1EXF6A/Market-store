@@ -79,31 +79,38 @@ describe('AuthController (e2e)', () => {
     if (container) await container.stop();
   });
 
-  it('/auth/register (POST) debe registrar un usuario', async () => {
-    const res = await request(app.getHttpServer())
+  it('/auth/register + verify + login flujo completo', async () => {
+    const unique = Date.now();
+    const email = `e2e_${unique}@example.com`;
+    const nationalId = String(10000000 + (unique % 10000000));
+
+    const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'e2e@example.com',
-        nationalId: '11223344',
+        email,
+        nationalId,
         password: '12345678',
         firstName: 'E2E',
-        lastName: 'Test'
+        lastName: 'Test',
       })
       .expect(201);
 
-    expect(res.body).toHaveProperty('access_token');
-    expect(res.body.user.email).toBe('e2e@example.com');
-  });
+    expect(registerRes.body).toHaveProperty('message');
 
-  it('/auth/login (POST) debe loguear un usuario existente', async () => {
-    const res = await request(app.getHttpServer())
+    // Marcar usuario como verificado en la base de datos para permitir login
+    const { DataSource } = await import('typeorm');
+    const dataSource = app.get<any>(DataSource);
+    await dataSource.manager.query('UPDATE users SET verified=$1 WHERE email=$2', [true, email]);
+
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'e2e@example.com',
-        password: '12345678'
+        email,
+        password: '12345678',
       })
       .expect(201);
 
-    expect(res.body).toHaveProperty('access_token');
+    expect(loginRes.body).toHaveProperty('access_token');
+    expect(loginRes.body.user.email).toBe(email);
   });
 });
