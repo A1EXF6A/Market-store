@@ -5,7 +5,8 @@ import { Test } from '@nestjs/testing';
 const request = require('supertest');
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
 // import { DataSource } from 'typeorm';
-import AppDataSource from '../../src/data-source';
+// AppDataSource will be imported after env is set to ensure it picks up DATABASE_URL/DB_*
+let AppDataSource: any;
 import { execSync } from 'child_process';
 
 let app: INestApplication;
@@ -50,6 +51,9 @@ describe('AuthController (e2e)', () => {
     process.env.DB_NAME = dbName;
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'testsecret';
 
+    // Import AppDataSource only after env vars are set
+    const dsModule = await import('../../src/data-source');
+    AppDataSource = dsModule.default;
     // También actualizamos AppDataSource.options para que TypeOrmModule use estas credenciales
     (AppDataSource as any).options = {
       ...AppDataSource.options,

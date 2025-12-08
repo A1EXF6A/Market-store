@@ -5,7 +5,8 @@ import { GenericContainer, StartedTestContainer } from 'testcontainers';
 import { JwtAuthGuard } from '../../src/auth/jwt-auth.guard';
 import { RolesGuard } from '../../src/common/guards/roles.guard';
 import { JwtService } from '@nestjs/jwt';
-import AppDataSource from '../../src/data-source';
+// Import AppDataSource after env vars are set to avoid default localhost port
+let AppDataSource: any;
 import { execSync } from 'child_process';
 
 let app: INestApplication;
@@ -46,6 +47,8 @@ describe('ProductsController (e2e)', () => {
   process.env.JWT_SECRET = process.env.JWT_SECRET || 'testsecret';
   process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
 
+    const dsModule = await import('../../src/data-source');
+    AppDataSource = dsModule.default;
     (AppDataSource as any).options = {
       ...AppDataSource.options,
       host: dbHost,
