@@ -19,7 +19,8 @@ const AppDataSource = new DataSource({
   synchronize: false,
   logging: true,
   entities: [User, Item, ItemPhoto, Service, Favorite, Report, Appeal, Incident, Chat, Message, Rating],
-  migrations: ["dist/migrations/*{.ts,.js}"],
+  // Point to source migrations for ts-node CLI runs
+  migrations: ["src/migrations/*{.ts,.js}"],
 });
 
 export default AppDataSource;
