@@ -23,6 +23,10 @@ const config: Config = {
 
   // 📊 Carpeta donde se guardarán los reportes de cobertura
   coverageDirectory: './coverage',
+  // 📊 Formatos de cobertura: añadimos 'cobertura' para Jenkins Cobertura
+  coverageReporters: ['json', 'lcov', 'text', 'cobertura'],
+  // ✅ Recoger cobertura por defecto
+  collectCoverage: true,
 
   // ✅ Ignora ciertas carpetas innecesarias para las pruebas
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
