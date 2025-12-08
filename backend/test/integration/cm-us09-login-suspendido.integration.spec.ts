@@ -1,3 +1,5 @@
+require('dotenv').config({ path: '.env' }); // o '.env.test' si tienes uno
+
 import * as request from "supertest";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -24,7 +26,7 @@ describe("CM-US09 - Login con usuario suspendido", () => {
 
   const suspendedUser = {
     email: "maria.gonzalez@email.com",
-    password: "Password123!",
+    password: "con123",
   };
 
   beforeAll(async () => {
@@ -33,12 +35,12 @@ describe("CM-US09 - Login con usuario suspendido", () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         TypeOrmModule.forRoot({
-          type: "postgres",
-          host: "127.0.0.1",
-          port: 5432,
-          username: "postgres",
-          password: "Youpikne/47",
-          database: "sistema_ventas",
+          type: 'postgres',
+          host: process.env.DB_HOST,
+          port: Number(process.env.DB_PORT),
+          username: process.env.DB_USERNAME,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
           synchronize: false,
           logging: true,
           entities: [
