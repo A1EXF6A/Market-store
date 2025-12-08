@@ -36,7 +36,7 @@ describe("CM-US05 - Login de usuario existente (Integración)", () => {
   };
 
   beforeAll(async () => {
-    // 🔑 Aseguramos la secret para el test
+    //  Aseguramos la secret para el test
     process.env.JWT_SECRET = "testSecret";
 
     const moduleRef = await Test.createTestingModule({
