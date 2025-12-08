@@ -36,15 +36,15 @@ ENV DB_NAME=marketstore
 # Optional: DATABASE_URL takes precedence if set
 # Run migrations then start the server
 # Wait for Postgres, run migrations, then start
-CMD /bin/sh -c "\
+CMD /bin/sh -c "set -e; \
   until nc -z ${DB_HOST} ${DB_PORT}; do \
     echo '📡 Esperando PostgreSQL...'; \
     sleep 1; \
   done; \
   echo '🚀 PostgreSQL está listo!'; \
-  node -e \"console.log('Running migrations...')\"; \
-  npx typeorm migration:run -d dist/data-source.js; \
-  npm run start:prod\
-"
+  echo 'Running migrations...'; \
+  npx typeorm migration:run -d dist/data-source.js && \
+  echo 'Migrations completed.' && \
+  npm run start:prod"
 
 EXPOSE 3000
