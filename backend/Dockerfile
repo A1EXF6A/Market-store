@@ -18,7 +18,9 @@ COPY --from=build /app/dist ./dist
 COPY package.json ./package.json
 COPY --from=deps /app/node_modules ./node_modules
 # Uploads directory for static assets
-COPY uploads ./uploads
+#COPY uploads ./uploads
+RUN mkdir -p uploads
+
 # Default port can be overridden by env
 ENV PORT=3000
 # Database envs
