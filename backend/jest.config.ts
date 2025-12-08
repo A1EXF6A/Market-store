@@ -33,7 +33,7 @@ const config: Config = {
   },
 
   // 🧭 Configuración útil si usas Testcontainers (para evitar timeout por Docker)
-  testTimeout: 60000, // 60 segundos
+  testTimeout: 180000, // 60 segundos
 
   // 🧪 Corre las pruebas de forma secuencial si es necesario (útil con Docker)
   maxWorkers: 1,
