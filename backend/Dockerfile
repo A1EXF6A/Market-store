@@ -22,6 +22,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # Uploads directory for static assets
 #COPY uploads ./uploads
 RUN mkdir -p uploads
+# Install tools for health checks (netcat for waiting on Postgres)
+RUN apk add --no-cache netcat-openbsd
 
 # Default port can be overridden by env
 ENV PORT=3000
@@ -33,5 +35,16 @@ ENV DB_PASSWORD=postgres
 ENV DB_NAME=marketstore
 # Optional: DATABASE_URL takes precedence if set
 # Run migrations then start the server
-CMD sh -c "node -e 'console.log(\"Waiting for DB...\")' && npx typeorm-ts-node-commonjs migration:run -d ./dist/data-source.js || true && npm run start:prod"
+# Wait for Postgres, run migrations, then start
+CMD /bin/sh -c "\
+  until nc -z ${DB_HOST} ${DB_PORT}; do \
+    echo '📡 Esperando PostgreSQL...'; \
+    sleep 1; \
+  done; \
+  echo '🚀 PostgreSQL está listo!'; \
+  node -e \"console.log('Running migrations...')\"; \
+  npx typeorm migration:run -d dist/data-source.js; \
+  npm run start:prod\
+"
+
 EXPOSE 3000
