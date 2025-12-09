@@ -79,7 +79,7 @@ async create(
   }
 
   // ✅ 5. Guardar imágenes si existen
-  if (files.images && files.images.length > 0) {
+  if (files?.images && files.images.length > 0) {
     const photoUrls = await this.saveImages(files.images);
     const photoEntities = photoUrls.map((url) =>
       this.photoRepository.create({ itemId: savedItem.itemId, url }),
@@ -197,7 +197,7 @@ async create(
       await this.photoRepository.delete({ itemId: id, url: In(removedImages) });
     }
 
-    if (files.images) {
+    if (files?.images) {
       await this.photoRepository.delete({ itemId: id });
       if (files.images.length > 0) {
         const photoUrls = await this.saveImages(files.images);
