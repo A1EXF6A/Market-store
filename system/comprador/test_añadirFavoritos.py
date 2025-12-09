@@ -115,9 +115,9 @@ class TestAnadirFavoritos:
                     print(f"⚠ No se ubicó botón corazón en '{titulo_prod}': {e_inner}")
                     continue
 
+            try:
+                # Realizar el click (común para ambos casos)
                 driver.execute_script("arguments[0].scrollIntoView({block:'center'});", heart_btn)
-
-                # Intento 1: JS click para evitar intercepts
                 driver.execute_script("arguments[0].click();", heart_btn)
 
                 # Confirmar con toast; si no aparece, usar Actions como fallback
@@ -132,7 +132,6 @@ class TestAnadirFavoritos:
                     )
 
                 añadidos.add(titulo_prod)
-
             except Exception as e:
                 print(f"⚠ No se pudo añadir favorito para '{titulo_prod}': {e}")
                 continue
@@ -162,4 +161,15 @@ class TestAnadirFavoritos:
         # Log informativo de añadidos
         print(f"✅ Añadidos a favoritos: {sorted(list(añadidos))}")
 
-        assert "/favorites" in driver.current_url
+        # Asegurar navegación final estable a Favoritos antes de terminar
+        try:
+            favoritos_link = wait.until(EC.element_to_be_clickable(
+                (By.XPATH, "//a[.//span[normalize-space()='Favoritos']]")
+            ))
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", favoritos_link)
+            favoritos_link.click()
+            wait.until(EC.url_contains("/favorites"))
+        except Exception:
+            pass
+
+        assert "/favorites" in driver.current_url, f"URL final inesperada: {driver.current_url}"

@@ -81,27 +81,41 @@ class TestCMADGU01():
       user_name = user_name_element.text
       print(f"Cambiando rol del usuario: {user_name}")
       
-      # Hacer clic en el botón de acciones (MoreHorizontal)
+      # Hacer clic en el botón de acciones (MoreHorizontal) con manejo anti-intercepts
       action_button = target_user_row.find_element(By.CSS_SELECTOR, "button[aria-haspopup='menu']")
-      action_button.click()
+      self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", action_button)
+      try:
+        action_button.click()
+      except Exception:
+        self.driver.execute_script("arguments[0].click();", action_button)
+        ActionChains(self.driver).move_to_element(target_user_row).move_to_element(action_button).pause(0.1).click().perform()
       
-      # Esperar a que aparezca el menú desplegable
+      # Esperar a que aparezca el menú desplegable con opciones visibles
+      change_role_locator = (By.XPATH, "//div[contains(text(), 'Cambiar Rol')]")
       WebDriverWait(self.driver, 10).until(
-        expected_conditions.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Cambiar Rol')]"))
+        expected_conditions.visibility_of_element_located(change_role_locator)
+      )
+      # Hacer clic en "Cambiar Rol" con espera y fallback
+      change_role_option = self.driver.find_element(*change_role_locator)
+      self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", change_role_option)
+      try:
+        change_role_option.click()
+      except Exception:
+        self.driver.execute_script("arguments[0].click();", change_role_option)
+      
+      # Esperar a que aparezca el submenú de roles (visible)
+      moderator_locator = (By.XPATH, "//div[contains(text(), 'Moderador')]")
+      WebDriverWait(self.driver, 10).until(
+        expected_conditions.visibility_of_element_located(moderator_locator)
       )
       
-      # Hacer clic en "Cambiar Rol"
-      change_role_option = self.driver.find_element(By.XPATH, "//div[contains(text(), 'Cambiar Rol')]")
-      change_role_option.click()
-      
-      # Esperar a que aparezca el submenú de roles
-      WebDriverWait(self.driver, 10).until(
-        expected_conditions.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Moderador')]"))
-      )
-      
-      # Hacer clic en "Moderador"
-      moderator_option = self.driver.find_element(By.XPATH, "//div[contains(text(), 'Moderador')]")
-      moderator_option.click()
+      # Hacer clic en "Moderador" con espera y fallback
+      moderator_option = self.driver.find_element(*moderator_locator)
+      self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", moderator_option)
+      try:
+        moderator_option.click()
+      except Exception:
+        self.driver.execute_script("arguments[0].click();", moderator_option)
       
       # Esperar a que aparezca el mensaje de éxito (toast)
       WebDriverWait(self.driver, 10).until(

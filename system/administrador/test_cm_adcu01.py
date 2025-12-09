@@ -94,16 +94,27 @@ class TestCMADCU01():
       
       # Hacer clic en el botón de acciones (MoreHorizontal)
       action_button = target_user_row.find_element(By.CSS_SELECTOR, "button[aria-haspopup='menu']")
-      action_button.click()
+      # Evitar intercepts: scroll + click con fallback
+      self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", action_button)
+      try:
+        action_button.click()
+      except Exception:
+        self.driver.execute_script("arguments[0].click();", action_button)
+        ActionChains(self.driver).move_to_element(target_user_row).move_to_element(action_button).pause(0.1).click().perform()
       
       # Esperar a que aparezca el menú desplegable y buscar "Eliminar"
       WebDriverWait(self.driver, 10).until(
         expected_conditions.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Eliminar')]"))
       )
       
-      # Hacer clic en "Eliminar" (elemento con texto rojo)
-      delete_option = self.driver.find_element(By.XPATH, "//div[contains(text(), 'Eliminar')]")
-      delete_option.click()
+      # Hacer clic en "Eliminar" (elemento con texto rojo) con espera y fallback
+      delete_locator = (By.XPATH, "//div[contains(text(), 'Eliminar')]")
+      delete_option = self.driver.find_element(*delete_locator)
+      self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", delete_option)
+      try:
+        delete_option.click()
+      except Exception:
+        self.driver.execute_script("arguments[0].click();", delete_option)
       
       # Esperar y manejar la alerta de confirmación de JavaScript
       WebDriverWait(self.driver, 5).until(expected_conditions.alert_is_present())

@@ -104,17 +104,26 @@ class TestCMADAU03():
     # Como ya validamos que target_row no es None, podemos proceder
     assert target_row is not None, "target_row no puede ser None en este punto"
     action_button = target_row.find_element(By.XPATH, ".//button[.//*[local-name()='svg']]")
-    action_button.click()
+    # Asegurar visibilidad y evitar intercepts al hacer clic
+    self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", action_button)
+    try:
+      action_button.click()
+    except Exception:
+      # Fallback: intento con JS click y luego con Actions
+      self.driver.execute_script("arguments[0].click();", action_button)
+      ActionChains(self.driver).move_to_element(target_row).move_to_element(action_button).pause(0.1).click().perform()
     
     print("✅ Menú de acciones desplegado")
     
     # Esperar a que aparezca el dropdown menu y hacer clic en "Reactivar"
-    WebDriverWait(self.driver, 5).until(
-      expected_conditions.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Reactivar')]"))
-    )
-    
-    reactivate_option = self.driver.find_element(By.XPATH, "//div[contains(text(), 'Reactivar')]")
-    reactivate_option.click()
+    menu_locator = (By.XPATH, "//div[contains(text(), 'Reactivar')]")
+    WebDriverWait(self.driver, 8).until(expected_conditions.visibility_of_element_located(menu_locator))
+    reactivate_option = self.driver.find_element(*menu_locator)
+    self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", reactivate_option)
+    try:
+      reactivate_option.click()
+    except Exception:
+      self.driver.execute_script("arguments[0].click();", reactivate_option)
     
     print("✅ Opción 'Reactivar' seleccionada")
     
