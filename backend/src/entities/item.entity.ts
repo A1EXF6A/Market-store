@@ -74,4 +74,4 @@ export class Item {
   incidents: Incident[];
 }
 
-export { ItemStatus };
+export { ItemStatus , ItemType };

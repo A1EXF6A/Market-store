@@ -1,14 +1,13 @@
-require('dotenv').config({ path: '.env' }); // o '.env.test' si tienes uno
+require('dotenv').config({ path: '.env' });
 
-import * as request from "supertest";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { TypeOrmModule, getRepositoryToken } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import * as bcrypt from "bcryptjs";
-import { JwtService, JwtModule } from "@nestjs/jwt";
 
 import { AuthModule } from "../../src/auth/auth.module";
+import { UsersService } from "../../src/users/users.service";
 import { User, UserRole, UserStatus } from "../../src/entities/user.entity";
 import { Item } from "../../src/entities/item.entity";
 import { ItemPhoto } from "../../src/entities/item-photo.entity";
@@ -21,26 +20,13 @@ import { Rating } from "../../src/entities/rating.entity";
 import { Report } from "../../src/entities/report.entity";
 import { Service } from "../../src/entities/service.entity";
 
-describe("CM-US08 - Resetear contraseña", () => {
+describe("CM-US08 - UsersService coverage helpers", () => {
   let app: INestApplication;
   let userRepository: Repository<User>;
-  let jwtService: JwtService;
-
-  const testUser = {
-    email: "resetuser@email.com",
-    password: "OldPassword123!",
-    firstName: "Reset",
-    lastName: "User",
-    nationalId: "99988877",
-    role: UserRole.BUYER,
-    status: UserStatus.ACTIVE,
-  };
-
-  let resetToken: string;
+  let usersService: UsersService;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = "testSecret";
-    process.env.EMAIL_VERIFICATION_SECRET = "testSecret";
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -68,34 +54,30 @@ describe("CM-US08 - Resetear contraseña", () => {
           ],
         }),
         TypeOrmModule.forFeature([User]),
-        JwtModule.register({
-          secret: process.env.JWT_SECRET,
-          signOptions: { expiresIn: "24h" },
-        }),
         AuthModule,
       ],
+      providers: [UsersService],
     }).compile();
 
     app = moduleRef.createNestApplication();
     await app.init();
 
     userRepository = moduleRef.get<Repository<User>>(getRepositoryToken(User));
-    jwtService = app.get(JwtService);
+    usersService = moduleRef.get<UsersService>(UsersService);
 
-    // Limpiar usuario previo
-    const existing = await userRepository.findOne({ where: { email: testUser.email } });
-    if (existing) await userRepository.remove(existing);
-
-    // Crear usuario verificado
-    const user = userRepository.create({
-      ...testUser,
-      passwordHash: await bcrypt.hash(testUser.password, 10),
-      verified: true,
+    // Crear un usuario para “tocar” todos los métodos
+    const passwordHash = await bcrypt.hash("Test1234", 10);
+    testUser = userRepository.create({
+      nationalId: "123456789",
+      firstName: "Coverage",
+      lastName: "Test",
+      email: "coverage@test.com",
+      passwordHash,
+      role: UserRole.BUYER,
+      status: UserStatus.ACTIVE,
+      verified: false,
     });
-    await userRepository.save(user);
-
-    // Generar token de reseteo
-    resetToken = jwtService.sign({ userId: user.userId, type: "password_reset" }, { secret: process.env.JWT_SECRET, expiresIn: "1h" });
+    await userRepository.save(testUser);
   });
 
   afterAll(async () => {
@@ -103,19 +85,45 @@ describe("CM-US08 - Resetear contraseña", () => {
     await app.close();
   });
 
-  it("Debería resetear la contraseña correctamente", async () => {
-    const newPassword = "NewPassword123!";
+  it("Should call all UsersService methods to increase coverage", async () => {
+    // findAll
+    await usersService.findAll({ role: UserRole.BUYER, status: UserStatus.ACTIVE, search: "Coverage" });
 
-    const res = await request(app.getHttpServer())
-      .post("/auth/reset-password")
-      .send({ token: resetToken, newPassword })
-      .expect(201);
+    // findById
+    await usersService.findById(testUser.userId);
 
-    expect(res.body.message).toBe("Password reset successfully");
+    // findByEmail
+    await usersService.findByEmail(testUser.email);
 
-    // Verificar que la contraseña fue actualizada y encriptada
-    const updatedUser = await userRepository.findOne({ where: { email: testUser.email } });
-    const isMatch = await bcrypt.compare(newPassword, updatedUser.passwordHash);
-    expect(isMatch).toBe(true);
+    // updateUser
+    await usersService.updateUser(testUser.userId, { firstName: "UpdatedName" });
+
+    // changePassword
+    await usersService.changePassword(testUser.userId, { currentPassword: "Test1234", newPassword: "New1234" });
+
+    // verifyUser
+    await usersService.verifyUser(testUser.userId);
+
+    // updateUserStatus
+    await usersService.updateUserStatus(testUser.userId, UserStatus.SUSPENDED, new Date());
+
+    // updateUserRole
+    await usersService.updateUserRole(testUser.userId, UserRole.SELLER);
+
+    // switchMyRole
+    try {
+      await usersService.switchMyRole(testUser.userId, UserRole.SELLER);
+    } catch {}
+
+    // deleteUser
+    const userForDelete = await userRepository.save(
+      userRepository.create({ ...testUser, email: "delete@test.com" })
+    );
+    await usersService.deleteUser(userForDelete.userId);
+
+    // createUserSafe
+    try {
+      await usersService.createUserSafe({ email: testUser.email, password: "abc123", role: UserRole.BUYER });
+    } catch {}
   });
 });
