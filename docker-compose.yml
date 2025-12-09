@@ -12,13 +12,13 @@ services:
       - "5435:5432" # host 5435 -> container 5432 (requested change)
     volumes:
       - pgdata:/var/lib/postgresql/data
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 5s
-        timeout: 5s
-        retries: 10
-      networks:
-        - marketstore-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - marketstore-net
 
   backend:
     build:
@@ -47,10 +47,10 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
-      volumes:
-        - backend_uploads:/app/uploads
-      networks:
-        - marketstore-net
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - marketstore-net
 
   frontend:
     build:
@@ -62,10 +62,10 @@ services:
     container_name: marketstore-frontend
     depends_on:
       - backend
-      ports:
-        - "4173:4173"
-      networks:
-        - marketstore-net
+    ports:
+      - "4173:4173"
+    networks:
+      - marketstore-net
 
 volumes:
   pgdata:
