@@ -99,5 +99,5 @@ class TestCrearProducto:
         # Validar redirección
         
         wait.until(EC.url_contains("/my-products"))
-
+        time.sleep(5)  # Esperar un poco para asegurar que la página cargue completamente
         print("🎉 PRODUCTO CREADO EXITOSAMENTE")

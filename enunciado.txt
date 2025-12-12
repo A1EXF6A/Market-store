@@ -105,3 +105,15 @@ Funcionalidad para seleccionar
     Chat con el vendedor con posibilidad de valoración del mismo 
 
     Definición de ubicación del producto, lo que permitirá filtrar por ubicación de productos en base al vendedor 
+
+-------------------------------
+back
+ pm2 start dist/main.js --name backend
+ npm run test:e2e
+ npm run test:e2e -- --coverage
+
+
+front
+ pm2 start "cmd.exe" --name frontend -- /c start-frontend.bat
+ net start nginx
+ net stop nginx
